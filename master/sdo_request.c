@@ -54,8 +54,8 @@ void ec_sdo_request_clear_data(ec_sdo_request_t *);
 /** SDO request constructor.
  */
 void ec_sdo_request_init(
-        ec_sdo_request_t *req /**< SDO request. */
-        )
+    ec_sdo_request_t *req /**< SDO request. */
+)
 {
     req->complete_access = 0;
     req->data = NULL;
@@ -74,8 +74,8 @@ void ec_sdo_request_init(
 /** SDO request destructor.
  */
 void ec_sdo_request_clear(
-        ec_sdo_request_t *req /**< SDO request. */
-        )
+    ec_sdo_request_t *req /**< SDO request. */
+)
 {
     ec_sdo_request_clear_data(req);
 }
@@ -89,9 +89,9 @@ void ec_sdo_request_clear(
  * \return Zero on success, otherwise a negative error code.
  */
 int ec_sdo_request_copy(
-        ec_sdo_request_t *req, /**< SDO request. */
-        const ec_sdo_request_t *other /**< Other SDO request to copy from. */
-        )
+    ec_sdo_request_t *req,        /**< SDO request. */
+    const ec_sdo_request_t *other /**< Other SDO request to copy from. */
+)
 {
     req->complete_access = other->complete_access;
     req->index = other->index;
@@ -104,10 +104,11 @@ int ec_sdo_request_copy(
 /** SDO request destructor.
  */
 void ec_sdo_request_clear_data(
-        ec_sdo_request_t *req /**< SDO request. */
-        )
+    ec_sdo_request_t *req /**< SDO request. */
+)
 {
-    if (req->data) {
+    if (req->data)
+    {
         kfree(req->data);
         req->data = NULL;
     }
@@ -125,16 +126,17 @@ void ec_sdo_request_clear_data(
  * \return 0 on success, otherwise -ENOMEM.
  */
 int ec_sdo_request_alloc(
-        ec_sdo_request_t *req, /**< SDO request. */
-        size_t size /**< Data size to allocate. */
-        )
+    ec_sdo_request_t *req, /**< SDO request. */
+    size_t size            /**< Data size to allocate. */
+)
 {
     if (size <= req->mem_size)
         return 0;
 
     ec_sdo_request_clear_data(req);
 
-    if (!(req->data = (uint8_t *) kmalloc(size, GFP_KERNEL))) {
+    if (!(req->data = (uint8_t *)kmalloc(size, GFP_KERNEL)))
+    {
         EC_ERR("Failed to allocate %zu bytes of SDO memory.\n", size);
         return -ENOMEM;
     }
@@ -154,10 +156,10 @@ int ec_sdo_request_alloc(
  * \retval <0 Error code.
  */
 int ec_sdo_request_copy_data(
-        ec_sdo_request_t *req, /**< SDO request. */
-        const uint8_t *source, /**< Source data. */
-        size_t size /**< Number of bytes in \a source. */
-        )
+    ec_sdo_request_t *req, /**< SDO request. */
+    const uint8_t *source, /**< Source data. */
+    size_t size            /**< Number of bytes in \a source. */
+)
 {
     int ret = ec_sdo_request_alloc(req, size);
     if (ret < 0)
@@ -176,8 +178,7 @@ int ec_sdo_request_copy_data(
  */
 int ec_sdo_request_timed_out(const ec_sdo_request_t *req /**< SDO request. */)
 {
-    return req->issue_timeout
-        && jiffies - req->jiffies_start > HZ * req->issue_timeout / 1000;
+    return req->issue_timeout && jiffies - req->jiffies_start > HZ * req->issue_timeout / 1000;
 }
 
 /*****************************************************************************
@@ -185,7 +186,7 @@ int ec_sdo_request_timed_out(const ec_sdo_request_t *req /**< SDO request. */)
  ****************************************************************************/
 
 void ecrt_sdo_request_index(ec_sdo_request_t *req, uint16_t index,
-        uint8_t subindex)
+                            uint8_t subindex)
 {
     req->index = index;
     req->subindex = subindex;
@@ -224,7 +225,7 @@ size_t ecrt_sdo_request_data_size(const ec_sdo_request_t *req)
 
 ec_request_state_t ecrt_sdo_request_state(const ec_sdo_request_t *req)
 {
-   return ec_request_state_translation_table[req->state];
+    return ec_request_state_translation_table[req->state];
 }
 
 /*****************************************************************************/
@@ -253,7 +254,8 @@ void ecrt_sdo_request_write(ec_sdo_request_t *req)
 
 void ecrt_sdo_request_write_with_size(ec_sdo_request_t *req, size_t size)
 {
-    if (size > req->mem_size) {
+    if (size > req->mem_size)
+    {
         EC_ERR("Request to write %zu bytes to SDO of size %zu.\n", size, req->mem_size);
         req->state = EC_INT_REQUEST_FAILURE;
         return;

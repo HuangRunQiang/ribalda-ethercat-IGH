@@ -53,11 +53,12 @@ typedef struct ec_tty ec_tty_t; /**< \see ec_tty */
 
 /** Operations on the virtual TTY interface.
  */
-typedef struct {
+typedef struct
+{
     int (*cflag_changed)(void *, tcflag_t); /**< Called when the serial
-                                              * settings shall be changed. The
-                                              * \a cflag argument contains the
-                                              * new settings. */
+                                             * settings shall be changed. The
+                                             * \a cflag argument contains the
+                                             * new settings. */
 } ec_tty_operations_t;
 
 /******************************************************************************
@@ -72,9 +73,8 @@ typedef struct {
  * \return Pointer to the interface object, otherwise an ERR_PTR value.
  */
 ec_tty_t *ectty_create(
-        const ec_tty_operations_t *ops,
-        void *cb_data
-        );
+    const ec_tty_operations_t *ops,
+    void *cb_data);
 
 /******************************************************************************
  * TTY interface methods
@@ -83,8 +83,8 @@ ec_tty_t *ectty_create(
 /** Releases a virtual TTY interface.
  */
 void ectty_free(
-        ec_tty_t *tty /**< TTY interface. */
-        );
+    ec_tty_t *tty /**< TTY interface. */
+);
 
 /** Reads data to send from the TTY interface.
  *
@@ -94,18 +94,18 @@ void ectty_free(
  * \return Number of bytes copied.
  */
 unsigned int ectty_tx_data(
-        ec_tty_t *tty, /**< TTY interface. */
-        uint8_t *buffer, /**< Buffer for data to transmit. */
-        size_t size /**< Available space in \a buffer. */
-        );
+    ec_tty_t *tty,   /**< TTY interface. */
+    uint8_t *buffer, /**< Buffer for data to transmit. */
+    size_t size      /**< Available space in \a buffer. */
+);
 
 /** Pushes received data to the TTY interface.
  */
 void ectty_rx_data(
-        ec_tty_t *tty, /**< TTY interface. */
-        const uint8_t *buffer, /**< Buffer with received data. */
-        size_t size /**< Number of bytes in \a buffer. */
-        );
+    ec_tty_t *tty,         /**< TTY interface. */
+    const uint8_t *buffer, /**< Buffer with received data. */
+    size_t size            /**< Number of bytes in \a buffer. */
+);
 
 /*****************************************************************************/
 

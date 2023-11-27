@@ -54,8 +54,8 @@ void ec_soe_request_clear_data(ec_soe_request_t *);
 /** SoE request constructor.
  */
 void ec_soe_request_init(
-        ec_soe_request_t *req /**< SoE request. */
-        )
+    ec_soe_request_t *req /**< SoE request. */
+)
 {
     INIT_LIST_HEAD(&req->list);
     req->drive_no = 0x00;
@@ -75,8 +75,8 @@ void ec_soe_request_init(
 /** SoE request destructor.
  */
 void ec_soe_request_clear(
-        ec_soe_request_t *req /**< SoE request. */
-        )
+    ec_soe_request_t *req /**< SoE request. */
+)
 {
     ec_soe_request_clear_data(req);
 }
@@ -88,9 +88,9 @@ void ec_soe_request_clear(
  * \return Zero on success, otherwise a negative error code.
  */
 int ec_soe_request_copy(
-        ec_soe_request_t *req, /**< SoE request. */
-        const ec_soe_request_t *other /**< Other SoE request to copy from. */
-        )
+    ec_soe_request_t *req,        /**< SoE request. */
+    const ec_soe_request_t *other /**< Other SoE request to copy from. */
+)
 {
     req->drive_no = other->drive_no;
     req->idn = other->idn;
@@ -103,9 +103,9 @@ int ec_soe_request_copy(
 /** Set drive number.
  */
 void ec_soe_request_set_drive_no(
-        ec_soe_request_t *req, /**< SoE request. */
-        uint8_t drive_no /** Drive Number. */
-        )
+    ec_soe_request_t *req, /**< SoE request. */
+    uint8_t drive_no       /** Drive Number. */
+)
 {
     req->drive_no = drive_no;
 }
@@ -115,9 +115,9 @@ void ec_soe_request_set_drive_no(
 /** Set IDN.
  */
 void ec_soe_request_set_idn(
-        ec_soe_request_t *req, /**< SoE request. */
-        uint16_t idn /** IDN. */
-        )
+    ec_soe_request_t *req, /**< SoE request. */
+    uint16_t idn           /** IDN. */
+)
 {
     req->idn = idn;
 }
@@ -127,10 +127,11 @@ void ec_soe_request_set_idn(
 /** Free allocated memory.
  */
 void ec_soe_request_clear_data(
-        ec_soe_request_t *req /**< SoE request. */
-        )
+    ec_soe_request_t *req /**< SoE request. */
+)
 {
-    if (req->data) {
+    if (req->data)
+    {
         kfree(req->data);
         req->data = NULL;
     }
@@ -148,16 +149,17 @@ void ec_soe_request_clear_data(
  * \return 0 on success, otherwise -ENOMEM.
  */
 int ec_soe_request_alloc(
-        ec_soe_request_t *req, /**< SoE request. */
-        size_t size /**< Data size to allocate. */
-        )
+    ec_soe_request_t *req, /**< SoE request. */
+    size_t size            /**< Data size to allocate. */
+)
 {
     if (size <= req->mem_size)
         return 0;
 
     ec_soe_request_clear_data(req);
 
-    if (!(req->data = (uint8_t *) kmalloc(size, GFP_KERNEL))) {
+    if (!(req->data = (uint8_t *)kmalloc(size, GFP_KERNEL)))
+    {
         EC_ERR("Failed to allocate %zu bytes of SoE memory.\n", size);
         return -ENOMEM;
     }
@@ -177,10 +179,10 @@ int ec_soe_request_alloc(
  * \retval <0 Error code.
  */
 int ec_soe_request_copy_data(
-        ec_soe_request_t *req, /**< SoE request. */
-        const uint8_t *source, /**< Source data. */
-        size_t size /**< Number of bytes in \a source. */
-        )
+    ec_soe_request_t *req, /**< SoE request. */
+    const uint8_t *source, /**< Source data. */
+    size_t size            /**< Number of bytes in \a source. */
+)
 {
     int ret = ec_soe_request_alloc(req, size);
     if (ret < 0)
@@ -201,17 +203,19 @@ int ec_soe_request_copy_data(
  * \retval <0 Error code.
  */
 int ec_soe_request_append_data(
-        ec_soe_request_t *req, /**< SoE request. */
-        const uint8_t *source, /**< Source data. */
-        size_t size /**< Number of bytes in \a source. */
-        )
+    ec_soe_request_t *req, /**< SoE request. */
+    const uint8_t *source, /**< Source data. */
+    size_t size            /**< Number of bytes in \a source. */
+)
 {
-    if (req->data_size + size > req->mem_size) {
+    if (req->data_size + size > req->mem_size)
+    {
         size_t new_size = req->mem_size ? req->mem_size * 2 : size;
-        uint8_t *new_data = (uint8_t *) kmalloc(new_size, GFP_KERNEL);
-        if (!new_data) {
+        uint8_t *new_data = (uint8_t *)kmalloc(new_size, GFP_KERNEL);
+        if (!new_data)
+        {
             EC_ERR("Failed to allocate %zu bytes of SoE memory.\n",
-                    new_size);
+                   new_size);
             return -ENOMEM;
         }
         memcpy(new_data, req->data, req->data_size);
@@ -230,8 +234,8 @@ int ec_soe_request_append_data(
 /** Request a read operation.
  */
 void ec_soe_request_read(
-        ec_soe_request_t *req /**< SoE request. */
-       )
+    ec_soe_request_t *req /**< SoE request. */
+)
 {
     req->dir = EC_DIR_INPUT;
     req->state = EC_INT_REQUEST_QUEUED;
@@ -243,8 +247,8 @@ void ec_soe_request_read(
 /** Request a write operation.
  */
 void ec_soe_request_write(
-        ec_soe_request_t *req /**< SoE request. */
-        )
+    ec_soe_request_t *req /**< SoE request. */
+)
 {
     req->dir = EC_DIR_OUTPUT;
     req->state = EC_INT_REQUEST_QUEUED;

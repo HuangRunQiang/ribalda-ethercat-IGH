@@ -40,13 +40,17 @@
 
 /*****************************************************************************/
 
-#define EC_FSM_ERR(fsm, fmt, args...) \
-    do { \
-        if (fsm->slave) { \
-            EC_SLAVE_ERR(fsm->slave, fmt, ##args); \
-        } else { \
+#define EC_FSM_ERR(fsm, fmt, args...)                \
+    do                                               \
+    {                                                \
+        if (fsm->slave)                              \
+        {                                            \
+            EC_SLAVE_ERR(fsm->slave, fmt, ##args);   \
+        }                                            \
+        else                                         \
+        {                                            \
             EC_MASTER_ERR(fsm->master, fmt, ##args); \
-        } \
+        }                                            \
     } while (0)
 
 /*****************************************************************************/
@@ -65,9 +69,9 @@ void ec_fsm_reboot_state_error(ec_fsm_reboot_t *);
    Constructor.
 */
 
-void ec_fsm_reboot_init(ec_fsm_reboot_t *fsm, /**< finite state machine */
+void ec_fsm_reboot_init(ec_fsm_reboot_t *fsm,   /**< finite state machine */
                         ec_datagram_t *datagram /**< datagram */
-                        )
+)
 {
     fsm->state = NULL;
     fsm->datagram = datagram;
@@ -90,8 +94,8 @@ void ec_fsm_reboot_clear(ec_fsm_reboot_t *fsm /**< finite state machine */)
 */
 
 void ec_fsm_reboot_single(ec_fsm_reboot_t *fsm, /**< finite state machine */
-                         ec_slave_t *slave /**< EtherCAT slave */
-                         )
+                          ec_slave_t *slave     /**< EtherCAT slave */
+)
 {
     fsm->master = slave->master;
     fsm->slave = slave;
@@ -105,8 +109,8 @@ void ec_fsm_reboot_single(ec_fsm_reboot_t *fsm, /**< finite state machine */
 */
 
 void ec_fsm_reboot_all(ec_fsm_reboot_t *fsm, /**< finite state machine */
-                         ec_master_t *master /**< EtherCAT master */
-                         )
+                       ec_master_t *master   /**< EtherCAT master */
+)
 {
     fsm->master = master;
     fsm->slave = NULL;
@@ -124,8 +128,7 @@ int ec_fsm_reboot_exec(ec_fsm_reboot_t *fsm /**< finite state machine */)
 {
     fsm->state(fsm);
 
-    return fsm->state != ec_fsm_reboot_state_end
-        && fsm->state != ec_fsm_reboot_state_error;
+    return fsm->state != ec_fsm_reboot_state_end && fsm->state != ec_fsm_reboot_state_error;
 }
 
 /*****************************************************************************/
@@ -154,10 +157,13 @@ void ec_fsm_reboot_state_start(ec_fsm_reboot_t *fsm
     ec_datagram_t *datagram = fsm->datagram;
     ec_slave_t *slave = fsm->slave;
 
-    if (slave) {
+    if (slave)
+    {
         EC_SLAVE_INFO(slave, "Requesting slave reboot\n");
         ec_datagram_fpwr(datagram, slave->station_address, 0x0040, 1);
-    } else {
+    }
+    else
+    {
         EC_MASTER_INFO(fsm->master, "Requesting global reboot\n");
         ec_datagram_bwr(datagram, 0x0040, 1);
     }
@@ -173,7 +179,7 @@ void ec_fsm_reboot_state_start(ec_fsm_reboot_t *fsm
 */
 
 void ec_fsm_reboot_state_one(ec_fsm_reboot_t *fsm
-                               /**< finite state machine */)
+                             /**< finite state machine */)
 {
     ec_datagram_t *datagram = fsm->datagram;
     ec_slave_t *slave = fsm->slave;
@@ -181,15 +187,18 @@ void ec_fsm_reboot_state_one(ec_fsm_reboot_t *fsm
     if (datagram->state == EC_DATAGRAM_TIMED_OUT && fsm->retries--)
         return;
 
-    if (datagram->state != EC_DATAGRAM_RECEIVED) {
+    if (datagram->state != EC_DATAGRAM_RECEIVED)
+    {
         fsm->state = ec_fsm_reboot_state_error;
         EC_FSM_ERR(fsm, "Failed to receive reboot 1 datagram: ");
         ec_datagram_print_state(datagram);
         return;
     }
 
-    if (datagram->working_counter == 0) {
-        if (slave && fsm->retries--) {
+    if (datagram->working_counter == 0)
+    {
+        if (slave && fsm->retries--)
+        {
             ec_datagram_fpwr(datagram, slave->station_address, 0x0040, 1);
             EC_WRITE_U8(datagram->data, 'R');
             return;
@@ -201,9 +210,12 @@ void ec_fsm_reboot_state_one(ec_fsm_reboot_t *fsm
         return;
     }
 
-    if (slave) {
+    if (slave)
+    {
         ec_datagram_fpwr(datagram, slave->station_address, 0x0040, 1);
-    } else {
+    }
+    else
+    {
         ec_datagram_bwr(datagram, 0x0040, 1);
     }
     EC_WRITE_U8(datagram->data, 'E');
@@ -218,7 +230,7 @@ void ec_fsm_reboot_state_one(ec_fsm_reboot_t *fsm
 */
 
 void ec_fsm_reboot_state_two(ec_fsm_reboot_t *fsm
-                               /**< finite state machine */)
+                             /**< finite state machine */)
 {
     ec_datagram_t *datagram = fsm->datagram;
     ec_slave_t *slave = fsm->slave;
@@ -226,23 +238,28 @@ void ec_fsm_reboot_state_two(ec_fsm_reboot_t *fsm
     if (datagram->state == EC_DATAGRAM_TIMED_OUT && fsm->retries--)
         return;
 
-    if (datagram->state != EC_DATAGRAM_RECEIVED) {
+    if (datagram->state != EC_DATAGRAM_RECEIVED)
+    {
         fsm->state = ec_fsm_reboot_state_error;
         EC_FSM_ERR(fsm, "Failed to receive reboot 2 datagram: ");
         ec_datagram_print_state(datagram);
         return;
     }
 
-    if (datagram->working_counter == 0) {
+    if (datagram->working_counter == 0)
+    {
         fsm->state = ec_fsm_reboot_state_error;
         EC_FSM_ERR(fsm, "Failed to reboot 2\n");
         ec_datagram_print_wc_error(datagram);
         return;
     }
 
-    if (slave) {
+    if (slave)
+    {
         ec_datagram_fpwr(datagram, slave->station_address, 0x0040, 1);
-    } else {
+    }
+    else
+    {
         ec_datagram_bwr(datagram, 0x0040, 1);
     }
     EC_WRITE_U8(datagram->data, 'S');
@@ -264,14 +281,16 @@ void ec_fsm_reboot_state_three(ec_fsm_reboot_t *fsm
     if (datagram->state == EC_DATAGRAM_TIMED_OUT && fsm->retries--)
         return;
 
-    if (datagram->state != EC_DATAGRAM_RECEIVED) {
+    if (datagram->state != EC_DATAGRAM_RECEIVED)
+    {
         fsm->state = ec_fsm_reboot_state_error;
         EC_FSM_ERR(fsm, "Failed to receive reboot 3 datagram: ");
         ec_datagram_print_state(datagram);
         return;
     }
 
-    if (datagram->working_counter == 0) {
+    if (datagram->working_counter == 0)
+    {
         fsm->state = ec_fsm_reboot_state_error;
         EC_FSM_ERR(fsm, "Failed to reboot 3\n");
         ec_datagram_print_wc_error(datagram);
@@ -281,7 +300,7 @@ void ec_fsm_reboot_state_three(ec_fsm_reboot_t *fsm
     // we must delay for a minimum of 1ms before allowing *any* datagram to be
     // sent on the network, or the slaves may not actually reboot (due to a
     // hardware bug).  we must wait at least 2 cycles to guarantee no undershoot.
-    fsm->jiffies_timeout = datagram->jiffies_received + max(2, HZ/1000);
+    fsm->jiffies_timeout = datagram->jiffies_received + max(2, HZ / 1000);
     datagram->state = EC_DATAGRAM_INVALID; // do not send a new datagram
     fsm->state = ec_fsm_reboot_state_wait;
 }
@@ -293,11 +312,12 @@ void ec_fsm_reboot_state_three(ec_fsm_reboot_t *fsm
 */
 
 void ec_fsm_reboot_state_wait(ec_fsm_reboot_t *fsm
-                               /**< finite state machine */)
+                              /**< finite state machine */)
 {
     ec_datagram_t *datagram = fsm->datagram;
 
-    if (time_after(jiffies, fsm->jiffies_timeout)) {
+    if (time_after(jiffies, fsm->jiffies_timeout))
+    {
         // slave should have rebooted by now, if it supports this.  if it
         // does, the master FSM will detect a topology change (unless it
         // finished reset already).

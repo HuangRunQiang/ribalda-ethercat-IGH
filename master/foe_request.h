@@ -47,28 +47,29 @@
 
 /** FoE request.
  */
-struct ec_foe_request {
+struct ec_foe_request
+{
     struct list_head list; /**< List item. */
-    uint8_t *buffer; /**< Pointer to FoE data. */
-    size_t buffer_size; /**< Size of FoE data memory. */
-    size_t data_size; /**< Size of FoE data. */
-    size_t progress; /**< Current position of a BUSY request. */
+    uint8_t *buffer;       /**< Pointer to FoE data. */
+    size_t buffer_size;    /**< Size of FoE data memory. */
+    size_t data_size;      /**< Size of FoE data. */
+    size_t progress;       /**< Current position of a BUSY request. */
 
-    uint32_t issue_timeout; /**< Maximum time in ms, the processing of the
-                              request may take. */
-    uint32_t response_timeout; /**< Maximum time in ms, the transfer is
-                                 retried, if the slave does not respond. */
-    ec_direction_t dir; /**< Direction. EC_DIR_OUTPUT means downloading to
-                          the slave, EC_DIR_INPUT means uploading from the
-                          slave. */
+    uint32_t issue_timeout;            /**< Maximum time in ms, the processing of the
+                                         request may take. */
+    uint32_t response_timeout;         /**< Maximum time in ms, the transfer is
+                                         retried, if the slave does not respond. */
+    ec_direction_t dir;                /**< Direction. EC_DIR_OUTPUT means downloading to
+                                         the slave, EC_DIR_INPUT means uploading from the
+                                         slave. */
     ec_internal_request_state_t state; /**< FoE request state. */
-    unsigned long jiffies_start; /**< Jiffies, when the request was issued. */
-    unsigned long jiffies_sent; /**< Jiffies, when the upload/download
-                                     request was sent. */
-    uint32_t password; /**< FoE password. */
-    ec_foe_error_t result; /**< FoE request abort code. Zero on success. */
-    uint32_t error_code; /**< Error code from an FoE Error Request. */
-    uint8_t file_name[255]; /**< FoE filename. */
+    unsigned long jiffies_start;       /**< Jiffies, when the request was issued. */
+    unsigned long jiffies_sent;        /**< Jiffies, when the upload/download
+                                            request was sent. */
+    uint32_t password;                 /**< FoE password. */
+    ec_foe_error_t result;             /**< FoE request abort code. Zero on success. */
+    uint32_t error_code;               /**< Error code from an FoE Error Request. */
+    uint8_t file_name[255];            /**< FoE filename. */
 };
 
 /*****************************************************************************/

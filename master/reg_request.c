@@ -46,11 +46,12 @@
  * \return Zero on success, otherwise a negative error code.
  */
 int ec_reg_request_init(
-        ec_reg_request_t *reg, /**< Register request. */
-        size_t size /**< Memory size. */
-        )
+    ec_reg_request_t *reg, /**< Register request. */
+    size_t size            /**< Memory size. */
+)
 {
-    if (!(reg->data = (uint8_t *) kmalloc(size, GFP_KERNEL))) {
+    if (!(reg->data = (uint8_t *)kmalloc(size, GFP_KERNEL)))
+    {
         EC_ERR("Failed to allocate %zu bytes of register memory.\n", size);
         return -ENOMEM;
     }
@@ -71,10 +72,11 @@ int ec_reg_request_init(
 /** Register request destructor.
  */
 void ec_reg_request_clear(
-        ec_reg_request_t *reg /**< Register request. */
-        )
+    ec_reg_request_t *reg /**< Register request. */
+)
 {
-    if (reg->data) {
+    if (reg->data)
+    {
         kfree(reg->data);
     }
 }
@@ -92,13 +94,13 @@ uint8_t *ecrt_reg_request_data(ec_reg_request_t *reg)
 
 ec_request_state_t ecrt_reg_request_state(const ec_reg_request_t *reg)
 {
-   return ec_request_state_translation_table[reg->state];
+    return ec_request_state_translation_table[reg->state];
 }
 
 /*****************************************************************************/
 
 void ecrt_reg_request_write(ec_reg_request_t *reg, uint16_t address,
-        size_t size)
+                            size_t size)
 {
     reg->dir = EC_DIR_OUTPUT;
     reg->address = address;
@@ -109,7 +111,7 @@ void ecrt_reg_request_write(ec_reg_request_t *reg, uint16_t address,
 /*****************************************************************************/
 
 void ecrt_reg_request_read(ec_reg_request_t *reg, uint16_t address,
-        size_t size)
+                           size_t size)
 {
     reg->dir = EC_DIR_INPUT;
     reg->address = address;
@@ -120,7 +122,7 @@ void ecrt_reg_request_read(ec_reg_request_t *reg, uint16_t address,
 /*****************************************************************************/
 
 void ecrt_reg_request_readwrite(ec_reg_request_t *reg, uint16_t address,
-        size_t size)
+                                size_t size)
 {
     reg->dir = EC_DIR_BOTH;
     reg->address = address;

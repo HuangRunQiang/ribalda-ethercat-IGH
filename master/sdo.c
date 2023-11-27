@@ -45,10 +45,10 @@
 /** Constructor.
  */
 void ec_sdo_init(
-        ec_sdo_t *sdo, /**< SDO. */
-        ec_slave_t *slave, /**< Parent slave. */
-        uint16_t index /**< SDO index. */
-        )
+    ec_sdo_t *sdo,     /**< SDO. */
+    ec_slave_t *slave, /**< Parent slave. */
+    uint16_t index     /**< SDO index. */
+)
 {
     sdo->slave = slave;
     sdo->index = index;
@@ -65,13 +65,14 @@ void ec_sdo_init(
  * Clears and frees an SDO object.
  */
 void ec_sdo_clear(
-        ec_sdo_t *sdo /**< SDO. */
-        )
+    ec_sdo_t *sdo /**< SDO. */
+)
 {
     ec_sdo_entry_t *entry, *next;
 
     // free all entries
-    list_for_each_entry_safe(entry, next, &sdo->entries, list) {
+    list_for_each_entry_safe(entry, next, &sdo->entries, list)
+    {
         list_del(&entry->list);
         ec_sdo_entry_clear(entry);
         kfree(entry);
@@ -89,13 +90,14 @@ void ec_sdo_clear(
  * \retval NULL SDO entry not found.
  */
 ec_sdo_entry_t *ec_sdo_get_entry(
-        ec_sdo_t *sdo, /**< SDO. */
-        uint8_t subindex /**< Entry subindex. */
-        )
+    ec_sdo_t *sdo,   /**< SDO. */
+    uint8_t subindex /**< Entry subindex. */
+)
 {
     ec_sdo_entry_t *entry;
 
-    list_for_each_entry(entry, &sdo->entries, list) {
+    list_for_each_entry(entry, &sdo->entries, list)
+    {
         if (entry->subindex != subindex)
             continue;
         return entry;
@@ -114,13 +116,14 @@ ec_sdo_entry_t *ec_sdo_get_entry(
  * \retval NULL SDO entry not found.
  */
 const ec_sdo_entry_t *ec_sdo_get_entry_const(
-        const ec_sdo_t *sdo, /**< SDO. */
-        uint8_t subindex /**< Entry subindex. */
-        )
+    const ec_sdo_t *sdo, /**< SDO. */
+    uint8_t subindex     /**< Entry subindex. */
+)
 {
     const ec_sdo_entry_t *entry;
 
-    list_for_each_entry(entry, &sdo->entries, list) {
+    list_for_each_entry(entry, &sdo->entries, list)
+    {
         if (entry->subindex != subindex)
             continue;
         return entry;

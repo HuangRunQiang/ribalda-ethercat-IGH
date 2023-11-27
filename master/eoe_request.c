@@ -44,8 +44,8 @@
 /** EoE request constructor.
  */
 void ec_eoe_request_init(
-        ec_eoe_request_t *req /**< EoE request. */
-        )
+    ec_eoe_request_t *req /**< EoE request. */
+)
 {
     INIT_LIST_HEAD(&req->list);
     req->state = EC_INT_REQUEST_INIT;

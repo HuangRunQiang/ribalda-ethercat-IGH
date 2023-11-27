@@ -45,20 +45,21 @@
 
 /** Sercos-over-EtherCAT request.
  */
-typedef struct {
-    struct list_head list; /**< List item. */
-    uint8_t drive_no; /**< Drive number. */
-    uint16_t idn; /**< Sercos ID-Number. */
-    ec_al_state_t al_state; /**< AL state (only valid for IDN config). */
-    uint8_t *data; /**< Pointer to SDO data. */
-    size_t mem_size; /**< Size of SDO data memory. */
-    size_t data_size; /**< Size of SDO data. */
-    ec_direction_t dir; /**< Direction. EC_DIR_OUTPUT means writing to the
-                          slave, EC_DIR_INPUT means reading from the slave. */
+typedef struct
+{
+    struct list_head list;             /**< List item. */
+    uint8_t drive_no;                  /**< Drive number. */
+    uint16_t idn;                      /**< Sercos ID-Number. */
+    ec_al_state_t al_state;            /**< AL state (only valid for IDN config). */
+    uint8_t *data;                     /**< Pointer to SDO data. */
+    size_t mem_size;                   /**< Size of SDO data memory. */
+    size_t data_size;                  /**< Size of SDO data. */
+    ec_direction_t dir;                /**< Direction. EC_DIR_OUTPUT means writing to the
+                                         slave, EC_DIR_INPUT means reading from the slave. */
     ec_internal_request_state_t state; /**< Request state. */
-    unsigned long jiffies_sent; /**< Jiffies, when the upload/download
-                                     request was sent. */
-    uint16_t error_code; /**< SoE error code. */
+    unsigned long jiffies_sent;        /**< Jiffies, when the upload/download
+                                            request was sent. */
+    uint16_t error_code;               /**< SoE error code. */
 } ec_soe_request_t;
 
 /*****************************************************************************/

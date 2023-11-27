@@ -49,12 +49,13 @@
 
 /** SII write request.
  */
-typedef struct {
-    struct list_head list; /**< List head. */
-    ec_slave_t *slave; /**< EtherCAT slave. */
-    uint16_t offset; /**< SII word offset. */
-    size_t nwords; /**< Number of words. */
-    const uint16_t *words; /**< Pointer to the data words. */
+typedef struct
+{
+    struct list_head list;             /**< List head. */
+    ec_slave_t *slave;                 /**< EtherCAT slave. */
+    uint16_t offset;                   /**< SII word offset. */
+    size_t nwords;                     /**< Number of words. */
+    const uint16_t *words;             /**< Pointer to the data words. */
     ec_internal_request_state_t state; /**< State of the request. */
 } ec_sii_write_request_t;
 
@@ -64,31 +65,32 @@ typedef struct ec_fsm_master ec_fsm_master_t; /**< \see ec_fsm_master */
 
 /** Finite state machine of an EtherCAT master.
  */
-struct ec_fsm_master {
-    ec_master_t *master; /**< master the FSM runs on */
+struct ec_fsm_master
+{
+    ec_master_t *master;     /**< master the FSM runs on */
     ec_datagram_t *datagram; /**< datagram used in the state machine */
-    unsigned int retries; /**< retries on datagram timeout. */
+    unsigned int retries;    /**< retries on datagram timeout. */
 
-    void (*state)(ec_fsm_master_t *); /**< master state function */
-    ec_device_index_t dev_idx; /**< Current device index (for scanning etc.).
-                                */
-    int idle; /**< state machine is in idle phase */
-    unsigned long scan_jiffies; /**< beginning of slave scanning */
-    uint8_t link_state[EC_MAX_NUM_DEVICES]; /**< Last link state for every
-                                              device. */
+    void (*state)(ec_fsm_master_t *);                   /**< master state function */
+    ec_device_index_t dev_idx;                          /**< Current device index (for scanning etc.).
+                                                         */
+    int idle;                                           /**< state machine is in idle phase */
+    unsigned long scan_jiffies;                         /**< beginning of slave scanning */
+    uint8_t link_state[EC_MAX_NUM_DEVICES];             /**< Last link state for every
+                                                          device. */
     unsigned int slaves_responding[EC_MAX_NUM_DEVICES]; /**< Number of
                                                           responding slaves
                                                           for every device. */
-    unsigned int rescan_required; /**< A bus rescan is required. */
-    ec_slave_state_t slave_states[EC_MAX_NUM_DEVICES]; /**< AL states of
-                                                         responding slaves for
-                                                         every device. */
-    ec_slave_t *slave; /**< current slave */
-    ec_sii_write_request_t *sii_request; /**< SII write request */
-    off_t sii_index; /**< index to SII write request data */
+    unsigned int rescan_required;                       /**< A bus rescan is required. */
+    ec_slave_state_t slave_states[EC_MAX_NUM_DEVICES];  /**< AL states of
+                                                          responding slaves for
+                                                          every device. */
+    ec_slave_t *slave;                                  /**< current slave */
+    ec_sii_write_request_t *sii_request;                /**< SII write request */
+    off_t sii_index;                                    /**< index to SII write request data */
 
     ec_fsm_reboot_t fsm_reboot; /**< Slave reboot state machine */
-    ec_fsm_sii_t fsm_sii; /**< SII state machine */
+    ec_fsm_sii_t fsm_sii;       /**< SII state machine */
 };
 
 /*****************************************************************************/

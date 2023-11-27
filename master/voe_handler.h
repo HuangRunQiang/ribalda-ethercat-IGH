@@ -46,20 +46,21 @@
 
 /** Vendor specific over EtherCAT handler.
  */
-struct ec_voe_handler {
-    struct list_head list; /**< List item. */
-    ec_slave_config_t *config; /**< Parent slave configuration. */
-    ec_datagram_t datagram; /**< State machine datagram. */
-    uint32_t vendor_id; /**< Vendor ID for the header. */
-    uint16_t vendor_type; /**< Vendor type for the header. */
-    size_t data_size; /**< Size of VoE data. */
-    ec_direction_t dir; /**< Direction. EC_DIR_OUTPUT means writing to
-                          the slave, EC_DIR_INPUT means reading from the
-                          slave. */
-    void (*state)(ec_voe_handler_t *); /**< State function */
+struct ec_voe_handler
+{
+    struct list_head list;                     /**< List item. */
+    ec_slave_config_t *config;                 /**< Parent slave configuration. */
+    ec_datagram_t datagram;                    /**< State machine datagram. */
+    uint32_t vendor_id;                        /**< Vendor ID for the header. */
+    uint16_t vendor_type;                      /**< Vendor type for the header. */
+    size_t data_size;                          /**< Size of VoE data. */
+    ec_direction_t dir;                        /**< Direction. EC_DIR_OUTPUT means writing to
+                                                 the slave, EC_DIR_INPUT means reading from the
+                                                 slave. */
+    void (*state)(ec_voe_handler_t *);         /**< State function */
     ec_internal_request_state_t request_state; /**< Handler state. */
-    unsigned int retries; /**< retries upon datagram timeout */
-    unsigned long jiffies_start; /**< Timestamp for timeout calculation. */
+    unsigned int retries;                      /**< retries upon datagram timeout */
+    unsigned long jiffies_start;               /**< Timestamp for timeout calculation. */
 };
 
 /*****************************************************************************/

@@ -54,17 +54,17 @@ static int ec_mac_parse(uint8_t *, const char *, int);
 
 /*****************************************************************************/
 
-static char *main_devices[MAX_MASTERS]; /**< Main devices parameter. */
-static unsigned int master_count; /**< Number of masters. */
+static char *main_devices[MAX_MASTERS];   /**< Main devices parameter. */
+static unsigned int master_count;         /**< Number of masters. */
 static char *backup_devices[MAX_MASTERS]; /**< Backup devices parameter. */
-static unsigned int backup_count; /**< Number of backup devices. */
+static unsigned int backup_count;         /**< Number of backup devices. */
 #ifdef EC_EOE
 char *eoe_interfaces[MAX_EOE]; /**< EOE interfaces parameter. */
-unsigned int eoe_count; /**< Number of EOE interfaces. */
-bool eoe_autocreate = 1;  /**< Auto-create EOE interfaces. */
+unsigned int eoe_count;        /**< Number of EOE interfaces. */
+bool eoe_autocreate = 1;       /**< Auto-create EOE interfaces. */
 #endif
-static unsigned int debug_level;  /**< Debug level parameter. */
-unsigned long pcap_size;  /**< Pcap buffer size in bytes. */
+static unsigned int debug_level; /**< Debug level parameter. */
+unsigned long pcap_size;         /**< Pcap buffer size in bytes. */
 
 static ec_master_t *masters; /**< Array of masters. */
 static ec_lock_t master_sem; /**< Master semaphore. */
@@ -117,9 +117,11 @@ int __init ec_init_module(void)
 
     ec_lock_init(&master_sem);
 
-    if (master_count) {
+    if (master_count)
+    {
         if (alloc_chrdev_region(&device_number,
-                    0, master_count, "EtherCAT")) {
+                                0, master_count, "EtherCAT"))
+        {
             EC_ERR("Failed to obtain device number(s)!\n");
             ret = -EBUSY;
             goto out_return;
@@ -127,7 +129,8 @@ int __init ec_init_module(void)
     }
 
     class = class_create(THIS_MODULE, "EtherCAT");
-    if (IS_ERR(class)) {
+    if (IS_ERR(class))
+    {
         EC_ERR("Failed to create device class.\n");
         ret = PTR_ERR(class);
         goto out_cdev;
@@ -137,12 +140,14 @@ int __init ec_init_module(void)
     memset(macs, 0x00, sizeof(uint8_t) * MAX_MASTERS * 2 * ETH_ALEN);
 
     // process MAC parameters
-    for (i = 0; i < master_count; i++) {
+    for (i = 0; i < master_count; i++)
+    {
         ret = ec_mac_parse(macs[i][0], main_devices[i], 0);
         if (ret)
             goto out_class;
 
-        if (i < backup_count) {
+        if (i < backup_count)
+        {
             ret = ec_mac_parse(macs[i][1], backup_devices[i], 1);
             if (ret)
                 goto out_class;
@@ -152,23 +157,26 @@ int __init ec_init_module(void)
     // initialize static master variables
     ec_master_init_static();
 
-    if (master_count) {
+    if (master_count)
+    {
         if (!(masters = kmalloc(sizeof(ec_master_t) * master_count,
-                        GFP_KERNEL))) {
+                                GFP_KERNEL)))
+        {
             EC_ERR("Failed to allocate memory"
-                    " for EtherCAT masters.\n");
+                   " for EtherCAT masters.\n");
             ret = -ENOMEM;
             goto out_class;
         }
     }
 
-    for (i = 0; i < master_count; i++) {
+    for (i = 0; i < master_count; i++)
+    {
         ret = ec_master_init(&masters[i], i, macs[i][0], macs[i][1],
-                    device_number, class, debug_level);
+                             device_number, class, debug_level);
         if (ret)
             goto out_free_masters;
     }
-    
+
     EC_INFO("%u master%s waiting for devices.\n",
             master_count, (master_count == 1 ? "" : "s"));
     return ret;
@@ -196,7 +204,8 @@ void __exit ec_cleanup_module(void)
 {
     unsigned int i;
 
-    for (i = 0; i < master_count; i++) {
+    for (i = 0; i < master_count; i++)
+    {
         ec_master_clear(&masters[i]);
     }
 
@@ -228,9 +237,9 @@ unsigned int ec_master_count(void)
  * \return true, if two MAC addresses are equal.
  */
 int ec_mac_equal(
-        const uint8_t *mac1, /**< First MAC address. */
-        const uint8_t *mac2 /**< Second MAC address. */
-        )
+    const uint8_t *mac1, /**< First MAC address. */
+    const uint8_t *mac2  /**< Second MAC address. */
+)
 {
     unsigned int i;
 
@@ -254,16 +263,18 @@ int ec_mac_equal(
  * \return number of bytes written.
  */
 size_t ec_mac_print(
-        const uint8_t *mac, /**< MAC address */
-        char *buffer /**< Target buffer. */
-        )
+    const uint8_t *mac, /**< MAC address */
+    char *buffer        /**< Target buffer. */
+)
 {
     size_t off = 0;
     unsigned int i;
 
-    for (i = 0; i < ETH_ALEN; i++) {
+    for (i = 0; i < ETH_ALEN; i++)
+    {
         off += sprintf(buffer + off, "%02X", mac[i]);
-        if (i < ETH_ALEN - 1) off += sprintf(buffer + off, ":");
+        if (i < ETH_ALEN - 1)
+            off += sprintf(buffer + off, ":");
     }
 
     return off;
@@ -275,8 +286,8 @@ size_t ec_mac_print(
  * \return true, if the MAC address is all-zero.
  */
 int ec_mac_is_zero(
-        const uint8_t *mac /**< MAC address. */
-        )
+    const uint8_t *mac /**< MAC address. */
+)
 {
     unsigned int i;
 
@@ -293,8 +304,8 @@ int ec_mac_is_zero(
  * \return true, if the given MAC address is the broadcast address.
  */
 int ec_mac_is_broadcast(
-        const uint8_t *mac /**< MAC address. */
-        )
+    const uint8_t *mac /**< MAC address. */
+)
 {
     unsigned int i;
 
@@ -320,25 +331,30 @@ static int ec_mac_parse(uint8_t *mac, const char *src, int allow_empty)
     const char *orig = src;
     char *rem;
 
-    if (!strlen(src)) {
-        if (allow_empty){
+    if (!strlen(src))
+    {
+        if (allow_empty)
+        {
             return 0;
-        } else {
+        }
+        else
+        {
             EC_ERR("MAC address may not be empty.\n");
             return -EINVAL;
         }
     }
 
-    for (i = 0; i < ETH_ALEN; i++) {
+    for (i = 0; i < ETH_ALEN; i++)
+    {
         value = simple_strtoul(src, &rem, 16);
-        if (rem != src + 2
-                || value > 0xFF
-                || (i < ETH_ALEN - 1 && *rem != ':')) {
+        if (rem != src + 2 || value > 0xFF || (i < ETH_ALEN - 1 && *rem != ':'))
+        {
             EC_ERR("Invalid MAC address \"%s\".\n", orig);
             return -EINVAL;
         }
         mac[i] = value;
-        if (i < ETH_ALEN - 1) {
+        if (i < ETH_ALEN - 1)
+        {
             src = rem + 1; // skip colon
         }
     }
@@ -353,21 +369,24 @@ static int ec_mac_parse(uint8_t *mac, const char *src, int allow_empty)
  * and the last 128 bytes will be shown
  */
 void ec_print_data(const uint8_t *data, /**< pointer to data */
-                   size_t size /**< number of bytes to output */
-                   )
+                   size_t size          /**< number of bytes to output */
+)
 {
     unsigned int i;
 
     EC_DBG("");
-    for (i = 0; i < size; i++) {
+    for (i = 0; i < size; i++)
+    {
         printk(KERN_CONT "%02X ", data[i]);
 
-        if ((i + 1) % 16 == 0 && i < size - 1) {
+        if ((i + 1) % 16 == 0 && i < size - 1)
+        {
             printk(KERN_CONT "\n");
             EC_DBG("");
         }
 
-        if (i + 1 == 128 && size > 256) {
+        if (i + 1 == 128 && size > 256)
+        {
             printk(KERN_CONT "dropped %zu bytes\n", size - 128 - i);
             i = size - 128;
             EC_DBG("");
@@ -382,16 +401,20 @@ void ec_print_data(const uint8_t *data, /**< pointer to data */
  */
 void ec_print_data_diff(const uint8_t *d1, /**< first data */
                         const uint8_t *d2, /**< second data */
-                        size_t size /** number of bytes to output */
-                        )
+                        size_t size        /** number of bytes to output */
+)
 {
     unsigned int i;
 
     EC_DBG("");
-    for (i = 0; i < size; i++) {
-        if (d1[i] == d2[i]) printk(KERN_CONT ".. ");
-        else printk(KERN_CONT "%02X ", d2[i]);
-        if ((i + 1) % 16 == 0) {
+    for (i = 0; i < size; i++)
+    {
+        if (d1[i] == d2[i])
+            printk(KERN_CONT ".. ");
+        else
+            printk(KERN_CONT "%02X ", d2[i]);
+        if ((i + 1) % 16 == 0)
+        {
             printk(KERN_CONT "\n");
             EC_DBG("");
         }
@@ -406,57 +429,81 @@ void ec_print_data_diff(const uint8_t *d1, /**< first data */
  * \return Size of the created string.
  */
 size_t ec_state_string(uint8_t states, /**< slave states */
-                       char *buffer, /**< target buffer
-                                       (min. EC_STATE_STRING_SIZE bytes) */
-                       uint8_t multi /**< Show multi-state mask. */
-                       )
+                       char *buffer,   /**< target buffer
+                                         (min. EC_STATE_STRING_SIZE bytes) */
+                       uint8_t multi   /**< Show multi-state mask. */
+)
 {
     off_t off = 0;
     unsigned int first = 1;
 
-    if (!states) {
+    if (!states)
+    {
         off += sprintf(buffer + off, "(unknown)");
         return off;
     }
 
-    if (multi) { // multiple slaves
-        if (states & EC_SLAVE_STATE_INIT) {
+    if (multi)
+    { // multiple slaves
+        if (states & EC_SLAVE_STATE_INIT)
+        {
             off += sprintf(buffer + off, "INIT");
             first = 0;
         }
-        if (states & EC_SLAVE_STATE_PREOP) {
-            if (!first) off += sprintf(buffer + off, ", ");
+        if (states & EC_SLAVE_STATE_PREOP)
+        {
+            if (!first)
+                off += sprintf(buffer + off, ", ");
             off += sprintf(buffer + off, "PREOP");
             first = 0;
         }
-        if (states & EC_SLAVE_STATE_SAFEOP) {
-            if (!first) off += sprintf(buffer + off, ", ");
+        if (states & EC_SLAVE_STATE_SAFEOP)
+        {
+            if (!first)
+                off += sprintf(buffer + off, ", ");
             off += sprintf(buffer + off, "SAFEOP");
             first = 0;
         }
-        if (states & EC_SLAVE_STATE_OP) {
-            if (!first) off += sprintf(buffer + off, ", ");
+        if (states & EC_SLAVE_STATE_OP)
+        {
+            if (!first)
+                off += sprintf(buffer + off, ", ");
             off += sprintf(buffer + off, "OP");
         }
-    } else { // single slave
-        if ((states & EC_SLAVE_STATE_MASK) == EC_SLAVE_STATE_INIT) {
+    }
+    else
+    { // single slave
+        if ((states & EC_SLAVE_STATE_MASK) == EC_SLAVE_STATE_INIT)
+        {
             off += sprintf(buffer + off, "INIT");
-        } else if ((states & EC_SLAVE_STATE_MASK) == EC_SLAVE_STATE_PREOP) {
+        }
+        else if ((states & EC_SLAVE_STATE_MASK) == EC_SLAVE_STATE_PREOP)
+        {
             off += sprintf(buffer + off, "PREOP");
-        } else if ((states & EC_SLAVE_STATE_MASK) == EC_SLAVE_STATE_BOOT) {
+        }
+        else if ((states & EC_SLAVE_STATE_MASK) == EC_SLAVE_STATE_BOOT)
+        {
             off += sprintf(buffer + off, "BOOT");
-        } else if ((states & EC_SLAVE_STATE_MASK) == EC_SLAVE_STATE_SAFEOP) {
+        }
+        else if ((states & EC_SLAVE_STATE_MASK) == EC_SLAVE_STATE_SAFEOP)
+        {
             off += sprintf(buffer + off, "SAFEOP");
-        } else if ((states & EC_SLAVE_STATE_MASK) == EC_SLAVE_STATE_OP) {
+        }
+        else if ((states & EC_SLAVE_STATE_MASK) == EC_SLAVE_STATE_OP)
+        {
             off += sprintf(buffer + off, "OP");
-        } else {
+        }
+        else
+        {
             off += sprintf(buffer + off, "(invalid)");
         }
         first = 0;
     }
 
-    if (states & EC_SLAVE_STATE_ACK_ERR) {
-        if (!first) off += sprintf(buffer + off, " + ");
+    if (states & EC_SLAVE_STATE_ACK_ERR)
+    {
+        if (!first)
+            off += sprintf(buffer + off, " + ");
         off += sprintf(buffer + off, "ERROR");
     }
 
@@ -471,8 +518,7 @@ size_t ec_state_string(uint8_t states, /**< slave states */
  */
 const char *ec_device_names[2] = {
     "main",
-    "backup"
-};
+    "backup"};
 
 /** Offers an EtherCAT device to a certain master.
  *
@@ -485,39 +531,41 @@ const char *ec_device_names[2] = {
  * \ingroup DeviceInterface
  */
 ec_device_t *ecdev_offer(
-        struct net_device *net_dev, /**< net_device to offer */
-        ec_pollfunc_t poll, /**< device poll function */
-        struct module *module /**< pointer to the module */
-        )
+    struct net_device *net_dev, /**< net_device to offer */
+    ec_pollfunc_t poll,         /**< device poll function */
+    struct module *module       /**< pointer to the module */
+)
 {
     ec_master_t *master;
     char str[EC_MAX_MAC_STRING_SIZE];
     unsigned int i, dev_idx;
 
-    for (i = 0; i < master_count; i++) {
+    for (i = 0; i < master_count; i++)
+    {
         master = &masters[i];
         ec_mac_print(net_dev->dev_addr, str);
 
-        if (ec_lock_down_interruptible(&master->device_sem)) {
+        if (ec_lock_down_interruptible(&master->device_sem))
+        {
             EC_MASTER_WARN(master, "%s() interrupted!\n", __func__);
             return NULL;
         }
 
         for (dev_idx = EC_DEVICE_MAIN;
-                dev_idx < ec_master_num_devices(master); dev_idx++) {
-            if (!master->devices[dev_idx].dev
-                && (ec_mac_equal(master->macs[dev_idx], net_dev->dev_addr)
-                    || ec_mac_is_broadcast(master->macs[dev_idx]))) {
+             dev_idx < ec_master_num_devices(master); dev_idx++)
+        {
+            if (!master->devices[dev_idx].dev && (ec_mac_equal(master->macs[dev_idx], net_dev->dev_addr) || ec_mac_is_broadcast(master->macs[dev_idx])))
+            {
 
                 EC_INFO("Accepting %s as %s device for master %u.\n",
                         str, ec_device_names[dev_idx != 0], master->index);
 
                 ec_device_attach(&master->devices[dev_idx],
-                        net_dev, poll, module);
+                                 net_dev, poll, module);
                 ec_lock_up(&master->device_sem);
 
                 snprintf(net_dev->name, IFNAMSIZ, "ec%c%u",
-                        ec_device_names[dev_idx != 0][0], master->index);
+                         ec_device_names[dev_idx != 0][0], master->index);
 
                 return &master->devices[dev_idx]; // offer accepted
             }
@@ -542,27 +590,30 @@ ec_device_t *ecdev_offer(
  * \return Requested master.
  */
 ec_master_t *ecrt_request_master_err(
-        unsigned int master_index /**< Master index. */
-        )
+    unsigned int master_index /**< Master index. */
+)
 {
     ec_master_t *master, *errptr = NULL;
     unsigned int dev_idx = EC_DEVICE_MAIN;
 
     EC_INFO("Requesting master %u...\n", master_index);
 
-    if (master_index >= master_count) {
+    if (master_index >= master_count)
+    {
         EC_ERR("Invalid master index %u.\n", master_index);
         errptr = ERR_PTR(-EINVAL);
         goto out_return;
     }
     master = &masters[master_index];
 
-    if (ec_lock_down_interruptible(&master_sem)) {
+    if (ec_lock_down_interruptible(&master_sem))
+    {
         errptr = ERR_PTR(-EINTR);
         goto out_return;
     }
 
-    if (master->reserved) {
+    if (master->reserved)
+    {
         ec_lock_up(&master_sem);
         EC_MASTER_ERR(master, "Master already in use!\n");
         errptr = ERR_PTR(-EBUSY);
@@ -571,21 +622,25 @@ ec_master_t *ecrt_request_master_err(
     master->reserved = 1;
     ec_lock_up(&master_sem);
 
-    if (ec_lock_down_interruptible(&master->device_sem)) {
+    if (ec_lock_down_interruptible(&master->device_sem))
+    {
         errptr = ERR_PTR(-EINTR);
         goto out_release;
     }
 
-    if (master->phase != EC_IDLE) {
+    if (master->phase != EC_IDLE)
+    {
         ec_lock_up(&master->device_sem);
         EC_MASTER_ERR(master, "Master still waiting for devices!\n");
         errptr = ERR_PTR(-ENODEV);
         goto out_release;
     }
 
-    for (; dev_idx < ec_master_num_devices(master); dev_idx++) {
+    for (; dev_idx < ec_master_num_devices(master); dev_idx++)
+    {
         ec_device_t *device = &master->devices[dev_idx];
-        if (!try_module_get(device->module)) {
+        if (!try_module_get(device->module))
+        {
             ec_lock_up(&master->device_sem);
             EC_MASTER_ERR(master, "Device module is unloading!\n");
             errptr = ERR_PTR(-ENODEV);
@@ -595,7 +650,8 @@ ec_master_t *ecrt_request_master_err(
 
     ec_lock_up(&master->device_sem);
 
-    if (ec_master_enter_operation_phase(master)) {
+    if (ec_master_enter_operation_phase(master))
+    {
         EC_MASTER_ERR(master, "Failed to enter OPERATION phase!\n");
         errptr = ERR_PTR(-EIO);
         goto out_module_put;
@@ -604,14 +660,15 @@ ec_master_t *ecrt_request_master_err(
     EC_INFO("Successfully requested master %u.\n", master_index);
     return master;
 
- out_module_put:
-    for (; dev_idx > 0; dev_idx--) {
+out_module_put:
+    for (; dev_idx > 0; dev_idx--)
+    {
         ec_device_t *device = &master->devices[dev_idx - 1];
         module_put(device->module);
     }
- out_release:
+out_release:
     master->reserved = 0;
- out_return:
+out_return:
     return errptr;
 }
 
@@ -631,16 +688,18 @@ void ecrt_release_master(ec_master_t *master)
 
     EC_MASTER_INFO(master, "Releasing master...\n");
 
-    if (!master->reserved) {
+    if (!master->reserved)
+    {
         EC_MASTER_WARN(master, "%s(): Master was was not requested!\n",
-                __func__);
+                       __func__);
         return;
     }
 
     ec_master_leave_operation_phase(master);
 
     for (dev_idx = EC_DEVICE_MAIN; dev_idx < ec_master_num_devices(master);
-            dev_idx++) {
+         dev_idx++)
+    {
         module_put(master->devices[dev_idx].module);
     }
 

@@ -43,22 +43,22 @@
 /** Constructor.
  */
 void ec_sdo_entry_init(
-        ec_sdo_entry_t *entry, /**< SDO entry. */
-        ec_sdo_t *sdo, /**< Parent SDO. */
-        uint8_t subindex /**< Subindex. */
-        )
+    ec_sdo_entry_t *entry, /**< SDO entry. */
+    ec_sdo_t *sdo,         /**< Parent SDO. */
+    uint8_t subindex       /**< Subindex. */
+)
 {
-    entry->sdo = sdo;
-    entry->subindex = subindex;
-    entry->data_type = 0x0000;
-    entry->bit_length = 0;
-    entry->read_access[EC_SDO_ENTRY_ACCESS_PREOP] = 0;
-    entry->read_access[EC_SDO_ENTRY_ACCESS_SAFEOP] = 0;
-    entry->read_access[EC_SDO_ENTRY_ACCESS_OP] = 0;
-    entry->write_access[EC_SDO_ENTRY_ACCESS_PREOP] = 0;
-    entry->write_access[EC_SDO_ENTRY_ACCESS_SAFEOP] = 0;
-    entry->write_access[EC_SDO_ENTRY_ACCESS_OP] = 0;
-    entry->description = NULL;
+        entry->sdo = sdo;
+        entry->subindex = subindex;
+        entry->data_type = 0x0000;
+        entry->bit_length = 0;
+        entry->read_access[EC_SDO_ENTRY_ACCESS_PREOP] = 0;
+        entry->read_access[EC_SDO_ENTRY_ACCESS_SAFEOP] = 0;
+        entry->read_access[EC_SDO_ENTRY_ACCESS_OP] = 0;
+        entry->write_access[EC_SDO_ENTRY_ACCESS_PREOP] = 0;
+        entry->write_access[EC_SDO_ENTRY_ACCESS_SAFEOP] = 0;
+        entry->write_access[EC_SDO_ENTRY_ACCESS_OP] = 0;
+        entry->description = NULL;
 }
 
 /*****************************************************************************/
@@ -66,12 +66,12 @@ void ec_sdo_entry_init(
 /** Destructor.
  */
 void ec_sdo_entry_clear(
-        ec_sdo_entry_t *entry /**< SDO entry. */
-        )
+    ec_sdo_entry_t *entry /**< SDO entry. */
+)
 {
 
-    if (entry->description)
-        kfree(entry->description);
+        if (entry->description)
+                kfree(entry->description);
 }
 
 /*****************************************************************************/

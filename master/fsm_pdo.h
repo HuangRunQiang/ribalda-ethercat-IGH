@@ -54,17 +54,17 @@ typedef struct ec_fsm_pdo ec_fsm_pdo_t;
 struct ec_fsm_pdo
 {
     void (*state)(ec_fsm_pdo_t *, ec_datagram_t *); /**< State function. */
-    ec_fsm_coe_t *fsm_coe; /**< CoE state machine to use. */
-    ec_fsm_pdo_entry_t fsm_pdo_entry; /**< PDO entry state machine. */
-    ec_pdo_list_t pdos; /**< PDO configuration. */
-    ec_sdo_request_t request; /**< SDO request. */
-    ec_pdo_t slave_pdo; /**< PDO actually appearing in a slave. */
+    ec_fsm_coe_t *fsm_coe;                          /**< CoE state machine to use. */
+    ec_fsm_pdo_entry_t fsm_pdo_entry;               /**< PDO entry state machine. */
+    ec_pdo_list_t pdos;                             /**< PDO configuration. */
+    ec_sdo_request_t request;                       /**< SDO request. */
+    ec_pdo_t slave_pdo;                             /**< PDO actually appearing in a slave. */
 
-    ec_slave_t *slave; /**< Slave the FSM runs on. */
-    uint8_t sync_index; /**< Current sync manager index. */
-    ec_sync_t *sync; /**< Current sync manager. */
-    ec_pdo_t *pdo; /**< Current PDO. */
-    unsigned int pdo_pos; /**< Assignment position of current PDOs. */
+    ec_slave_t *slave;      /**< Slave the FSM runs on. */
+    uint8_t sync_index;     /**< Current sync manager index. */
+    ec_sync_t *sync;        /**< Current sync manager. */
+    ec_pdo_t *pdo;          /**< Current PDO. */
+    unsigned int pdo_pos;   /**< Assignment position of current PDOs. */
     unsigned int pdo_count; /**< Number of assigned PDOs. */
 };
 

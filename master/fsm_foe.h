@@ -50,20 +50,21 @@ typedef struct ec_fsm_foe ec_fsm_foe_t; /**< \see ec_fsm_foe */
 
 /** Finite state machines for the CANopen-over-EtherCAT protocol.
  */
-struct ec_fsm_foe {
-    ec_slave_t *slave; /**< Slave the FSM runs on. */
+struct ec_fsm_foe
+{
+    ec_slave_t *slave;    /**< Slave the FSM runs on. */
     unsigned int retries; /**< Retries upon datagram timeout */
 
     void (*state)(ec_fsm_foe_t *, ec_datagram_t *); /**< FoE state function. */
-    ec_datagram_t *datagram; /**< Datagram used in previous step. */
-    unsigned long jiffies_start; /**< FoE timestamp. */
-    ec_foe_request_t *request; /**< FoE request. */
+    ec_datagram_t *datagram;                        /**< Datagram used in previous step. */
+    unsigned long jiffies_start;                    /**< FoE timestamp. */
+    ec_foe_request_t *request;                      /**< FoE request. */
 
-    uint32_t buffer_size; /**< Size of transmit/receive buffer. */
+    uint32_t buffer_size;   /**< Size of transmit/receive buffer. */
     uint32_t buffer_offset; /**< Offset of data to transmit/receive next. */
-    uint32_t last_packet; /**< Current packet is last one to send/receive. */
-    uint32_t packet_no; /**< FoE packet number. */
-    uint32_t current_size; /**< Size of current packet to send. */
+    uint32_t last_packet;   /**< Current packet is last one to send/receive. */
+    uint32_t packet_no;     /**< FoE packet number. */
+    uint32_t current_size;  /**< Size of current packet to send. */
 };
 
 /*****************************************************************************/

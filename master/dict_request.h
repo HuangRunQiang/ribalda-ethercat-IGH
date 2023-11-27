@@ -45,8 +45,9 @@
 
 /** CANopen dictionary request.
  */
-typedef struct {
-    struct list_head list; /**< List item. */
+typedef struct
+{
+    struct list_head list;             /**< List item. */
     ec_internal_request_state_t state; /**< SDO request state. */
 } ec_dict_request_t;
 

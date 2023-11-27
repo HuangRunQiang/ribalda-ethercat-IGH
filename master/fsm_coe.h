@@ -49,21 +49,22 @@ typedef struct ec_fsm_coe ec_fsm_coe_t; /**< \see ec_fsm_coe */
 
 /** Finite state machines for the CANopen over EtherCAT protocol.
  */
-struct ec_fsm_coe {
-    ec_slave_t *slave; /**< slave the FSM runs on */
+struct ec_fsm_coe
+{
+    ec_slave_t *slave;    /**< slave the FSM runs on */
     unsigned int retries; /**< retries upon datagram timeout */
 
     void (*state)(ec_fsm_coe_t *, ec_datagram_t *); /**< CoE state function */
-    ec_datagram_t *datagram; /**< Datagram used in last step. */
-    unsigned long jiffies_start; /**< CoE timestamp. */
-    ec_sdo_t *sdo; /**< current SDO */
-    uint8_t subindex; /**< current subindex */
-    ec_sdo_request_t *request; /**< SDO request */
-    uint32_t complete_size; /**< Used when segmenting. */
-    uint8_t toggle; /**< toggle bit for segment commands */
-    uint32_t offset; /**< Data offset during segmented download. */
-    uint32_t remaining; /**< Remaining bytes during segmented download. */
-    size_t segment_size; /**< Current segment size. */
+    ec_datagram_t *datagram;                        /**< Datagram used in last step. */
+    unsigned long jiffies_start;                    /**< CoE timestamp. */
+    ec_sdo_t *sdo;                                  /**< current SDO */
+    uint8_t subindex;                               /**< current subindex */
+    ec_sdo_request_t *request;                      /**< SDO request */
+    uint32_t complete_size;                         /**< Used when segmenting. */
+    uint8_t toggle;                                 /**< toggle bit for segment commands */
+    uint32_t offset;                                /**< Data offset during segmented download. */
+    uint32_t remaining;                             /**< Remaining bytes during segmented download. */
+    size_t segment_size;                            /**< Current segment size. */
 };
 
 /*****************************************************************************/

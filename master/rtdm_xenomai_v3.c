@@ -42,9 +42,10 @@
  */
 #define DEBUG_RTDM 0
 
-struct ec_rtdm_context {
+struct ec_rtdm_context
+{
 	struct rtdm_fd *fd;
-	ec_ioctl_context_t ioctl_ctx;	/**< Context structure. */
+	ec_ioctl_context_t ioctl_ctx; /**< Context structure. */
 };
 
 static int ec_rtdm_open(struct rtdm_fd *fd, int oflags)
@@ -64,7 +65,7 @@ static int ec_rtdm_open(struct rtdm_fd *fd, int oflags)
 
 #if DEBUG_RTDM
 	EC_MASTER_INFO(rtdm_dev->master, "RTDM device %s opened.\n",
-			dev->name);
+				   dev->name);
 #endif
 
 	return 0;
@@ -84,21 +85,21 @@ static void ec_rtdm_close(struct rtdm_fd *fd)
 
 #if DEBUG_RTDM
 	EC_MASTER_INFO(rtdm_dev->master, "RTDM device %s closed.\n",
-			dev->name);
+				   dev->name);
 #endif
 }
 
 #if DEBUG_RTDM
-struct ec_ioctl_desc {
+struct ec_ioctl_desc
+{
 	unsigned int cmd;
 	const char *name;
 };
 
-#define EC_IOCTL_DEF(ioctl)	\
-	[_IOC_NR(ioctl)] = {	\
-		.cmd = ioctl,	\
-		.name = #ioctl	\
-	}
+#define EC_IOCTL_DEF(ioctl) \
+	[_IOC_NR(ioctl)] = {    \
+		.cmd = ioctl,       \
+		.name = #ioctl}
 
 static const struct ec_ioctl_desc ec_ioctls[] = {
 	EC_IOCTL_DEF(EC_IOCTL_MODULE),
@@ -215,7 +216,7 @@ static const struct ec_ioctl_desc ec_ioctls[] = {
 #endif
 
 static int ec_rtdm_ioctl_rt(struct rtdm_fd *fd, unsigned int request,
-			 void __user *arg)
+							void __user *arg)
 {
 	struct ec_rtdm_context *ctx = rtdm_fd_to_private(fd);
 	struct rtdm_device *dev = rtdm_fd_device(fd);
@@ -226,15 +227,17 @@ static int ec_rtdm_ioctl_rt(struct rtdm_fd *fd, unsigned int request,
 	const struct ec_ioctl_desc *ioctl = &ec_ioctls[nr];
 
 	EC_MASTER_INFO(rtdm_dev->master, "ioctl_rt(request = %u, ctl = %02x %s)"
-			" on RTDM device %s.\n", request, _IOC_NR(request),ioctl->name,
-			dev->name);
+									 " on RTDM device %s.\n",
+				   request, _IOC_NR(request), ioctl->name,
+				   dev->name);
 #endif
 
 	/*
 	 * FIXME: Execute ioctls from non-rt context except below ioctls to
 	 *	  avoid any unknown system hanging.
 	 */
-	switch (request) {
+	switch (request)
+	{
 	case EC_IOCTL_SEND:
 	case EC_IOCTL_RECEIVE:
 	case EC_IOCTL_MASTER_STATE:
@@ -255,7 +258,7 @@ static int ec_rtdm_ioctl_rt(struct rtdm_fd *fd, unsigned int request,
 }
 
 static int ec_rtdm_ioctl(struct rtdm_fd *fd, unsigned int request,
-			 void __user *arg)
+						 void __user *arg)
 {
 	struct ec_rtdm_context *ctx = rtdm_fd_to_private(fd);
 	struct rtdm_device *dev = rtdm_fd_device(fd);
@@ -266,26 +269,27 @@ static int ec_rtdm_ioctl(struct rtdm_fd *fd, unsigned int request,
 	const struct ec_ioctl_desc *ioctl = &ec_ioctls[nr];
 
 	EC_MASTER_INFO(rtdm_dev->master, "ioctl(request = %u, ctl = %02x %s)"
-			" on RTDM device %s.\n", request, _IOC_NR(request),ioctl->name,
-			dev->name);
+									 " on RTDM device %s.\n",
+				   request, _IOC_NR(request), ioctl->name,
+				   dev->name);
 #endif
 
 	return ec_ioctl_rtdm(rtdm_dev->master, &ctx->ioctl_ctx, request, arg);
 }
 
 static struct rtdm_driver ec_rtdm_driver = {
-	.profile_info		= RTDM_PROFILE_INFO(ec_rtdm,
-						    RTDM_CLASS_EXPERIMENTAL,
-						    222,
-						    0),
-	.device_flags		= RTDM_NAMED_DEVICE,
-	.device_count		= 1,
-	.context_size		= sizeof(struct ec_rtdm_context),
+	.profile_info = RTDM_PROFILE_INFO(ec_rtdm,
+									  RTDM_CLASS_EXPERIMENTAL,
+									  222,
+									  0),
+	.device_flags = RTDM_NAMED_DEVICE,
+	.device_count = 1,
+	.context_size = sizeof(struct ec_rtdm_context),
 	.ops = {
-		.open		= ec_rtdm_open,
-		.close		= ec_rtdm_close,
-		.ioctl_rt	= ec_rtdm_ioctl_rt,
-		.ioctl_nrt	= ec_rtdm_ioctl,
+		.open = ec_rtdm_open,
+		.close = ec_rtdm_close,
+		.ioctl_rt = ec_rtdm_ioctl_rt,
+		.ioctl_nrt = ec_rtdm_ioctl,
 	},
 };
 
@@ -297,9 +301,10 @@ int ec_rtdm_dev_init(ec_rtdm_dev_t *rtdm_dev, ec_master_t *master)
 	rtdm_dev->master = master;
 
 	rtdm_dev->dev = kzalloc(sizeof(struct rtdm_device), GFP_KERNEL);
-	if (!rtdm_dev->dev) {
+	if (!rtdm_dev->dev)
+	{
 		EC_MASTER_ERR(master,
-				"Failed to reserve memory for RTDM device.\n");
+					  "Failed to reserve memory for RTDM device.\n");
 		return -ENOMEM;
 	}
 
@@ -310,9 +315,11 @@ int ec_rtdm_dev_init(ec_rtdm_dev_t *rtdm_dev, ec_master_t *master)
 	dev->label = "EtherCAT%u";
 
 	ret = rtdm_dev_register(dev);
-	if (ret) {
+	if (ret)
+	{
 		EC_MASTER_ERR(master, "Initialization of RTDM interface failed"
-				" (return value %i).\n", ret);
+							  " (return value %i).\n",
+					  ret);
 		kfree(dev);
 		return ret;
 	}
@@ -327,7 +334,7 @@ void ec_rtdm_dev_clear(ec_rtdm_dev_t *rtdm_dev)
 	rtdm_dev_unregister(rtdm_dev->dev);
 
 	EC_MASTER_INFO(rtdm_dev->master, "Unregistered RTDM device %s.\n",
-			rtdm_dev->dev->name);
+				   rtdm_dev->dev->name);
 
 	kfree(rtdm_dev->dev);
 }
@@ -339,10 +346,10 @@ int ec_rtdm_mmap(ec_ioctl_context_t *ioctl_ctx, void **user_address)
 	int ret;
 
 	ret = rtdm_mmap_to_user(ctx->fd,
-			ioctl_ctx->process_data, ioctl_ctx->process_data_size,
-			PROT_READ | PROT_WRITE,
-			user_address,
-			NULL, NULL);
+							ioctl_ctx->process_data, ioctl_ctx->process_data_size,
+							PROT_READ | PROT_WRITE,
+							user_address,
+							NULL, NULL);
 	if (ret < 0)
 		return ret;
 

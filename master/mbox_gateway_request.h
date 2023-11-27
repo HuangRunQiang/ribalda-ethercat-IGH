@@ -45,18 +45,19 @@
 
 /** EtherCAT Mailbox Gateway request.
  */
-typedef struct {
-    struct list_head list; /**< List item. */
-    uint8_t *data; /**< Pointer to MBox request data. */
-    size_t mem_size; /**< Size of MBox request data memory. */
-    size_t data_size; /**< Size of MBox request data. */
-    uint32_t response_timeout; /**< Maximum time in ms, the transfer is
-                                 retried, if the slave does not respond. */
+typedef struct
+{
+    struct list_head list;             /**< List item. */
+    uint8_t *data;                     /**< Pointer to MBox request data. */
+    size_t mem_size;                   /**< Size of MBox request data memory. */
+    size_t data_size;                  /**< Size of MBox request data. */
+    uint32_t response_timeout;         /**< Maximum time in ms, the transfer is
+                                         retried, if the slave does not respond. */
     ec_internal_request_state_t state; /**< Request state. */
-    unsigned long jiffies_sent; /**< Jiffies, when the upload/download
-                                     request was sent. */
-    uint16_t error_code; /**< MBox Gateway error code. */
-    uint8_t mbox_type; /**< Cached MBox type */
+    unsigned long jiffies_sent;        /**< Jiffies, when the upload/download
+                                            request was sent. */
+    uint16_t error_code;               /**< MBox Gateway error code. */
+    uint8_t mbox_type;                 /**< Cached MBox type */
 } ec_mbg_request_t;
 
 /*****************************************************************************/

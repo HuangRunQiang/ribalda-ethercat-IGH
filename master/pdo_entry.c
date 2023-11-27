@@ -43,8 +43,8 @@
 /** PDO entry constructor.
  */
 void ec_pdo_entry_init(
-        ec_pdo_entry_t *entry /**< PDO entry. */
-        )
+    ec_pdo_entry_t *entry /**< PDO entry. */
+)
 {
     entry->name = NULL;
 }
@@ -57,9 +57,9 @@ void ec_pdo_entry_init(
  * \retval <0 Error code.
  */
 int ec_pdo_entry_init_copy(
-        ec_pdo_entry_t *entry, /**< PDO entry. */
-        const ec_pdo_entry_t *other /**< PDO entry to copy from. */
-        )
+    ec_pdo_entry_t *entry,      /**< PDO entry. */
+    const ec_pdo_entry_t *other /**< PDO entry to copy from. */
+)
 {
     entry->index = other->index;
     entry->subindex = other->subindex;
@@ -87,9 +87,9 @@ void ec_pdo_entry_clear(ec_pdo_entry_t *entry /**< PDO entry. */)
  * \retval <0 Error code.
  */
 int ec_pdo_entry_set_name(
-        ec_pdo_entry_t *entry, /**< PDO entry. */
-        const char *name /**< New name. */
-        )
+    ec_pdo_entry_t *entry, /**< PDO entry. */
+    const char *name       /**< New name. */
+)
 {
     unsigned int len;
 
@@ -99,13 +99,17 @@ int ec_pdo_entry_set_name(
     if (entry->name)
         kfree(entry->name);
 
-    if (name && (len = strlen(name))) {
-        if (!(entry->name = (char *) kmalloc(len + 1, GFP_KERNEL))) {
+    if (name && (len = strlen(name)))
+    {
+        if (!(entry->name = (char *)kmalloc(len + 1, GFP_KERNEL)))
+        {
             EC_ERR("Failed to allocate PDO entry name.\n");
             return -ENOMEM;
         }
         memcpy(entry->name, name, len + 1);
-    } else {
+    }
+    else
+    {
         entry->name = NULL;
     }
 
@@ -120,13 +124,11 @@ int ec_pdo_entry_set_name(
  * \retval 0 The entries differ.
  */
 int ec_pdo_entry_equal(
-        const ec_pdo_entry_t *entry1, /**< First PDO entry. */
-        const ec_pdo_entry_t *entry2 /**< Second PDO entry. */
-        )
+    const ec_pdo_entry_t *entry1, /**< First PDO entry. */
+    const ec_pdo_entry_t *entry2  /**< Second PDO entry. */
+)
 {
-    return entry1->index == entry2->index
-        && entry1->subindex == entry2->subindex
-        && entry1->bit_length == entry2->bit_length;
+    return entry1->index == entry2->index && entry1->subindex == entry2->subindex && entry1->bit_length == entry2->bit_length;
 }
 
 /*****************************************************************************/

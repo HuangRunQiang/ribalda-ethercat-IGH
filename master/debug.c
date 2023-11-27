@@ -54,11 +54,11 @@ struct net_device_stats *ec_dbgdev_stats(struct net_device *);
 /** Device operations for debug interfaces.
  */
 static const struct net_device_ops ec_dbg_netdev_ops =
-{
-    .ndo_open = ec_dbgdev_open,
-    .ndo_stop = ec_dbgdev_stop,
-    .ndo_start_xmit = ec_dbgdev_tx,
-    .ndo_get_stats = ec_dbgdev_stats,
+    {
+        .ndo_open = ec_dbgdev_open,
+        .ndo_stop = ec_dbgdev_stop,
+        .ndo_start_xmit = ec_dbgdev_tx,
+        .ndo_get_stats = ec_dbgdev_stats,
 };
 #endif
 
@@ -72,10 +72,10 @@ static const struct net_device_ops ec_dbg_netdev_ops =
  * \retval <0 Error code.
  */
 int ec_debug_init(
-        ec_debug_t *dbg, /**< Debug object. */
-        ec_device_t *device, /**< EtherCAT device. */
-        const char *name /**< Interface name. */
-        )
+    ec_debug_t *dbg,     /**< Debug object. */
+    ec_device_t *device, /**< EtherCAT device. */
+    const char *name     /**< Interface name. */
+)
 {
     dbg->device = device;
     dbg->registered = 0;
@@ -84,13 +84,14 @@ int ec_debug_init(
     memset(&dbg->stats, 0, sizeof(struct net_device_stats));
 
     if (!(dbg->dev =
-          alloc_netdev(sizeof(ec_debug_t *), name,
+              alloc_netdev(sizeof(ec_debug_t *), name,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 17, 0)
-			NET_NAME_UNKNOWN,
+                           NET_NAME_UNKNOWN,
 #endif
-			ether_setup))) {
+                           ether_setup)))
+    {
         EC_MASTER_ERR(device->master, "Unable to allocate net_device"
-                " for debug object!\n");
+                                      " for debug object!\n");
         return -ENODEV;
     }
 
@@ -105,7 +106,7 @@ int ec_debug_init(
 #endif
 
     // initialize private data
-    *((ec_debug_t **) netdev_priv(dbg->dev)) = dbg;
+    *((ec_debug_t **)netdev_priv(dbg->dev)) = dbg;
 
     return 0;
 }
@@ -117,8 +118,8 @@ int ec_debug_init(
  * Unregisters the net_device and frees allocated memory.
  */
 void ec_debug_clear(
-        ec_debug_t *dbg /**< debug object */
-        )
+    ec_debug_t *dbg /**< debug object */
+)
 {
     ec_debug_unregister(dbg);
     free_netdev(dbg->dev);
@@ -129,9 +130,9 @@ void ec_debug_clear(
 /** Register debug interface.
  */
 void ec_debug_register(
-        ec_debug_t *dbg, /**< debug object */
-        const struct net_device *net_dev /**< 'Real' Ethernet device. */
-        )
+    ec_debug_t *dbg,                 /**< debug object */
+    const struct net_device *net_dev /**< 'Real' Ethernet device. */
+)
 {
     int result;
 
@@ -141,10 +142,14 @@ void ec_debug_register(
     memcpy(dbg->dev->dev_addr, net_dev->dev_addr, ETH_ALEN);
 
     // connect the net_device to the kernel
-    if ((result = register_netdev(dbg->dev))) {
+    if ((result = register_netdev(dbg->dev)))
+    {
         EC_MASTER_WARN(dbg->device->master, "Unable to register net_device:"
-                " error %i\n", result);
-    } else {
+                                            " error %i\n",
+                       result);
+    }
+    else
+    {
         dbg->registered = 1;
     }
 }
@@ -154,10 +159,11 @@ void ec_debug_register(
 /** Unregister debug interface.
  */
 void ec_debug_unregister(
-        ec_debug_t *dbg /**< debug object */
-        )
+    ec_debug_t *dbg /**< debug object */
+)
 {
-    if (dbg->registered) {
+    if (dbg->registered)
+    {
         dbg->opened = 0;
         dbg->registered = 0;
         unregister_netdev(dbg->dev);
@@ -169,10 +175,10 @@ void ec_debug_unregister(
 /** Sends frame data to the interface.
  */
 void ec_debug_send(
-        ec_debug_t *dbg, /**< debug object */
-        const uint8_t *data, /**< frame data */
-        size_t size /**< size of the frame data */
-        )
+    ec_debug_t *dbg,     /**< debug object */
+    const uint8_t *data, /**< frame data */
+    size_t size          /**< size of the frame data */
+)
 {
     struct sk_buff *skb;
 
@@ -180,7 +186,8 @@ void ec_debug_send(
         return;
 
     // allocate socket buffer
-    if (!(skb = dev_alloc_skb(size))) {
+    if (!(skb = dev_alloc_skb(size)))
+    {
         dbg->stats.rx_dropped++;
         return;
     }
@@ -208,13 +215,13 @@ void ec_debug_send(
  * \return Always zero (success).
  */
 int ec_dbgdev_open(
-        struct net_device *dev /**< debug net_device */
-        )
+    struct net_device *dev /**< debug net_device */
+)
 {
-    ec_debug_t *dbg = *((ec_debug_t **) netdev_priv(dev));
+    ec_debug_t *dbg = *((ec_debug_t **)netdev_priv(dev));
     dbg->opened = 1;
     EC_MASTER_INFO(dbg->device->master, "Debug interface %s opened.\n",
-            dev->name);
+                   dev->name);
     return 0;
 }
 
@@ -225,13 +232,13 @@ int ec_dbgdev_open(
  * \return Always zero (success).
  */
 int ec_dbgdev_stop(
-        struct net_device *dev /**< debug net_device */
-        )
+    struct net_device *dev /**< debug net_device */
+)
 {
-    ec_debug_t *dbg = *((ec_debug_t **) netdev_priv(dev));
+    ec_debug_t *dbg = *((ec_debug_t **)netdev_priv(dev));
     dbg->opened = 0;
     EC_MASTER_INFO(dbg->device->master, "Debug interface %s stopped.\n",
-            dev->name);
+                   dev->name);
     return 0;
 }
 
@@ -242,11 +249,11 @@ int ec_dbgdev_stop(
  * \return Always zero (success).
  */
 int ec_dbgdev_tx(
-        struct sk_buff *skb, /**< transmit socket buffer */
-        struct net_device *dev /**< EoE net_device */
-        )
+    struct sk_buff *skb,   /**< transmit socket buffer */
+    struct net_device *dev /**< EoE net_device */
+)
 {
-    ec_debug_t *dbg = *((ec_debug_t **) netdev_priv(dev));
+    ec_debug_t *dbg = *((ec_debug_t **)netdev_priv(dev));
 
     dev_kfree_skb(skb);
     dbg->stats.tx_dropped++;
@@ -260,10 +267,10 @@ int ec_dbgdev_tx(
  * \return Statistics.
  */
 struct net_device_stats *ec_dbgdev_stats(
-        struct net_device *dev /**< debug net_device */
-        )
+    struct net_device *dev /**< debug net_device */
+)
 {
-    ec_debug_t *dbg = *((ec_debug_t **) netdev_priv(dev));
+    ec_debug_t *dbg = *((ec_debug_t **)netdev_priv(dev));
     return &dbg->stats;
 }
 

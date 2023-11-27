@@ -46,11 +46,12 @@
 
 /** PDO description.
  */
-typedef struct {
-    struct list_head list; /**< List item. */
-    uint16_t index; /**< PDO index. */
-    int8_t sync_index; /**< Assigned sync manager. \todo remove? */
-    char *name; /**< PDO name. */
+typedef struct
+{
+    struct list_head list;    /**< List item. */
+    uint16_t index;           /**< PDO index. */
+    int8_t sync_index;        /**< Assigned sync manager. \todo remove? */
+    char *name;               /**< PDO name. */
     struct list_head entries; /**< List of PDO entries. */
 } ec_pdo_t;
 
@@ -66,7 +67,7 @@ int ec_pdo_copy_entries(ec_pdo_t *, const ec_pdo_t *);
 int ec_pdo_equal_entries(const ec_pdo_t *, const ec_pdo_t *);
 unsigned int ec_pdo_entry_count(const ec_pdo_t *);
 const ec_pdo_entry_t *ec_pdo_find_entry_by_pos_const(
-        const ec_pdo_t *, unsigned int);
+    const ec_pdo_t *, unsigned int);
 
 void ec_pdo_print_entries(const ec_pdo_t *);
 

@@ -45,27 +45,28 @@
 
 /** CANopen SDO request.
  */
-struct ec_sdo_request {
-    struct list_head list; /**< List item. */
-    uint16_t index; /**< SDO index. */
-    uint8_t subindex; /**< SDO subindex. */
-    uint8_t *data; /**< Pointer to SDO data. */
-    size_t mem_size; /**< Size of SDO data memory. */
-    size_t data_size; /**< Size of SDO data. */
-    uint8_t complete_access; /**< SDO shall be transferred completely. */
-    uint32_t issue_timeout; /**< Maximum time in ms, the processing of the
-                              request may take. */
-    uint32_t response_timeout; /**< Maximum time in ms, the transfer is
-                                 retried, if the slave does not respond. */
-    ec_direction_t dir; /**< Direction. EC_DIR_OUTPUT means downloading to
-                          the slave, EC_DIR_INPUT means uploading from the
-                          slave. */
+struct ec_sdo_request
+{
+    struct list_head list;             /**< List item. */
+    uint16_t index;                    /**< SDO index. */
+    uint8_t subindex;                  /**< SDO subindex. */
+    uint8_t *data;                     /**< Pointer to SDO data. */
+    size_t mem_size;                   /**< Size of SDO data memory. */
+    size_t data_size;                  /**< Size of SDO data. */
+    uint8_t complete_access;           /**< SDO shall be transferred completely. */
+    uint32_t issue_timeout;            /**< Maximum time in ms, the processing of the
+                                         request may take. */
+    uint32_t response_timeout;         /**< Maximum time in ms, the transfer is
+                                         retried, if the slave does not respond. */
+    ec_direction_t dir;                /**< Direction. EC_DIR_OUTPUT means downloading to
+                                         the slave, EC_DIR_INPUT means uploading from the
+                                         slave. */
     ec_internal_request_state_t state; /**< SDO request state. */
-    unsigned long jiffies_start; /**< Jiffies, when the request was issued. */
-    unsigned long jiffies_sent; /**< Jiffies, when the upload/download
-                                     request was sent. */
-    int errno; /**< Error number. */
-    uint32_t abort_code; /**< SDO request abort code. Zero on success. */
+    unsigned long jiffies_start;       /**< Jiffies, when the request was issued. */
+    unsigned long jiffies_sent;        /**< Jiffies, when the upload/download
+                                            request was sent. */
+    int errno;                         /**< Error number. */
+    uint32_t abort_code;               /**< SDO request abort code. Zero on success. */
 };
 
 /*****************************************************************************/

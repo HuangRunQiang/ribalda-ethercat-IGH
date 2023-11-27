@@ -45,13 +45,12 @@
  */
 typedef struct
 {
-    ec_device_t *device; /**< Parent device. */
-    struct net_device *dev; /**< net_device for virtual ethernet device */
+    ec_device_t *device;           /**< Parent device. */
+    struct net_device *dev;        /**< net_device for virtual ethernet device */
     struct net_device_stats stats; /**< device statistics */
-    uint8_t registered; /**< net_device is opened */
-    uint8_t opened; /**< net_device is opened */
-}
-ec_debug_t;
+    uint8_t registered;            /**< net_device is opened */
+    uint8_t opened;                /**< net_device is opened */
+} ec_debug_t;
 
 /*****************************************************************************/
 

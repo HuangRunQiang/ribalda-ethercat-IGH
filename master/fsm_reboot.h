@@ -52,13 +52,13 @@ typedef struct ec_fsm_reboot ec_fsm_reboot_t; /**< \see ec_fsm_reboot */
 
 struct ec_fsm_reboot
 {
-    ec_master_t *master; /**< master the FSM runs on, if "all" */
-    ec_slave_t *slave; /**< slave the FSM runs on, if "single" */
-    ec_datagram_t *datagram; /**< datagram used in the state machine */
-    unsigned int retries; /**< retries upon datagram timeout */
-    unsigned long jiffies_timeout; /**< pause timer */
+   ec_master_t *master;           /**< master the FSM runs on, if "all" */
+   ec_slave_t *slave;             /**< slave the FSM runs on, if "single" */
+   ec_datagram_t *datagram;       /**< datagram used in the state machine */
+   unsigned int retries;          /**< retries upon datagram timeout */
+   unsigned long jiffies_timeout; /**< pause timer */
 
-    void (*state)(ec_fsm_reboot_t *); /**< slave reboot state function */
+   void (*state)(ec_fsm_reboot_t *); /**< slave reboot state function */
 };
 
 /*****************************************************************************/

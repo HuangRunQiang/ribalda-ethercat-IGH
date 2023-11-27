@@ -41,8 +41,8 @@
 /** Constructor.
  */
 void ec_sync_config_init(
-        ec_sync_config_t *sync_config /**< Sync manager configuration. */
-        )
+    ec_sync_config_t *sync_config /**< Sync manager configuration. */
+)
 {
     sync_config->dir = EC_DIR_INVALID;
     sync_config->watchdog_mode = EC_WD_DEFAULT;
@@ -54,8 +54,8 @@ void ec_sync_config_init(
 /** Destructor.
  */
 void ec_sync_config_clear(
-        ec_sync_config_t *sync_config /**< Sync manager configuration. */
-        )
+    ec_sync_config_t *sync_config /**< Sync manager configuration. */
+)
 {
     ec_pdo_list_clear(&sync_config->pdos);
 }

@@ -44,14 +44,16 @@
 #include "master.h"
 
 #ifdef EC_DEBUG_RING
-#define timersub(a, b, result) \
-    do { \
-        (result)->tv_sec = (a)->tv_sec - (b)->tv_sec; \
+#define timersub(a, b, result)                           \
+    do                                                   \
+    {                                                    \
+        (result)->tv_sec = (a)->tv_sec - (b)->tv_sec;    \
         (result)->tv_usec = (a)->tv_usec - (b)->tv_usec; \
-        if ((result)->tv_usec < 0) { \
-            --(result)->tv_sec; \
-            (result)->tv_usec += 1000000; \
-        } \
+        if ((result)->tv_usec < 0)                       \
+        {                                                \
+            --(result)->tv_sec;                          \
+            (result)->tv_usec += 1000000;                \
+        }                                                \
     } while (0)
 #endif
 
@@ -62,9 +64,9 @@
  * \return 0 in case of success, else < 0
  */
 int ec_device_init(
-        ec_device_t *device, /**< EtherCAT device */
-        ec_master_t *master /**< master owning the device */
-        )
+    ec_device_t *device, /**< EtherCAT device */
+    ec_master_t *master  /**< master owning the device */
+)
 {
     int ret;
     unsigned int i;
@@ -80,7 +82,8 @@ int ec_device_init(
     device->module = NULL;
     device->open = 0;
     device->link_state = 0;
-    for (i = 0; i < EC_TX_RING_SIZE; i++) {
+    for (i = 0; i < EC_TX_RING_SIZE; i++)
+    {
         device->tx_skb[i] = NULL;
     }
     device->tx_ring_index = 0;
@@ -96,7 +99,8 @@ int ec_device_init(
     ec_device_clear_stats(device);
 
 #ifdef EC_DEBUG_RING
-    for (i = 0; i < EC_DEBUG_RING_SIZE; i++) {
+    for (i = 0; i < EC_DEBUG_RING_SIZE; i++)
+    {
         ec_debug_frame_t *df = &device->debug_frames[i];
         df->dir = TX;
         df->t.tv_sec = 0;
@@ -111,24 +115,29 @@ int ec_device_init(
 #endif
 
 #ifdef EC_DEBUG_IF
-    if (device == &master->devices[EC_DEVICE_MAIN]) {
+    if (device == &master->devices[EC_DEVICE_MAIN])
+    {
         mb = 'm';
     }
-    else {
+    else
+    {
         mb = 'b';
     }
 
     sprintf(ifname, "ecdbg%c%u", mb, master->index);
 
     ret = ec_debug_init(&device->dbg, device, ifname);
-    if (ret < 0) {
+    if (ret < 0)
+    {
         EC_MASTER_ERR(master, "Failed to init debug device!\n");
         goto out_return;
     }
 #endif
 
-    for (i = 0; i < EC_TX_RING_SIZE; i++) {
-        if (!(device->tx_skb[i] = dev_alloc_skb(ETH_FRAME_LEN))) {
+    for (i = 0; i < EC_TX_RING_SIZE; i++)
+    {
+        if (!(device->tx_skb[i] = dev_alloc_skb(ETH_FRAME_LEN)))
+        {
             EC_MASTER_ERR(master, "Error allocating device socket buffer!\n");
             ret = -ENOMEM;
             goto out_tx_ring;
@@ -136,7 +145,7 @@ int ec_device_init(
 
         // add Ethernet-II-header
         skb_reserve(device->tx_skb[i], ETH_HLEN);
-        eth = (struct ethhdr *) skb_push(device->tx_skb[i], ETH_HLEN);
+        eth = (struct ethhdr *)skb_push(device->tx_skb[i], ETH_HLEN);
         eth->h_proto = htons(0x88A4);
         memset(eth->h_dest, 0xFF, ETH_ALEN);
     }
@@ -144,8 +153,10 @@ int ec_device_init(
     return 0;
 
 out_tx_ring:
-    for (i = 0; i < EC_TX_RING_SIZE; i++) {
-        if (device->tx_skb[i]) {
+    for (i = 0; i < EC_TX_RING_SIZE; i++)
+    {
+        if (device->tx_skb[i])
+        {
             dev_kfree_skb(device->tx_skb[i]);
         }
     }
@@ -161,12 +172,13 @@ out_return:
 /** Destructor.
  */
 void ec_device_clear(
-        ec_device_t *device /**< EtherCAT device */
-        )
+    ec_device_t *device /**< EtherCAT device */
+)
 {
     unsigned int i;
 
-    if (device->open) {
+    if (device->open)
+    {
         ec_device_close(device);
     }
     for (i = 0; i < EC_TX_RING_SIZE; i++)
@@ -181,11 +193,11 @@ void ec_device_clear(
 /** Associate with net_device.
  */
 void ec_device_attach(
-        ec_device_t *device, /**< EtherCAT device */
-        struct net_device *net_dev, /**< net_device structure */
-        ec_pollfunc_t poll, /**< pointer to device's poll function */
-        struct module *module /**< the device's module */
-        )
+    ec_device_t *device,        /**< EtherCAT device */
+    struct net_device *net_dev, /**< net_device structure */
+    ec_pollfunc_t poll,         /**< pointer to device's poll function */
+    struct module *module       /**< the device's module */
+)
 {
     unsigned int i;
     struct ethhdr *eth;
@@ -196,9 +208,10 @@ void ec_device_attach(
     device->poll = poll;
     device->module = module;
 
-    for (i = 0; i < EC_TX_RING_SIZE; i++) {
+    for (i = 0; i < EC_TX_RING_SIZE; i++)
+    {
         device->tx_skb[i]->dev = net_dev;
-        eth = (struct ethhdr *) (device->tx_skb[i]->data);
+        eth = (struct ethhdr *)(device->tx_skb[i]->data);
         memcpy(eth->h_source, net_dev->dev_addr, ETH_ALEN);
     }
 
@@ -212,8 +225,8 @@ void ec_device_attach(
 /** Disconnect from net_device.
  */
 void ec_device_detach(
-        ec_device_t *device /**< EtherCAT device */
-        )
+    ec_device_t *device /**< EtherCAT device */
+)
 {
     unsigned int i;
 
@@ -229,7 +242,8 @@ void ec_device_detach(
 
     ec_device_clear_stats(device);
 
-    for (i = 0; i < EC_TX_RING_SIZE; i++) {
+    for (i = 0; i < EC_TX_RING_SIZE; i++)
+    {
         device->tx_skb[i]->dev = NULL;
     }
 }
@@ -241,17 +255,19 @@ void ec_device_detach(
  * \return 0 in case of success, else < 0
  */
 int ec_device_open(
-        ec_device_t *device /**< EtherCAT device */
-        )
+    ec_device_t *device /**< EtherCAT device */
+)
 {
     int ret;
 
-    if (!device->dev) {
+    if (!device->dev)
+    {
         EC_MASTER_ERR(device->master, "No net_device to open!\n");
         return -ENODEV;
     }
 
-    if (device->open) {
+    if (device->open)
+    {
         EC_MASTER_WARN(device->master, "Device already opened!\n");
         return 0;
     }
@@ -278,17 +294,19 @@ int ec_device_open(
  * \return 0 in case of success, else < 0
  */
 int ec_device_close(
-        ec_device_t *device /**< EtherCAT device */
-        )
+    ec_device_t *device /**< EtherCAT device */
+)
 {
     int ret;
 
-    if (!device->dev) {
+    if (!device->dev)
+    {
         EC_MASTER_ERR(device->master, "No device to close!\n");
         return -ENODEV;
     }
 
-    if (!device->open) {
+    if (!device->open)
+    {
         EC_MASTER_WARN(device->master, "Device already closed!\n");
         return 0;
     }
@@ -310,24 +328,26 @@ int ec_device_close(
  */
 
 static void pcap_record(
-            ec_device_t *device, /**< EtherCAT device */
-            const void *data, /**< Packet data */
-            size_t size /**< Packet size */
-            )
+    ec_device_t *device, /**< EtherCAT device */
+    const void *data,    /**< Packet data */
+    size_t size          /**< Packet size */
+)
 {
     // check there's enough room to copy frame to pcap mem
-    if (unlikely(device->master->pcap_data)) {
+    if (unlikely(device->master->pcap_data))
+    {
         // get current data pointer
         void *curr_data = device->master->pcap_curr_data;
         long available = pcap_size - (curr_data - device->master->pcap_data);
         long reqd = size + sizeof(pcaprec_hdr_t);
-        if (unlikely(reqd <= available)) {
+        if (unlikely(reqd <= available))
+        {
             pcaprec_hdr_t *pcaphdr;
             struct timeval t;
-          
+
             // update curr data pointer
             device->master->pcap_curr_data = curr_data + reqd;
-            
+
             // fill in pcap frame header info
             pcaphdr = curr_data;
 #ifdef EC_RTDM
@@ -335,12 +355,12 @@ static void pcap_record(
 #else
             t = device->timeval_poll;
 #endif
-            pcaphdr->ts_sec   = t.tv_sec;
-            pcaphdr->ts_usec  = t.tv_usec;
+            pcaphdr->ts_sec = t.tv_sec;
+            pcaphdr->ts_usec = t.tv_usec;
             pcaphdr->incl_len = size;
             pcaphdr->orig_len = size;
             curr_data += sizeof(pcaprec_hdr_t);
-          
+
             // copy frame
             memcpy(curr_data, data, size);
         }
@@ -354,8 +374,8 @@ static void pcap_record(
  * \return pointer to the TX socket buffer
  */
 uint8_t *ec_device_tx_data(
-        ec_device_t *device /**< EtherCAT device */
-        )
+    ec_device_t *device /**< EtherCAT device */
+)
 {
     /* cycle through socket buffers, because otherwise there is a race
      * condition, if multiple frames are sent and the DMA is not scheduled in
@@ -373,16 +393,17 @@ uint8_t *ec_device_tx_data(
  * start_xmit() function of the assigned net_device.
  */
 void ec_device_send(
-        ec_device_t *device, /**< EtherCAT device */
-        size_t size /**< number of bytes to send */
-        )
+    ec_device_t *device, /**< EtherCAT device */
+    size_t size          /**< number of bytes to send */
+)
 {
     struct sk_buff *skb = device->tx_skb[device->tx_ring_index];
 
     // set the right length for the data
     skb->len = ETH_HLEN + size;
 
-    if (unlikely(device->master->debug_level > 1)) {
+    if (unlikely(device->master->debug_level > 1))
+    {
         EC_MASTER_DBG(device->master, 2, "Sending frame:\n");
         ec_print_data(skb->data, ETH_HLEN + size);
     }
@@ -390,7 +411,7 @@ void ec_device_send(
     // start sending
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
     if (device->dev->netdev_ops->ndo_start_xmit(skb, device->dev) ==
-            NETDEV_TX_OK)
+        NETDEV_TX_OK)
 #else
     if (device->dev->hard_start_xmit(skb, device->dev) == NETDEV_TX_OK)
 #endif
@@ -405,9 +426,11 @@ void ec_device_send(
 #endif
 #ifdef EC_DEBUG_RING
         ec_device_debug_ring_append(
-                device, TX, skb->data + ETH_HLEN, size);
+            device, TX, skb->data + ETH_HLEN, size);
 #endif
-    } else {
+    }
+    else
+    {
         device->tx_errors++;
     }
 }
@@ -417,8 +440,8 @@ void ec_device_send(
 /** Clears the frame statistics.
  */
 void ec_device_clear_stats(
-        ec_device_t *device /**< EtherCAT device */
-        )
+    ec_device_t *device /**< EtherCAT device */
+)
 {
     unsigned int i;
 
@@ -433,7 +456,8 @@ void ec_device_clear_stats(
     device->last_rx_bytes = 0;
     device->tx_errors = 0;
 
-    for (i = 0; i < EC_RATE_COUNT; i++) {
+    for (i = 0; i < EC_RATE_COUNT; i++)
+    {
         device->tx_frame_rates[i] = 0;
         device->rx_frame_rates[i] = 0;
         device->tx_byte_rates[i] = 0;
@@ -445,11 +469,11 @@ void ec_device_clear_stats(
 
 static void do_gettimeofday(struct timeval *tv)
 {
-	struct timespec64 ts;
+    struct timespec64 ts;
 
-	ktime_get_ts64(&ts);
-	tv->tv_sec = ts.tv_sec;
-	tv->tv_usec = ts.tv_nsec / NSEC_PER_USEC;
+    ktime_get_ts64(&ts);
+    tv->tv_sec = ts.tv_sec;
+    tv->tv_usec = ts.tv_nsec / NSEC_PER_USEC;
 }
 
 #endif
@@ -460,19 +484,21 @@ static void do_gettimeofday(struct timeval *tv)
 /** Appends frame data to the debug ring.
  */
 void ec_device_debug_ring_append(
-        ec_device_t *device, /**< EtherCAT device */
-        ec_debug_frame_dir_t dir, /**< direction */
-        const void *data, /**< frame data */
-        size_t size /**< data size */
-        )
+    ec_device_t *device,      /**< EtherCAT device */
+    ec_debug_frame_dir_t dir, /**< direction */
+    const void *data,         /**< frame data */
+    size_t size               /**< data size */
+)
 {
     ec_debug_frame_t *df = &device->debug_frames[device->debug_frame_index];
 
     df->dir = dir;
-    if (dir == TX) {
+    if (dir == TX)
+    {
         do_gettimeofday(&df->t);
     }
-    else {
+    else
+    {
         df->t = device->timeval_poll;
     }
     memcpy(df->data, data, size);
@@ -489,8 +515,8 @@ void ec_device_debug_ring_append(
 /** Outputs the debug ring.
  */
 void ec_device_debug_ring_print(
-        const ec_device_t *device /**< EtherCAT device */
-        )
+    const ec_device_t *device /**< EtherCAT device */
+)
 {
     int i;
     unsigned int ring_index;
@@ -498,25 +524,24 @@ void ec_device_debug_ring_print(
     struct timeval t0, diff;
 
     // calculate index of the newest frame in the ring to get its time
-    ring_index = (device->debug_frame_index + EC_DEBUG_RING_SIZE - 1)
-        % EC_DEBUG_RING_SIZE;
+    ring_index = (device->debug_frame_index + EC_DEBUG_RING_SIZE - 1) % EC_DEBUG_RING_SIZE;
     t0 = device->debug_frames[ring_index].t;
 
     EC_MASTER_DBG(device->master, 1, "Debug ring %u:\n", ring_index);
 
     // calculate index of the oldest frame in the ring
-    ring_index = (device->debug_frame_index + EC_DEBUG_RING_SIZE
-            - device->debug_frame_count) % EC_DEBUG_RING_SIZE;
+    ring_index = (device->debug_frame_index + EC_DEBUG_RING_SIZE - device->debug_frame_count) % EC_DEBUG_RING_SIZE;
 
-    for (i = 0; i < device->debug_frame_count; i++) {
+    for (i = 0; i < device->debug_frame_count; i++)
+    {
         df = &device->debug_frames[ring_index];
         timersub(&t0, &df->t, &diff);
 
         EC_MASTER_DBG(device->master, 1, "Frame %u, dt=%u.%06u s, %s:\n",
-                i + 1 - device->debug_frame_count,
-                (unsigned int) diff.tv_sec,
-                (unsigned int) diff.tv_usec,
-                (df->dir == TX) ? "TX" : "RX");
+                      i + 1 - device->debug_frame_count,
+                      (unsigned int)diff.tv_sec,
+                      (unsigned int)diff.tv_usec,
+                      (df->dir == TX) ? "TX" : "RX");
         ec_print_data(df->data, df->data_size);
 
         ring_index++;
@@ -534,8 +559,8 @@ void ec_device_debug_ring_print(
  * done by the master calling the ISR "manually".
  */
 void ec_device_poll(
-        ec_device_t *device /**< EtherCAT device */
-        )
+    ec_device_t *device /**< EtherCAT device */
+)
 {
 #ifdef EC_HAVE_CYCLES
     device->cycles_poll = get_cycles();
@@ -555,8 +580,8 @@ void ec_device_poll(
 /** Update device statistics.
  */
 void ec_device_update_stats(
-        ec_device_t *device /**< EtherCAT device */
-        )
+    ec_device_t *device /**< EtherCAT device */
+)
 {
     unsigned int i;
 
@@ -569,7 +594,8 @@ void ec_device_update_stats(
      *      Y_n = y_(n - 1) + T / tau * (x - y_(n - 1))   | T = 1
      *   -> Y_n += (x - y_(n - 1)) / tau
      */
-    for (i = 0; i < EC_RATE_COUNT; i++) {
+    for (i = 0; i < EC_RATE_COUNT; i++)
+    {
         s32 n = rate_intervals[i];
         device->tx_frame_rates[i] +=
             (tx_frame_rate - device->tx_frame_rates[i]) / n;
@@ -608,13 +634,18 @@ void ecdev_withdraw(ec_device_t *device /**< EtherCAT device */)
 
     ec_mac_print(device->dev->dev_addr, mac_str);
 
-    if (device == &master->devices[EC_DEVICE_MAIN]) {
+    if (device == &master->devices[EC_DEVICE_MAIN])
+    {
         sprintf(dev_str, "main");
-    } else if (device == &master->devices[EC_DEVICE_BACKUP]) {
+    }
+    else if (device == &master->devices[EC_DEVICE_BACKUP])
+    {
         sprintf(dev_str, "backup");
-    } else {
+    }
+    else
+    {
         EC_MASTER_WARN(master, "%s() called with unknown device %s!\n",
-                __func__, mac_str);
+                       __func__, mac_str);
         sprintf(dev_str, "UNKNOWN");
     }
 
@@ -639,22 +670,27 @@ int ecdev_open(ec_device_t *device /**< EtherCAT device */)
     unsigned int all_open = 1, dev_idx;
 
     ret = ec_device_open(device);
-    if (ret) {
+    if (ret)
+    {
         EC_MASTER_ERR(master, "Failed to open device!\n");
         return ret;
     }
 
     for (dev_idx = EC_DEVICE_MAIN;
-            dev_idx < ec_master_num_devices(device->master); dev_idx++) {
-        if (!master->devices[dev_idx].open) {
+         dev_idx < ec_master_num_devices(device->master); dev_idx++)
+    {
+        if (!master->devices[dev_idx].open)
+        {
             all_open = 0;
             break;
         }
     }
 
-    if (all_open) {
+    if (all_open)
+    {
         ret = ec_master_enter_idle_phase(device->master);
-        if (ret) {
+        if (ret)
+        {
             EC_MASTER_ERR(device->master, "Failed to enter IDLE phase!\n");
             return ret;
         }
@@ -674,11 +710,13 @@ void ecdev_close(ec_device_t *device /**< EtherCAT device */)
 {
     ec_master_t *master = device->master;
 
-    if (master->phase == EC_IDLE) {
+    if (master->phase == EC_IDLE)
+    {
         ec_master_leave_idle_phase(master);
     }
 
-    if (ec_device_close(device)) {
+    if (ec_device_close(device))
+    {
         EC_MASTER_WARN(master, "Failed to close device!\n");
     }
 }
@@ -695,17 +733,18 @@ void ecdev_close(ec_device_t *device /**< EtherCAT device */)
  * \ingroup DeviceInterface
  */
 void ecdev_receive(
-        ec_device_t *device, /**< EtherCAT device */
-        const void *data, /**< pointer to received data */
-        size_t size /**< number of bytes received */
-        )
+    ec_device_t *device, /**< EtherCAT device */
+    const void *data,    /**< pointer to received data */
+    size_t size          /**< number of bytes received */
+)
 {
     const void *ec_data = data + ETH_HLEN;
     size_t ec_size = size - ETH_HLEN;
 
-    if (unlikely(!data)) {
+    if (unlikely(!data))
+    {
         EC_MASTER_WARN(device->master, "%s() called with NULL data.\n",
-                __func__);
+                       __func__);
         return;
     }
 
@@ -714,7 +753,8 @@ void ecdev_receive(
     device->rx_bytes += size;
     device->master->device_stats.rx_bytes += size;
 
-    if (unlikely(device->master->debug_level > 1)) {
+    if (unlikely(device->master->debug_level > 1))
+    {
         EC_MASTER_DBG(device->master, 2, "Received frame:\n");
         ec_print_data(data, size);
     }
@@ -740,20 +780,22 @@ void ecdev_receive(
  * \ingroup DeviceInterface
  */
 void ecdev_set_link(
-        ec_device_t *device, /**< EtherCAT device */
-        uint8_t state /**< new link state */
-        )
+    ec_device_t *device, /**< EtherCAT device */
+    uint8_t state        /**< new link state */
+)
 {
-    if (unlikely(!device)) {
+    if (unlikely(!device))
+    {
         EC_WARN("ecdev_set_link() called with null device!\n");
         return;
     }
 
-    if (likely(state != device->link_state)) {
+    if (likely(state != device->link_state))
+    {
         device->link_state = state;
         EC_MASTER_INFO(device->master,
-                "Link state of %s changed to %s.\n",
-                device->dev->name, (state ? "UP" : "DOWN"));
+                       "Link state of %s changed to %s.\n",
+                       device->dev->name, (state ? "UP" : "DOWN"));
     }
 }
 
@@ -766,10 +808,11 @@ void ecdev_set_link(
  * \return Link state.
  */
 uint8_t ecdev_get_link(
-        const ec_device_t *device /**< EtherCAT device */
-        )
+    const ec_device_t *device /**< EtherCAT device */
+)
 {
-    if (unlikely(!device)) {
+    if (unlikely(!device))
+    {
         EC_WARN("ecdev_get_link() called with null device!\n");
         return 0;
     }

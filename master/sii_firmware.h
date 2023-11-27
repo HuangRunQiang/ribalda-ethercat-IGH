@@ -46,7 +46,7 @@
 /*****************************************************************************/
 
 void ec_request_sii_firmware(ec_slave_t *, void *,
-            void (*)(const struct firmware *, void *));
+                             void (*)(const struct firmware *, void *));
 
 void ec_release_sii_firmware(const struct firmware *);
 

@@ -54,8 +54,8 @@ void ec_mbg_request_clear_data(ec_mbg_request_t *);
 /** Mbox Gateway request constructor.
  */
 void ec_mbg_request_init(
-        ec_mbg_request_t *req /**< Mbox Gateway request. */
-        )
+    ec_mbg_request_t *req /**< Mbox Gateway request. */
+)
 {
     INIT_LIST_HEAD(&req->list);
     req->data = NULL;
@@ -72,8 +72,8 @@ void ec_mbg_request_init(
 /** Mbox Gateway request destructor.
  */
 void ec_mbg_request_clear(
-        ec_mbg_request_t *req /**< Mbox Gateway request. */
-        )
+    ec_mbg_request_t *req /**< Mbox Gateway request. */
+)
 {
     ec_mbg_request_clear_data(req);
 }
@@ -83,10 +83,11 @@ void ec_mbg_request_clear(
 /** Free allocated memory.
  */
 void ec_mbg_request_clear_data(
-        ec_mbg_request_t *req /**< Mbox Gateway request. */
-        )
+    ec_mbg_request_t *req /**< Mbox Gateway request. */
+)
 {
-    if (req->data) {
+    if (req->data)
+    {
         kfree(req->data);
         req->data = NULL;
     }
@@ -104,16 +105,17 @@ void ec_mbg_request_clear_data(
  * \return 0 on success, otherwise -ENOMEM.
  */
 int ec_mbg_request_alloc(
-        ec_mbg_request_t *req, /**< Mbox Gateway request. */
-        size_t size /**< Data size to allocate. */
-        )
+    ec_mbg_request_t *req, /**< Mbox Gateway request. */
+    size_t size            /**< Data size to allocate. */
+)
 {
     if (size <= req->mem_size)
         return 0;
 
     ec_mbg_request_clear_data(req);
 
-    if (!(req->data = (uint8_t *) kmalloc(size, GFP_KERNEL))) {
+    if (!(req->data = (uint8_t *)kmalloc(size, GFP_KERNEL)))
+    {
         EC_ERR("Failed to allocate %zu bytes of Mbox Gateway memory.\n", size);
         return -ENOMEM;
     }
@@ -133,10 +135,10 @@ int ec_mbg_request_alloc(
  * \retval <0 Error code.
  */
 int ec_mbg_request_copy_data(
-        ec_mbg_request_t *req, /**< Mbox Gateway request. */
-        const uint8_t *source, /**< Source data. */
-        size_t size /**< Number of bytes in \a source. */
-        )
+    ec_mbg_request_t *req, /**< Mbox Gateway request. */
+    const uint8_t *source, /**< Source data. */
+    size_t size            /**< Number of bytes in \a source. */
+)
 {
     int ret = ec_mbg_request_alloc(req, size);
     if (ret < 0)
@@ -152,8 +154,8 @@ int ec_mbg_request_copy_data(
 /** Request to run.
  */
 void ec_mbg_request_run(
-        ec_mbg_request_t *req /**< Mbox Gateway request. */
-       )
+    ec_mbg_request_t *req /**< Mbox Gateway request. */
+)
 {
     req->state = EC_INT_REQUEST_QUEUED;
     req->error_code = 0x0000;

@@ -54,8 +54,8 @@ void ec_foe_request_clear_data(ec_foe_request_t *);
 /** FoE request constructor.
  */
 void ec_foe_request_init(
-        ec_foe_request_t *req /**< FoE request. */
-        )
+    ec_foe_request_t *req /**< FoE request. */
+)
 {
     INIT_LIST_HEAD(&req->list);
     req->buffer = NULL;
@@ -77,8 +77,8 @@ void ec_foe_request_init(
 /** FoE request destructor.
  */
 void ec_foe_request_clear(
-        ec_foe_request_t *req /**< FoE request. */
-        )
+    ec_foe_request_t *req /**< FoE request. */
+)
 {
     ec_foe_request_clear_data(req);
 }
@@ -88,10 +88,11 @@ void ec_foe_request_clear(
 /** FoE request destructor.
  */
 void ec_foe_request_clear_data(
-        ec_foe_request_t *req /**< FoE request. */
-        )
+    ec_foe_request_t *req /**< FoE request. */
+)
 {
-    if (req->buffer) {
+    if (req->buffer)
+    {
         kfree(req->buffer);
         req->buffer = NULL;
     }
@@ -110,17 +111,19 @@ void ec_foe_request_clear_data(
  * \return Zero on success, otherwise a negative error code.
  */
 int ec_foe_request_alloc(
-        ec_foe_request_t *req, /**< FoE request. */
-        size_t size /**< Data size to allocate. */
-        )
+    ec_foe_request_t *req, /**< FoE request. */
+    size_t size            /**< Data size to allocate. */
+)
 {
-    if (size <= req->buffer_size) {
+    if (size <= req->buffer_size)
+    {
         return 0;
     }
 
     ec_foe_request_clear_data(req);
 
-    if (!(req->buffer = (uint8_t *) kmalloc(size, GFP_KERNEL))) {
+    if (!(req->buffer = (uint8_t *)kmalloc(size, GFP_KERNEL)))
+    {
         EC_ERR("Failed to allocate %zu bytes of FoE memory.\n", size);
         return -ENOMEM;
     }
@@ -139,15 +142,16 @@ int ec_foe_request_alloc(
  * \return Zero on success, otherwise a negative error code.
  */
 int ec_foe_request_copy_data(
-        ec_foe_request_t *req, /**< FoE request. */
-        const uint8_t *source, /**< Source data. */
-        size_t size /**< Number of bytes in \a source. */
-        )
+    ec_foe_request_t *req, /**< FoE request. */
+    const uint8_t *source, /**< Source data. */
+    size_t size            /**< Number of bytes in \a source. */
+)
 {
     int ret;
 
     ret = ec_foe_request_alloc(req, size);
-    if (ret) {
+    if (ret)
+    {
         return ret;
     }
 
@@ -163,11 +167,10 @@ int ec_foe_request_copy_data(
  * \return non-zero if the timeout was exceeded, else zero.
  */
 int ec_foe_request_timed_out(
-        const ec_foe_request_t *req /**< FoE request. */
-        )
+    const ec_foe_request_t *req /**< FoE request. */
+)
 {
-    return req->issue_timeout
-        && jiffies - req->jiffies_start > HZ * req->issue_timeout / 1000;
+    return req->issue_timeout && jiffies - req->jiffies_start > HZ * req->issue_timeout / 1000;
 }
 
 /*****************************************************************************
@@ -177,9 +180,9 @@ int ec_foe_request_timed_out(
 /** Set the request timeout.
  */
 void ecrt_foe_request_timeout(
-        ec_foe_request_t *req, /**< FoE request. */
-        uint32_t timeout /**< Timeout in ms. */
-        )
+    ec_foe_request_t *req, /**< FoE request. */
+    uint32_t timeout       /**< Timeout in ms. */
+)
 {
     req->issue_timeout = timeout;
 }
@@ -189,12 +192,12 @@ void ecrt_foe_request_timeout(
 /** Selects a new file for the request.
  */
 void ecrt_foe_request_file(
-        ec_foe_request_t *req, /**< FoE request. */
-        const char* file_name, /** filename */
-        uint32_t password /** password */
-        )
+    ec_foe_request_t *req, /**< FoE request. */
+    const char *file_name, /** filename */
+    uint32_t password      /** password */
+)
 {
-    strlcpy((char*) req->file_name, file_name, sizeof(req->file_name));
+    strlcpy((char *)req->file_name, file_name, sizeof(req->file_name));
     req->password = password;
 }
 
@@ -205,8 +208,8 @@ void ecrt_foe_request_file(
  * \return Data pointer.
  */
 uint8_t *ecrt_foe_request_data(
-        ec_foe_request_t *req /**< FoE request. */
-        )
+    ec_foe_request_t *req /**< FoE request. */
+)
 {
     return req->buffer;
 }
@@ -218,8 +221,8 @@ uint8_t *ecrt_foe_request_data(
  * \return Data size.
  */
 size_t ecrt_foe_request_data_size(
-        const ec_foe_request_t *req /**< FoE request. */
-        )
+    const ec_foe_request_t *req /**< FoE request. */
+)
 {
     return req->data_size;
 }
@@ -252,8 +255,8 @@ uint32_t ecrt_foe_request_error_code(const ec_foe_request_t *req)
  * \return Progress in bytes.
  */
 size_t ecrt_foe_request_progress(
-        const ec_foe_request_t *req /**< FoE request. */
-        )
+    const ec_foe_request_t *req /**< FoE request. */
+)
 {
     return req->progress;
 }
@@ -263,8 +266,8 @@ size_t ecrt_foe_request_progress(
 /** Prepares a read request (slave to master).
  */
 void ecrt_foe_request_read(
-        ec_foe_request_t *req /**< FoE request. */
-        )
+    ec_foe_request_t *req /**< FoE request. */
+)
 {
     req->data_size = 0;
     req->progress = 0;
@@ -279,11 +282,12 @@ void ecrt_foe_request_read(
 /** Prepares a write request (master to slave).
  */
 void ecrt_foe_request_write(
-        ec_foe_request_t *req, /**< FoE request. */
-        size_t data_size /**< Data size. */
-        )
+    ec_foe_request_t *req, /**< FoE request. */
+    size_t data_size       /**< Data size. */
+)
 {
-    if (data_size > req->buffer_size) {
+    if (data_size > req->buffer_size)
+    {
         EC_ERR("Request to write %zu bytes to FoE buffer of size %zu.\n",
                data_size, req->buffer_size);
         req->state = EC_INT_REQUEST_FAILURE;

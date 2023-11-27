@@ -90,7 +90,6 @@ const ec_code_msg_t soe_error_codes[] = {
     {0x800A, "Invalid drive number"},
     {0x800B, "General error"},
     {0x800C, "No element addressed"},
-    {}
-};
+    {}};
 
 /*****************************************************************************/

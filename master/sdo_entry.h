@@ -51,15 +51,16 @@ typedef struct ec_sdo ec_sdo_t; /**< \see ec_sdo. */
 
 /** CANopen SDO entry.
  */
-typedef struct {
-    struct list_head list; /**< List item. */
-    ec_sdo_t *sdo; /**< Parent SDO. */
-    uint8_t subindex; /**< Subindex. */
-    uint16_t data_type; /**< Data type. */
-    uint16_t bit_length; /**< Data size in bit. */
-    uint8_t read_access[EC_SDO_ENTRY_ACCESS_COUNT]; /**< Read access. */
+typedef struct
+{
+    struct list_head list;                           /**< List item. */
+    ec_sdo_t *sdo;                                   /**< Parent SDO. */
+    uint8_t subindex;                                /**< Subindex. */
+    uint16_t data_type;                              /**< Data type. */
+    uint16_t bit_length;                             /**< Data size in bit. */
+    uint8_t read_access[EC_SDO_ENTRY_ACCESS_COUNT];  /**< Read access. */
     uint8_t write_access[EC_SDO_ENTRY_ACCESS_COUNT]; /**< Write access. */
-    char *description; /**< Description. */
+    char *description;                               /**< Description. */
 } ec_sdo_entry_t;
 
 /*****************************************************************************/

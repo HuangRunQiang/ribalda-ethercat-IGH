@@ -44,13 +44,14 @@
 
 /** Sync manager.
  */
-typedef struct {
-    ec_slave_t *slave; /**< Slave, the sync manager belongs to. */
+typedef struct
+{
+    ec_slave_t *slave;               /**< Slave, the sync manager belongs to. */
     uint16_t physical_start_address; /**< Physical start address. */
-    uint16_t default_length; /**< Data length in bytes. */
-    uint8_t control_register; /**< Control register value. */
-    uint8_t enable; /**< Enable bit. */
-    ec_pdo_list_t pdos; /**< Current PDO assignment. */
+    uint16_t default_length;         /**< Data length in bytes. */
+    uint8_t control_register;        /**< Control register value. */
+    uint8_t enable;                  /**< Enable bit. */
+    ec_pdo_list_t pdos;              /**< Current PDO assignment. */
 } ec_sync_t;
 
 /*****************************************************************************/
@@ -59,7 +60,7 @@ void ec_sync_init(ec_sync_t *, ec_slave_t *);
 void ec_sync_init_copy(ec_sync_t *, const ec_sync_t *);
 void ec_sync_clear(ec_sync_t *);
 void ec_sync_page(const ec_sync_t *, uint8_t, uint16_t,
-        const ec_sync_config_t *, uint8_t, uint8_t *);
+                  const ec_sync_config_t *, uint8_t, uint8_t *);
 int ec_sync_add_pdo(ec_sync_t *, const ec_pdo_t *);
 ec_direction_t ec_sync_default_direction(const ec_sync_t *);
 

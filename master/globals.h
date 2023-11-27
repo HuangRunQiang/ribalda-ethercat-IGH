@@ -88,12 +88,11 @@
 
 /** Resulting maximum data size of a single datagram in a frame. */
 #ifdef DEBUG_DATAGRAM_OVERFLOW
-// Define a runt datagram which can be easily overflowed on 
+// Define a runt datagram which can be easily overflowed on
 // available hardware for use when testing ec_domain_finish()
 #define EC_MAX_DATA_SIZE (128)
 #else
-#define EC_MAX_DATA_SIZE (ETH_DATA_LEN - EC_FRAME_HEADER_SIZE \
-                          - EC_DATAGRAM_HEADER_SIZE - EC_DATAGRAM_FOOTER_SIZE)
+#define EC_MAX_DATA_SIZE (ETH_DATA_LEN - EC_FRAME_HEADER_SIZE - EC_DATAGRAM_HEADER_SIZE - EC_DATAGRAM_FOOTER_SIZE)
 #endif // DEBUG_DATAGRAM_OVERFLOW
 
 /** Mailbox header size.  */
@@ -156,7 +155,8 @@
 
 /** State of an EtherCAT slave.
  */
-typedef enum {
+typedef enum
+{
     EC_SLAVE_STATE_UNKNOWN = 0x00,
     /**< unknown state */
     EC_SLAVE_STATE_INIT = 0x01,
@@ -178,7 +178,8 @@ typedef enum {
  * Not to mix up with the mailbox type field in the mailbox header defined in
  * master/mailbox.h.
  */
-enum {
+enum
+{
     EC_MBOX_AOE = 0x01, /**< ADS over EtherCAT */
     EC_MBOX_EOE = 0x02, /**< Ethernet over EtherCAT */
     EC_MBOX_COE = 0x04, /**< CANopen over EtherCAT */
@@ -189,52 +190,58 @@ enum {
 
 /** Slave information interface CANopen over EtherCAT details flags.
  */
-typedef struct {
-    uint8_t enable_sdo : 1; /**< Enable SDO access. */
-    uint8_t enable_sdo_info : 1; /**< SDO information service available. */
-    uint8_t enable_pdo_assign : 1; /**< PDO mapping configurable. */
-    uint8_t enable_pdo_configuration : 1; /**< PDO configuration possible. */
-    uint8_t enable_upload_at_startup : 1; /**< ?. */
+typedef struct
+{
+    uint8_t enable_sdo : 1;                 /**< Enable SDO access. */
+    uint8_t enable_sdo_info : 1;            /**< SDO information service available. */
+    uint8_t enable_pdo_assign : 1;          /**< PDO mapping configurable. */
+    uint8_t enable_pdo_configuration : 1;   /**< PDO configuration possible. */
+    uint8_t enable_upload_at_startup : 1;   /**< ?. */
     uint8_t enable_sdo_complete_access : 1; /**< Complete access possible. */
 } ec_sii_coe_details_t;
 
 /** Slave information interface general flags.
  */
-typedef struct {
-    uint8_t enable_safeop : 1; /**< ?. */
+typedef struct
+{
+    uint8_t enable_safeop : 1;  /**< ?. */
     uint8_t enable_not_lrw : 1; /**< Slave does not support LRW. */
 } ec_sii_general_flags_t;
 
 /** EtherCAT slave distributed clocks range.
  */
-typedef enum {
+typedef enum
+{
     EC_DC_32, /**< 32 bit. */
-    EC_DC_64 /*< 64 bit for system time, system time offset and
-               port 0 receive time. */
+    EC_DC_64  /*< 64 bit for system time, system time offset and
+                port 0 receive time. */
 } ec_slave_dc_range_t;
 
 /** EtherCAT slave sync signal configuration.
  */
-typedef struct {
+typedef struct
+{
     uint32_t cycle_time; /**< Cycle time [ns]. */
-    int32_t shift_time; /**< Shift time [ns]. */
+    int32_t shift_time;  /**< Shift time [ns]. */
 } ec_sync_signal_t;
 
 /** Access states for SDO entries.
  *
  * The access rights are managed per AL state.
  */
-enum {
-    EC_SDO_ENTRY_ACCESS_PREOP, /**< Access rights in PREOP. */
+enum
+{
+    EC_SDO_ENTRY_ACCESS_PREOP,  /**< Access rights in PREOP. */
     EC_SDO_ENTRY_ACCESS_SAFEOP, /**< Access rights in SAFEOP. */
-    EC_SDO_ENTRY_ACCESS_OP, /**< Access rights in OP. */
-    EC_SDO_ENTRY_ACCESS_COUNT /**< Number of states. */
+    EC_SDO_ENTRY_ACCESS_OP,     /**< Access rights in OP. */
+    EC_SDO_ENTRY_ACCESS_COUNT   /**< Number of states. */
 };
 
 /** Master devices.
  */
-typedef enum {
-    EC_DEVICE_MAIN, /**< Main device. */
+typedef enum
+{
+    EC_DEVICE_MAIN,  /**< Main device. */
     EC_DEVICE_BACKUP /**< Backup device */
 } ec_device_index_t;
 
@@ -310,8 +317,9 @@ ec_master_t *ecrt_request_master_err(unsigned int);
  * Some EtherCAT datagrams support reading a status code to display a certain
  * message. This type allows to map a code to a message string.
  */
-typedef struct {
-    uint32_t code; /**< Code. */
+typedef struct
+{
+    uint32_t code;       /**< Code. */
     const char *message; /**< Message belonging to \a code. */
 } ec_code_msg_t;
 
@@ -322,7 +330,8 @@ typedef struct {
  * \attention If ever changing this, please be sure to adjust the \a
  * state_table in master/sdo_request.c.
  */
-typedef enum {
+typedef enum
+{
     EC_INT_REQUEST_INIT,
     EC_INT_REQUEST_QUEUED,
     EC_INT_REQUEST_BUSY,
@@ -338,9 +347,10 @@ extern const ec_request_state_t ec_request_state_translation_table[];
 
 /** Origin type.
  */
-typedef enum {
+typedef enum
+{
     EC_ORIG_INTERNAL, /**< Internal. */
-    EC_ORIG_EXTERNAL /**< External. */
+    EC_ORIG_EXTERNAL  /**< External. */
 } ec_origin_t;
 
 /*****************************************************************************/

@@ -49,15 +49,16 @@ typedef struct ec_fsm_mbg ec_fsm_mbg_t; /**< \see ec_fsm_mbg */
 
 /** Finite state machines for the CANopen over EtherCAT protocol.
  */
-struct ec_fsm_mbg {
-    ec_slave_t *slave; /**< slave the FSM runs on */
+struct ec_fsm_mbg
+{
+    ec_slave_t *slave;    /**< slave the FSM runs on */
     unsigned int retries; /**< retries upon datagram timeout */
 
     void (*state)(ec_fsm_mbg_t *, ec_datagram_t *); /**< mbox state function */
-    ec_datagram_t *datagram; /**< Datagram used in last step. */
-    unsigned long jiffies_start; /**< MBox Gateway timestamp. */
-    ec_mbg_request_t *request; /**< MBox Gateway request */
-    uint8_t mbox_type; /**< MBox Gateway header type */
+    ec_datagram_t *datagram;                        /**< Datagram used in last step. */
+    unsigned long jiffies_start;                    /**< MBox Gateway timestamp. */
+    ec_mbg_request_t *request;                      /**< MBox Gateway request */
+    uint8_t mbox_type;                              /**< MBox Gateway header type */
 };
 
 /*****************************************************************************/

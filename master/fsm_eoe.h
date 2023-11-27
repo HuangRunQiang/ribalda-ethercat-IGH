@@ -48,14 +48,15 @@ typedef struct ec_fsm_eoe ec_fsm_eoe_t; /**< \see ec_fsm_eoe */
 
 /** Finite state machines for the Ethernet over EtherCAT protocol.
  */
-struct ec_fsm_eoe {
-    ec_slave_t *slave; /**< slave the FSM runs on */
+struct ec_fsm_eoe
+{
+    ec_slave_t *slave;    /**< slave the FSM runs on */
     unsigned int retries; /**< retries upon datagram timeout */
 
     void (*state)(ec_fsm_eoe_t *, ec_datagram_t *); /**< EoE state function */
-    ec_datagram_t *datagram; /**< Datagram used in the previous step. */
-    unsigned long jiffies_start; /**< Timestamp. */
-    ec_eoe_request_t *request; /**< EoE request */
+    ec_datagram_t *datagram;                        /**< Datagram used in the previous step. */
+    unsigned long jiffies_start;                    /**< Timestamp. */
+    ec_eoe_request_t *request;                      /**< EoE request */
 };
 
 /****************************************************************************/
@@ -64,7 +65,7 @@ void ec_fsm_eoe_init(ec_fsm_eoe_t *);
 void ec_fsm_eoe_clear(ec_fsm_eoe_t *);
 
 void ec_fsm_eoe_set_ip_param(ec_fsm_eoe_t *, ec_slave_t *,
-        ec_eoe_request_t *);
+                             ec_eoe_request_t *);
 
 int ec_fsm_eoe_exec(ec_fsm_eoe_t *, ec_datagram_t *);
 int ec_fsm_eoe_success(const ec_fsm_eoe_t *);

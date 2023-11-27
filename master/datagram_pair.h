@@ -46,9 +46,10 @@
 
 /** Domain datagram pair.
  */
-typedef struct {
-    struct list_head list; /**< List header. */
-    ec_domain_t *domain; /**< Parent domain. */
+typedef struct
+{
+    struct list_head list;                       /**< List header. */
+    ec_domain_t *domain;                         /**< Parent domain. */
     ec_datagram_t datagrams[EC_MAX_NUM_DEVICES]; /**< Datagrams.  */
 #if EC_MAX_NUM_DEVICES > 1
     uint8_t *send_buffer;
@@ -59,7 +60,7 @@ typedef struct {
 /*****************************************************************************/
 
 int ec_datagram_pair_init(ec_datagram_pair_t *, ec_domain_t *, uint32_t,
-        uint8_t *, size_t, const unsigned int []);
+                          uint8_t *, size_t, const unsigned int[]);
 void ec_datagram_pair_clear(ec_datagram_pair_t *);
 
 uint16_t ec_datagram_pair_process(ec_datagram_pair_t *, uint16_t[]);

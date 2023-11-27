@@ -56,21 +56,24 @@
 #endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0)
-struct timeval {
-	__kernel_old_time_t	tv_sec;		/* seconds */
-	__kernel_suseconds_t	tv_usec;	/* microseconds */
+struct timeval
+{
+    __kernel_old_time_t tv_sec;   /* seconds */
+    __kernel_suseconds_t tv_usec; /* microseconds */
 };
 #endif
-
 
 #ifdef EC_DEBUG_RING
 #define EC_DEBUG_RING_SIZE 10
 
-typedef enum {
-    TX, RX
+typedef enum
+{
+    TX,
+    RX
 } ec_debug_frame_dir_t;
 
-typedef struct {
+typedef struct
+{
     ec_debug_frame_dir_t dir;
     struct timeval t;
     uint8_t data[EC_MAX_DATA_SIZE];
@@ -89,14 +92,14 @@ typedef struct {
 
 struct ec_device
 {
-    ec_master_t *master; /**< EtherCAT master */
-    struct net_device *dev; /**< pointer to the assigned net_device */
-    ec_pollfunc_t poll; /**< pointer to the device's poll function */
-    struct module *module; /**< pointer to the device's owning module */
-    uint8_t open; /**< true, if the net_device has been opened */
-    uint8_t link_state; /**< device link state */
+    ec_master_t *master;                     /**< EtherCAT master */
+    struct net_device *dev;                  /**< pointer to the assigned net_device */
+    ec_pollfunc_t poll;                      /**< pointer to the device's poll function */
+    struct module *module;                   /**< pointer to the device's owning module */
+    uint8_t open;                            /**< true, if the net_device has been opened */
+    uint8_t link_state;                      /**< device link state */
     struct sk_buff *tx_skb[EC_TX_RING_SIZE]; /**< transmit skb ring */
-    unsigned int tx_ring_index; /**< last ring entry used to transmit */
+    unsigned int tx_ring_index;              /**< last ring entry used to transmit */
 #ifdef EC_HAVE_CYCLES
     cycles_t cycles_poll; /**< cycles of last poll */
 #endif
@@ -106,27 +109,27 @@ struct ec_device
     unsigned long jiffies_poll; /**< jiffies of last poll */
 
     // Frame statistics
-    u64 tx_count; /**< Number of frames sent. */
-    u64 last_tx_count; /**< Number of frames sent of last statistics cycle. */
-    u64 rx_count; /**< Number of frames received. */
-    u64 last_rx_count; /**< Number of frames received of last statistics
-                         cycle. */
-    u64 tx_bytes; /**< Number of bytes sent. */
-    u64 last_tx_bytes; /**< Number of bytes sent of last statistics cycle. */
-    u64 rx_bytes; /**< Number of bytes received. */
-    u64 last_rx_bytes; /**< Number of bytes received of last statistics cycle.
-                        */
-    u64 tx_errors; /**< Number of transmit errors. */
+    u64 tx_count;                      /**< Number of frames sent. */
+    u64 last_tx_count;                 /**< Number of frames sent of last statistics cycle. */
+    u64 rx_count;                      /**< Number of frames received. */
+    u64 last_rx_count;                 /**< Number of frames received of last statistics
+                                         cycle. */
+    u64 tx_bytes;                      /**< Number of bytes sent. */
+    u64 last_tx_bytes;                 /**< Number of bytes sent of last statistics cycle. */
+    u64 rx_bytes;                      /**< Number of bytes received. */
+    u64 last_rx_bytes;                 /**< Number of bytes received of last statistics cycle.
+                                        */
+    u64 tx_errors;                     /**< Number of transmit errors. */
     s32 tx_frame_rates[EC_RATE_COUNT]; /**< Transmit rates in frames/s for
                                          different statistics cycle periods.
                                         */
     s32 rx_frame_rates[EC_RATE_COUNT]; /**< Receive rates in frames/s for
                                          different statistics cycle periods.
                                         */
-    s32 tx_byte_rates[EC_RATE_COUNT]; /**< Transmit rates in byte/s for
-                                        different statistics cycle periods. */
-    s32 rx_byte_rates[EC_RATE_COUNT]; /**< Receive rates in byte/s for
-                                        different statistics cycle periods. */
+    s32 tx_byte_rates[EC_RATE_COUNT];  /**< Transmit rates in byte/s for
+                                         different statistics cycle periods. */
+    s32 rx_byte_rates[EC_RATE_COUNT];  /**< Receive rates in byte/s for
+                                         different statistics cycle periods. */
 
 #ifdef EC_DEBUG_IF
     ec_debug_t dbg; /**< debug device */
@@ -144,14 +147,15 @@ struct ec_device
    pcap global header
 */
 
-typedef struct {
-    u32 magic_number;   /* magic number */
-    u16 version_major;  /* major version number */
-    u16 version_minor;  /* minor version number */
-    s32 thiszone;       /* GMT to local correction */
-    u32 sigfigs;        /* accuracy of timestamps */
-    u32 snaplen;        /* max length of captured packets, in octets */
-    u32 network;        /* data link type */
+typedef struct
+{
+    u32 magic_number;  /* magic number */
+    u16 version_major; /* major version number */
+    u16 version_minor; /* minor version number */
+    s32 thiszone;      /* GMT to local correction */
+    u32 sigfigs;       /* accuracy of timestamps */
+    u32 snaplen;       /* max length of captured packets, in octets */
+    u32 network;       /* data link type */
 } pcap_hdr_t;
 
 /*****************************************************************************/
@@ -160,11 +164,12 @@ typedef struct {
    pcap packet header
 */
 
-typedef struct {
-    u32 ts_sec;         /* timestamp seconds */
-    u32 ts_usec;        /* timestamp microseconds */
-    u32 incl_len;       /* number of octets of packet saved in file */
-    u32 orig_len;       /* actual length of packet */
+typedef struct
+{
+    u32 ts_sec;   /* timestamp seconds */
+    u32 ts_usec;  /* timestamp microseconds */
+    u32 incl_len; /* number of octets of packet saved in file */
+    u32 orig_len; /* actual length of packet */
 } pcaprec_hdr_t;
 
 /*****************************************************************************/
@@ -173,7 +178,7 @@ int ec_device_init(ec_device_t *, ec_master_t *);
 void ec_device_clear(ec_device_t *);
 
 void ec_device_attach(ec_device_t *, struct net_device *, ec_pollfunc_t,
-        struct module *);
+                      struct module *);
 void ec_device_detach(ec_device_t *);
 
 int ec_device_open(ec_device_t *);
@@ -187,7 +192,7 @@ void ec_device_update_stats(ec_device_t *);
 
 #ifdef EC_DEBUG_RING
 void ec_device_debug_ring_append(ec_device_t *, ec_debug_frame_dir_t,
-        const void *, size_t);
+                                 const void *, size_t);
 void ec_device_debug_ring_print(const ec_device_t *);
 #endif
 

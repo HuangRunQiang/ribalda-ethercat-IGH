@@ -60,22 +60,23 @@ typedef struct ec_fsm_slave ec_fsm_slave_t; /**< \see ec_fsm_slave */
 
 /** Finite state machine of an EtherCAT slave.
  */
-struct ec_fsm_slave {
-    ec_slave_t *slave; /**< slave the FSM runs on */
-    struct list_head list; /**< Used for execution list. */
+struct ec_fsm_slave
+{
+    ec_slave_t *slave;                  /**< slave the FSM runs on */
+    struct list_head list;              /**< Used for execution list. */
     ec_dict_request_t int_dict_request; /**< Internal dictionary request. */
 
     void (*state)(ec_fsm_slave_t *, ec_datagram_t *); /**< State function. */
-    ec_datagram_t *datagram; /**< Previous state datagram. */
-    ec_sdo_request_t *sdo_request; /**< SDO request to process. */
-    ec_reg_request_t *reg_request; /**< Register request to process. */
-    ec_foe_request_t *foe_request; /**< FoE request to process. */
-    off_t foe_index; /**< Index to FoE write request data. */
-    ec_soe_request_t *soe_request; /**< SoE request to process. */
+    ec_datagram_t *datagram;                          /**< Previous state datagram. */
+    ec_sdo_request_t *sdo_request;                    /**< SDO request to process. */
+    ec_reg_request_t *reg_request;                    /**< Register request to process. */
+    ec_foe_request_t *foe_request;                    /**< FoE request to process. */
+    off_t foe_index;                                  /**< Index to FoE write request data. */
+    ec_soe_request_t *soe_request;                    /**< SoE request to process. */
 #ifdef EC_EOE
     ec_eoe_request_t *eoe_request; /**< EoE request to process. */
 #endif
-    ec_mbg_request_t *mbg_request; /**< MBox Gateway request to process. */
+    ec_mbg_request_t *mbg_request;   /**< MBox Gateway request to process. */
     ec_dict_request_t *dict_request; /**< Dictionary request to process. */
 
     ec_fsm_coe_t fsm_coe; /**< CoE state machine. */
@@ -84,10 +85,10 @@ struct ec_fsm_slave {
 #ifdef EC_EOE
     ec_fsm_eoe_t fsm_eoe; /**< EoE state machine. */
 #endif
-    ec_fsm_mbg_t fsm_mbg; /**< MBox Gateway state machine. */
-    ec_fsm_pdo_t fsm_pdo; /**< PDO configuration state machine. */
-    ec_fsm_change_t fsm_change; /**< State change state machine */
-    ec_fsm_slave_scan_t fsm_slave_scan; /**< slave scan state machine */
+    ec_fsm_mbg_t fsm_mbg;                   /**< MBox Gateway state machine. */
+    ec_fsm_pdo_t fsm_pdo;                   /**< PDO configuration state machine. */
+    ec_fsm_change_t fsm_change;             /**< State change state machine */
+    ec_fsm_slave_scan_t fsm_slave_scan;     /**< slave scan state machine */
     ec_fsm_slave_config_t fsm_slave_config; /**< slave config state machine. */
 };
 
@@ -102,6 +103,5 @@ int ec_fsm_slave_set_unready(ec_fsm_slave_t *);
 int ec_fsm_slave_is_ready(const ec_fsm_slave_t *);
 
 /*****************************************************************************/
-
 
 #endif // __EC_FSM_SLAVE_H__

@@ -30,90 +30,56 @@
 
 /** \file
  *
- * EtherCAT master application interface.
+ * EtherCAT主站应用程序接口。
  *
- * \defgroup ApplicationInterface EtherCAT Application Interface
+ * \defgroup ApplicationInterface EtherCAT应用程序接口
  *
- * EtherCAT interface for realtime applications. This interface is designed
- * for realtime modules that want to use EtherCAT. There are functions to
- * request a master, to map process data, to communicate with slaves via CoE
- * and to configure and activate the bus.
+ * 用于实时应用程序的EtherCAT接口。该接口专为希望使用EtherCAT的实时模块而设计。它提供了请求主站、映射过程数据、通过CoE与从站通信以及配置和激活总线等功能的函数。
  *
- * Changes in version 1.5.2:
+ * 版本1.5.2中的变化：
  *
- * - Added redundancy_active flag to ec_domain_state_t.
- * - Added ecrt_master_link_state() method and ec_master_link_state_t to query
- *   the state of a redundant link.
- * - Added the EC_HAVE_REDUNDANCY define, to check, if the interface contains
- *   redundancy features.
- * - Added ecrt_sdo_request_index() to change SDO index and subindex after
- *   handler creation.
- * - Added interface for retrieving CoE emergency messages, i. e.
- *   ecrt_slave_config_emerg_size(), ecrt_slave_config_emerg_pop(),
- *   ecrt_slave_config_emerg_clear(), ecrt_slave_config_emerg_overruns() and
- *   the defines EC_HAVE_EMERGENCY and EC_COE_EMERGENCY_MSG_SIZE.
- * - Added interface for direct EtherCAT register access: Added data type
- *   ec_reg_request_t and methods ecrt_slave_config_create_reg_request(),
- *   ecrt_reg_request_data(), ecrt_reg_request_state(),
- *   ecrt_reg_request_write(), ecrt_reg_request_read() and the feature flag
- *   EC_HAVE_REG_ACCESS.
- * - Added method to select the reference clock,
- *   ecrt_master_select_reference_clock() and the feature flag
- *   EC_HAVE_SELECT_REF_CLOCK to check, if the method is available.
- * - Added method to get the reference clock time,
- *   ecrt_master_reference_clock_time() and the feature flag
- *   EC_HAVE_REF_CLOCK_TIME to have the possibility to synchronize the master
- *   clock to the reference clock.
- * - Changed the data types of the shift times in ecrt_slave_config_dc() to
- *   int32_t to correctly display negative shift times.
- * - Added ecrt_slave_config_reg_pdo_entry_pos() and the feature flag
- *   EC_HAVE_REG_BY_POS for registering PDO entries with non-unique indices
- *   via their positions in the mapping.
+ * - 在ec_domain_state_t中添加了redundancy_active标志。
+ * -
+添加了ecrt_master_link_state()方法和ec_master_link_state_t，用于查询冗余链路的状态。
+ * - 添加了EC_HAVE_REDUNDANCY定义，用于检查接口是否包含冗余功能。
+ * - 添加了ecrt_sdo_request_index()，用于在处理程序创建后更改SDO索引和子索引。
+ * -
+添加了检索CoE紧急消息的接口，例如ecrt_slave_config_emerg_size()、ecrt_slave_config_emerg_pop()、ecrt_slave_config_emerg_clear()、ecrt_slave_config_emerg_overruns()以及EC_HAVE_EMERGENCY和EC_COE_EMERGENCY_MSG_SIZE的定义。
+ * -
+添加了直接EtherCAT寄存器访问的接口：添加了数据类型ec_reg_request_t和方法ecrt_slave_config_create_reg_request()、ecrt_reg_request_data()、ecrt_reg_request_state()、ecrt_reg_request_write()、ecrt_reg_request_read()，以及特性标志EC_HAVE_REG_ACCESS。
+ * -
+添加了选择参考时钟的方法ecrt_master_select_reference_clock()和特性标志EC_HAVE_SELECT_REF_CLOCK，以检查该方法是否可用。
+ * -
+添加了获取参考时钟时间的方法ecrt_master_reference_clock_time()和特性标志EC_HAVE_REF_CLOCK_TIME，以实现将主时钟与参考时钟同步的可能性。
+ * -
+将ecrt_slave_config_dc()中的移位时间数据类型更改为int32_t，以正确显示负移位时间。
+ * -
+添加了ecrt_slave_config_reg_pdo_entry_pos()和特性标志EC_HAVE_REG_BY_POS，用于通过映射中的位置注册具有非唯一索引的PDO条目。
  *
- * Changes in version 1.5:
+ * 版本1.5中的变化：
  *
- * - Added the distributed clocks feature and the respective method
- *   ecrt_slave_config_dc() to configure a slave for cyclic operation, and
- *   ecrt_master_application_time(), ecrt_master_sync_reference_clock() and
- *   ecrt_master_sync_slave_clocks() for offset and drift compensation. The
- *   EC_TIMEVAL2NANO() macro can be used for epoch time conversion, while the
- *   ecrt_master_sync_monitor_queue() and ecrt_master_sync_monitor_process()
- *   methods can be used to monitor the synchrony.
- * - Improved the callback mechanism. ecrt_master_callbacks() now takes two
- *   callback functions for sending and receiving datagrams.
- *   ecrt_master_send_ext() is used to execute the sending of non-application
- *   datagrams.
- * - Added watchdog configuration (method ecrt_slave_config_watchdog(),
- *   #ec_watchdog_mode_t, \a watchdog_mode parameter in ec_sync_info_t and
- *   ecrt_slave_config_sync_manager()).
- * - Added ecrt_slave_config_complete_sdo() method to download an SDO during
- *   configuration via CompleteAccess.
- * - Added ecrt_master_deactivate() to remove the bus configuration.
- * - Added ecrt_open_master() and ecrt_master_reserve() separation for
- *   userspace.
- * - Added bus information interface (methods ecrt_master(),
- *   ecrt_master_get_slave(), ecrt_master_get_sync_manager(),
- *   ecrt_master_get_pdo() and ecrt_master_get_pdo_entry()) to get information
- *   about the currently connected slaves and the PDO entries provided.
- * - Added ecrt_master_sdo_download(), ecrt_master_sdo_download_complete() and
- *   ecrt_master_sdo_upload() methods to let an application transfer SDOs
- *   before activating the master.
- * - Changed the meaning of the negative return values of
- *   ecrt_slave_config_reg_pdo_entry() and ecrt_slave_config_sdo*().
- * - Implemented the Vendor-specific over EtherCAT mailbox protocol. See
- *   ecrt_slave_config_create_voe_handler().
- * - Renamed ec_sdo_request_state_t to #ec_request_state_t, because it is also
- *   used by VoE handlers.
- * - Removed 'const' from argument of ecrt_sdo_request_state(), because the
- *   userspace library has to modify object internals.
- * - Added 64-bit data access macros.
- * - Added ecrt_slave_config_idn() method for storing SoE IDN configurations,
- *   and ecrt_master_read_idn() and ecrt_master_write_idn() to read/write IDNs
- *   ad-hoc via the user-space library.
- * - Added ecrt_master_reset() to initiate retrying to configure slaves.
- *
- * @{
- */
+ * -
+添加了分布式时钟功能和相应的方法ecrt_slave_config_dc()，用于配置循环操作的从站，以及ecrt_master_application_time()、ecrt_master_sync_reference_clock()和ecrt_master_sync_slave_clocks()用于偏移和漂移补偿。可以使用EC_TIMEVAL2NANO()宏进行时代时间转换，同时可以使用ecrt_master_sync_monitor_queue()和ecrt_master_sync_monitor_process()方法来监视同步性。
+ * -
+改进了回调机制。ecrt_master_callbacks()现在接受两个回调函数用于发送和接收数据报文。使用ecrt_master_send_ext()来执行非应用数据报文的发送。
+ * -
+添加了看门狗配置（方法ecrt_slave_config_watchdog()、#ec_watchdog_mode_t、ec_sync_info_t中的\a
+watchdog_mode参数以及ecrt_slave_config_sync_manager()）。
+ * -
+添加了ecrt_slave_config_complete_sdo()方法，用于在配置期间通过CompleteAccess下载SDO。
+ * - 添加了ecrt_master_deactivate()方法，用于移除总线配置。
+ * - 为用户空间添加了ecrt_open_master()和ecrt_master_reserve()的分离。
+ * -
+添加了总线信息接口（方法ecrt_master()、ecrt_master_get_slave()、ecrt_master_get_sync_manager()、ecrt_master_get_pdo()和ecrt_master_get_pdo_entry()），用于获取当前连接的从站和提供的PDO条目的信息。
+ * -
+添加了ecrt_master_sdo_download()、ecrt_master_sdo_download_complete()和ecrt_master_sdo_upload()方法，允许应用程序在激活主站之前传输SDO。
+ * -
+更改了ecrt_slave_config_reg_pdo_entry()和ecrt_slave_config_sdo*()的负返回值的含义。
+ * -
+实现了基于EtherCAT邮箱的供应商特定协议。请参阅ecrt_slave_config_create_voe_handler()。
+ * -
+将ec_sdo_request_state_t重命名为#ec_request_state_t，因为它也被VoE处理程序使用。
+ * - 从ecrt_sdo_request_state()的参数中删除了'const'，因为用户
 
 /*****************************************************************************/
 
@@ -122,11 +88,11 @@
 
 #ifdef __KERNEL__
 #include <asm/byteorder.h>
-#include <linux/types.h>
 #include <linux/time.h>
+#include <linux/types.h>
 #else
-#include <stdlib.h> // for size_t
 #include <stdint.h>
+#include <stdlib.h>   // for size_t
 #include <sys/time.h> // for struct timeval
 #endif
 
@@ -134,102 +100,101 @@
  * Global definitions
  *****************************************************************************/
 
-/** EtherCAT realtime interface major version number.
+/** EtherCAT实时接口的主要版本号。
  */
 #define ECRT_VER_MAJOR 1
 
-/** EtherCAT realtime interface minor version number.
+/** EtherCAT实时接口的次要版本号。
  */
 #define ECRT_VER_MINOR 5
 
-/** EtherCAT realtime interface patchlevel number.
+/** EtherCAT实时接口的修订版本号。
  */
 #define ECRT_VER_PATCH 10
 
-/** EtherCAT realtime interface version word generator.
+/** EtherCAT实时接口版本号生成器。
  */
 #define ECRT_VERSION(a, b, c) (((a) << 16) + ((b) << 8) + (c))
 
-/** EtherCAT realtime interface version word.
+/** EtherCAT实时接口版本号。
  */
-#define ECRT_VERSION_MAGIC ECRT_VERSION(ECRT_VER_MAJOR, ECRT_VER_MINOR, ECRT_VER_PATCH)
+#define ECRT_VERSION_MAGIC \
+    ECRT_VERSION(ECRT_VER_MAJOR, ECRT_VER_MINOR, ECRT_VER_PATCH)
 
 /******************************************************************************
- * Feature flags
+ * 功能标志
  *****************************************************************************/
 
-/** Defined, if the redundancy features are available.
+/** 定义，如果冗余功能可用。
  *
- * I. e. if the \a redundancy_active flag in ec_domain_state_t and the
- * ecrt_master_link_state() method are available.
+ * 例如，如果ec_domain_state_t中的\a
+ * redundancy_active标志和ecrt_master_link_state()方法可用。
  */
 #define EC_HAVE_REDUNDANCY
 
-/** Defined, if the CoE emergency ring feature is available.
+/** 定义，如果CoE紧急环功能可用。
  *
- * I. e. if the ecrt_slave_config_emerg_*() methods are available.
+ * 例如，如果ecrt_slave_config_emerg_*()方法可用。
  */
 #define EC_HAVE_EMERGENCY
 
-/** Defined, if the register access interface is available.
+/** 定义，如果寄存器访问接口可用。
  *
- * I. e. if the methods ecrt_slave_config_create_reg_request(),
- * ecrt_reg_request_data(), ecrt_reg_request_state(), ecrt_reg_request_write()
- * and ecrt_reg_request_read() are available.
+ * 例如，如果ecrt_slave_config_create_reg_request()、ecrt_reg_request_data()、ecrt_reg_request_state()、ecrt_reg_request_write()和ecrt_reg_request_read()方法可用。
  */
 #define EC_HAVE_REG_ACCESS
 
-/** Defined if the method ecrt_master_select_reference_clock() is available.
+/** 定义，如果方法ecrt_master_select_reference_clock()可用。
  */
 #define EC_HAVE_SELECT_REF_CLOCK
 
-/** Defined if the method ecrt_master_reference_clock_time() is available.
+/** 定义，如果方法ecrt_master_reference_clock_time()可用。
  */
 #define EC_HAVE_REF_CLOCK_TIME
 
-/** Defined if the method ecrt_slave_config_reg_pdo_entry_pos() is available.
+/** 定义，如果方法ecrt_slave_config_reg_pdo_entry_pos()可用。
  */
 #define EC_HAVE_REG_BY_POS
 
-/** Defined if the method ecrt_master_sync_reference_clock_to() is available.
+/** 定义，如果方法ecrt_master_sync_reference_clock_to()可用。
  */
 #define EC_HAVE_SYNC_TO
 
 /*****************************************************************************/
 
-/** End of list marker.
+/** 列表结束标记。
  *
- * This can be used with ecrt_slave_config_pdos().
+ * 可以与ecrt_slave_config_pdos()一起使用。
  */
 #define EC_END ~0U
 
-/** Maximum number of sync managers per slave.
+/** 每个从站的最大同步管理器数量。
  */
 #define EC_MAX_SYNC_MANAGERS 16
 
-/** Maximum string length.
+/** 最大字符串长度。
  *
- * Used in ec_slave_info_t.
+ * 在ec_slave_info_t中使用。
  */
 #define EC_MAX_STRING_LENGTH 64
 
-/** Maximum number of slave ports. */
+/** 最大从站端口数量。 */
 #define EC_MAX_PORTS 4
 
-/** Timeval to nanoseconds conversion.
+/** timeval到纳秒的转换。
  *
- * This macro converts a Unix epoch time to EtherCAT DC time.
+ * 此宏将Unix纪元时间转换为EtherCAT DC时间。
  *
  * \see void ecrt_master_application_time()
  *
- * \param TV struct timeval containing epoch time.
+ * \param TV 包含纪元时间的struct timeval。
  */
 #define EC_TIMEVAL2NANO(TV) \
     (((TV).tv_sec - 946684800ULL) * 1000000000ULL + (TV).tv_usec * 1000ULL)
 
-/** Size of a CoE emergency message in byte.
+/** CoE紧急消息的字节大小。
  *
- * \see ecrt_slave_config_emerg_pop().
+ * \see ecrt_slave_config_emerg_pop()。
  */
 #define EC_COE_EMERGENCY_MSG_SIZE 8
 
@@ -260,320 +225,325 @@ typedef struct ec_reg_request ec_reg_request_t; /**< \see ec_reg_request. */
 
 /*****************************************************************************/
 
-/** Master state.
+/**
+ * @brief       主站状态。
  *
- * This is used for the output parameter of ecrt_master_state().
+ * @details     用于ecrt_master_state()的输出参数。
  *
- * \see ecrt_master_state().
+ * @see         ecrt_master_state()。
  */
-typedef struct {
-    unsigned int slaves_responding; /**< Sum of responding slaves on all
-                                      Ethernet devices. */
-    unsigned int al_states : 4; /**< Application-layer states of all slaves.
-                                  The states are coded in the lower 4 bits.
-                                  If a bit is set, it means that at least one
-                                  slave in the bus is in the corresponding
-                                  state:
-                                  - Bit 0: \a INIT
-                                  - Bit 1: \a PREOP
-                                  - Bit 2: \a SAFEOP
-                                  - Bit 3: \a OP */
-    unsigned int link_up : 1; /**< \a true, if at least one Ethernet link is
-                                up. */
-    unsigned int scan_busy : 1; /**< \a true, if a slave rescan is in progress */
+typedef struct
+{
+    unsigned int slaves_responding; /**< 所有以太网设备上响应的从站总数。 */
+    unsigned int
+        al_states : 4;          /**< 所有从站的应用层状态。
+                                状态以低4位编码。
+                                如果某一位被设置，表示总线上至少有一个从站处于相应的状态：
+                                - 位 0: \a INIT
+                                - 位 1: \a PREOP
+                                - 位 2: \a SAFEOP
+                                - 位 3: \a OP */
+    unsigned int link_up : 1;   /**< \a true，如果至少有一个以太网链接正常。 */
+    unsigned int scan_busy : 1; /**< \a true，如果从站重新扫描正在进行中。 */
 } ec_master_state_t;
 
 /*****************************************************************************/
 
-/** Redundant link state.
+/**
+ * @brief       冗余链路状态。
  *
- * This is used for the output parameter of ecrt_master_link_state().
+ * @details     用于ecrt_master_link_state()的输出参数。
  *
- * \see ecrt_master_link_state().
+ * @see         ecrt_master_link_state()。
  */
-typedef struct {
-    unsigned int slaves_responding; /**< Sum of responding slaves on the given
-                                      link. */
-    unsigned int al_states : 4; /**< Application-layer states of the slaves on
-                                  the given link.  The states are coded in the
-                                  lower 4 bits.  If a bit is set, it means
-                                  that at least one slave in the bus is in the
-                                  corresponding state:
-                                  - Bit 0: \a INIT
-                                  - Bit 1: \a PREOP
-                                  - Bit 2: \a SAFEOP
-                                  - Bit 3: \a OP */
-    unsigned int link_up : 1; /**< \a true, if the given Ethernet link is up.
-                               */
+typedef struct
+{
+    unsigned int slaves_responding; /**< 在给定链路上响应的从站总数。 */
+    unsigned int
+        al_states : 4;        /**< 给定链路上从站的应用层状态。
+                                状态以低4位编码。
+                                如果某一位被设置，表示总线上至少有一个从站处于相应的状态：
+                                - 位 0: \a INIT
+                                - 位 1: \a PREOP
+                                - 位 2: \a SAFEOP
+                                - 位 3: \a OP */
+    unsigned int link_up : 1; /**< \a true，如果给定的以太网链路正常。 */
 } ec_master_link_state_t;
 
 /*****************************************************************************/
 
-/** Slave configuration state.
+/**
+ * @brief       从站配置状态。
  *
- * This is used as an output parameter of ecrt_slave_config_state().
+ * @details     用于ecrt_slave_config_state()的输出参数。
  *
- * \see ecrt_slave_config_state().
+ * @see         ecrt_slave_config_state()。
  */
-typedef struct  {
-    unsigned int online : 1; /**< The slave is online. */
-    unsigned int operational : 1; /**< The slave was brought into \a OP state
-                                    using the specified configuration. */
-    unsigned int al_state : 4; /**< The application-layer state of the slave.
-                                 - 1: \a INIT
-                                 - 2: \a PREOP
-                                 - 4: \a SAFEOP
-                                 - 8: \a OP
-
-                                 Note that each state is coded in a different
-                                 bit! */
-    unsigned int error_flag : 1; /**< The slave has an unrecoverable error. */
-    unsigned int ready : 1; /**< The slave is ready for external requests. */
-    uint16_t position; /**< Offset of the slave in the ring. */
+typedef struct
+{
+    unsigned int online : 1;      /**< 从站在线。 */
+    unsigned int operational : 1; /**< 使用指定配置将从站引入\a OP状态。 */
+    unsigned int al_state : 4;    /**< 从站的应用层状态。
+                                    - 1: \a INIT
+                                    - 2: \a PREOP
+                                    - 4: \a SAFEOP
+                                    - 8: \a OP
+   
+                                    注意，每个状态都以不同的位编码！ */
+    unsigned int error_flag : 1;  /**< 从站存在不可恢复的错误。 */
+    unsigned int ready : 1;       /**< 从站准备好接收外部请求。 */
+    uint16_t position;            /**< 从站在环中的偏移量。 */
 } ec_slave_config_state_t;
 
 /*****************************************************************************/
 
-/** Master information.
+/** 主站信息。
  *
- * This is used as an output parameter of ecrt_master().
+ * @details     用于ecrt_master()的输出参数。
  *
- * \see ecrt_master().
+ * @see         ecrt_master()。
  */
-typedef struct {
-   unsigned int slave_count; /**< Number of slaves in the bus. */
-   unsigned int link_up : 1; /**< \a true, if the network link is up. */
-   uint8_t scan_busy; /**< \a true, while the master is scanning the bus */
-   uint64_t app_time; /**< Application time. */
+typedef struct
+{
+    unsigned int slave_count; /**< 总线上的从站数量。 */
+    unsigned int link_up : 1; /**< \a true，如果网络链接正常。 */
+    uint8_t scan_busy;        /**< \a true，在主站扫描总线时。 */
+    uint64_t app_time;        /**< 应用时间。 */
 } ec_master_info_t;
 
 /*****************************************************************************/
-
-/** EtherCAT slave port descriptor.
+/** EtherCAT从站端口描述符。
  */
-typedef enum {
-    EC_PORT_NOT_IMPLEMENTED, /**< Port is not implemented. */
-    EC_PORT_NOT_CONFIGURED, /**< Port is not configured. */
-    EC_PORT_EBUS, /**< Port is an E-Bus. */
-    EC_PORT_MII /**< Port is a MII. */
+typedef enum
+{
+    EC_PORT_NOT_IMPLEMENTED, /**< 未实现的端口。 */
+    EC_PORT_NOT_CONFIGURED,  /**< 未配置的端口。 */
+    EC_PORT_EBUS,            /**< 端口是E-Bus。 */
+    EC_PORT_MII              /**< 端口是MII。 */
 } ec_slave_port_desc_t;
 
 /*****************************************************************************/
 
-/** EtherCAT slave port information.
+/** EtherCAT从站端口信息。
  */
-typedef struct {
-    uint8_t link_up; /**< Link detected. */
-    uint8_t loop_closed; /**< Loop closed. */
-    uint8_t signal_detected; /**< Detected signal on RX port. */
-    uint8_t bypassed; /**< Packets are bypassing this port (eg. redundancy) */
+typedef struct
+{
+    uint8_t link_up;         /**< 检测到链接。 */
+    uint8_t loop_closed;     /**< 闭环。 */
+    uint8_t signal_detected; /**< 在RX端口上检测到的信号。 */
+    uint8_t bypassed;        /**< 数据包绕过此端口（例如冗余）。 */
 } ec_slave_port_link_t;
 
 /*****************************************************************************/
 
-/** Slave information.
+/** 从站信息。
  *
- * This is used as an output parameter of ecrt_master_get_slave().
+ * 作为ecrt_master_get_slave()的输出参数使用。
  *
- * \see ecrt_master_get_slave().
+ * \see ecrt_master_get_slave()。
  */
-typedef struct {
-    uint16_t position; /**< Offset of the slave in the ring. */
-    uint32_t vendor_id; /**< Vendor-ID stored on the slave. */
-    uint32_t product_code; /**< Product-Code stored on the slave. */
-    uint32_t revision_number; /**< Revision-Number stored on the slave. */
-    uint32_t serial_number; /**< Serial-Number stored on the slave. */
-    uint16_t alias; /**< The slaves alias if not equal to 0. */
-    int16_t current_on_ebus; /**< Used current in mA. */
-    struct {
-        ec_slave_port_desc_t desc; /**< Physical port type. */
-        ec_slave_port_link_t link; /**< Port link state. */
-        uint32_t receive_time; /**< Receive time on DC transmission delay
-                                 measurement. */
-        uint16_t next_slave; /**< Ring position of next DC slave on that
-                               port.  */
-        uint32_t delay_to_next_dc; /**< Delay [ns] to next DC slave. */
-    } ports[EC_MAX_PORTS]; /**< Port information. */
-    uint8_t upstream_port; /**< Index of upstream (master facing) port */
-    uint8_t al_state; /**< Current state of the slave. */
-    uint8_t error_flag; /**< Error flag for that slave. */
-    uint8_t scan_required; /**< The slave is being scanned. */
-    uint8_t ready; /**< The slave is ready for external requests. */
-    uint8_t sync_count; /**< Number of sync managers. */
-    uint16_t sdo_count; /**< Number of SDOs. */
-    char name[EC_MAX_STRING_LENGTH]; /**< Name of the slave. */
+typedef struct
+{
+    uint16_t position;        /**< 从站在环中的偏移量。 */
+    uint32_t vendor_id;       /**< 存储在从站上的供应商ID。 */
+    uint32_t product_code;    /**< 存储在从站上的产品代码。 */
+    uint32_t revision_number; /**< 存储在从站上的版本号。 */
+    uint32_t serial_number;   /**< 存储在从站上的序列号。 */
+    uint16_t alias;           /**< 如果不等于0，则为从站的别名。 */
+    int16_t current_on_ebus;  /**< 在毫安时使用的电流。 */
+    struct
+    {
+        ec_slave_port_desc_t desc;   /**< 物理端口类型。 */
+        ec_slave_port_link_t link;   /**< 端口链接状态。 */
+        uint32_t receive_time;       /**< DC传输延迟测量的接收时间。 */
+        uint16_t next_slave;         /**< 在该端口上的下一个DC从站的环位置。 */
+        uint32_t delay_to_next_dc;   /**< 到下一个DC从站的延迟[ns]。 */
+    } ports[EC_MAX_PORTS];           /**< 端口信息。 */
+    uint8_t upstream_port;           /**< 上游（面向主站）端口的索引。 */
+    uint8_t al_state;                /**< 从站的当前状态。 */
+    uint8_t error_flag;              /**< 该从站的错误标志。 */
+    uint8_t scan_required;           /**< 从站正在被扫描。 */
+    uint8_t ready;                   /**< 从站已准备好接收外部请求。 */
+    uint8_t sync_count;              /**< 同步管理器的数量。 */
+    uint16_t sdo_count;              /**< SDO的数量。 */
+    char name[EC_MAX_STRING_LENGTH]; /**< 从站的名称。 */
 } ec_slave_info_t;
 
 /*****************************************************************************/
 
-/** Domain working counter interpretation.
+/**
+ * \brief 域工作计数器解释
  *
- * This is used in ec_domain_state_t.
+ * 用于ec_domain_state_t中。
  */
-typedef enum {
-    EC_WC_ZERO = 0,   /**< No registered process data were exchanged. */
-    EC_WC_INCOMPLETE, /**< Some of the registered process data were
-                        exchanged. */
-    EC_WC_COMPLETE    /**< All registered process data were exchanged. */
+typedef enum
+{
+    EC_WC_ZERO = 0,   /**< 未交换任何已注册的过程数据。 */
+    EC_WC_INCOMPLETE, /**< 部分已注册的过程数据已交换。 */
+    EC_WC_COMPLETE    /**< 所有已注册的过程数据已交换。 */
 } ec_wc_state_t;
 
 /*****************************************************************************/
 
-/** Domain state.
+/** 域状态。
  *
- * This is used for the output parameter of ecrt_domain_state().
+ * 该结构体用于描述域（Domain）的状态，用作ecrt_domain_state()函数的输出参数。
  */
-typedef struct {
-    unsigned int working_counter; /**< Value of the last working counter. */
-    ec_wc_state_t wc_state; /**< Working counter interpretation. */
-    unsigned int redundancy_active; /**< Redundant link is in use. */
+typedef struct
+{
+    unsigned int working_counter;   /**< 上一次工作计数器的值。 */
+    ec_wc_state_t wc_state;         /**< 工作计数器的解释。 */
+    unsigned int redundancy_active; /**< 冗余链路是否正在使用中的标志。 */
 } ec_domain_state_t;
 
 /*****************************************************************************/
 
-/** Direction type for PDO assignment functions.
+/** PDO分配函数的方向类型。
  */
-typedef enum {
-    EC_DIR_INVALID, /**< Invalid direction. Do not use this value. */
-    EC_DIR_OUTPUT, /**< Values written by the master. */
-    EC_DIR_INPUT, /**< Values read by the master. */
-    EC_DIR_BOTH, /**< Values read and written by the master. */
-    EC_DIR_COUNT /**< Number of directions. For internal use only. */
+typedef enum
+{
+    EC_DIR_INVALID, /**< 无效的方向。不要使用该值。 */
+    EC_DIR_OUTPUT,  /**< 主站写入的值。 */
+    EC_DIR_INPUT,   /**< 主站读取的值。 */
+    EC_DIR_BOTH,    /**< 主站读写的值。 */
+    EC_DIR_COUNT    /**< 方向数量。仅供内部使用。 */
 } ec_direction_t;
 
 /*****************************************************************************/
 
-/** Watchdog mode for sync manager configuration.
+/** 同步管理器配置的看门狗模式。
  *
- * Used to specify, if a sync manager's watchdog is to be enabled.
+ * 用于指定是否启用同步管理器的看门狗。
  */
-typedef enum {
-    EC_WD_DEFAULT, /**< Use the default setting of the sync manager. */
-    EC_WD_ENABLE, /**< Enable the watchdog. */
-    EC_WD_DISABLE, /**< Disable the watchdog. */
+typedef enum
+{
+    EC_WD_DEFAULT, /**< 使用同步管理器的默认设置。 */
+    EC_WD_ENABLE,  /**< 启用看门狗。 */
+    EC_WD_DISABLE, /**< 禁用看门狗。 */
 } ec_watchdog_mode_t;
-
 /*****************************************************************************/
 
-/** PDO entry configuration information.
+/** PDO条目配置信息。
  *
- * This is the data type of the \a entries field in ec_pdo_info_t.
+ * 这是ec_pdo_info_t中\a entries字段的数据类型。
  *
- * \see ecrt_slave_config_pdos().
+ * \see ecrt_slave_config_pdos()。
  */
-typedef struct {
-    uint16_t index; /**< PDO entry index. */
-    uint8_t subindex; /**< PDO entry subindex. */
-    uint8_t bit_length; /**< Size of the PDO entry in bit. */
+typedef struct
+{
+    uint16_t index;     /**< PDO条目索引。 */
+    uint8_t subindex;   /**< PDO条目子索引。 */
+    uint8_t bit_length; /**< PDO条目的位大小。 */
 } ec_pdo_entry_info_t;
 
 /*****************************************************************************/
 
-/** PDO configuration information.
+/** PDO配置信息。
  *
- * This is the data type of the \a pdos field in ec_sync_info_t.
+ * 这是ec_sync_info_t中\a pdos字段的数据类型。
  *
- * \see ecrt_slave_config_pdos().
+ * \see ecrt_slave_config_pdos()。
  */
-typedef struct {
-    uint16_t index; /**< PDO index. */
-    unsigned int n_entries; /**< Number of PDO entries in \a entries to map.
-                              Zero means, that the default mapping shall be
-                              used (this can only be done if the slave is
-                              present at bus configuration time). */
-    ec_pdo_entry_info_t *entries; /**< Array of PDO entries to map. Can either
-                                    be \a NULL, or must contain at
-                                    least \a n_entries values. */
+typedef struct
+{
+    uint16_t index;         /**< PDO索引。 */
+    unsigned int n_entries; /**< \a entries中要映射的PDO条目数量。
+                              如果为零，表示将使用默认映射（只能在总线配置时存在从设备时才能使用）。
+                            */
+    ec_pdo_entry_info_t
+        *entries; /**< 要映射的PDO条目数组。
+                    可以是\a NULL，或者必须包含至少\a n_entries个值。 */
 } ec_pdo_info_t;
 
 /*****************************************************************************/
 
-/** Sync manager configuration information.
+/** 同步管理器配置信息。
  *
- * This can be use to configure multiple sync managers including the PDO
- * assignment and PDO mapping. It is used as an input parameter type in
- * ecrt_slave_config_pdos().
+ * 这可以用于配置多个同步管理器，包括PDO分配和PDO映射。它作为ecrt_slave_config_pdos()中的输入参数类型使用。
  */
-typedef struct {
-    uint8_t index; /**< Sync manager index. Must be less
-                     than #EC_MAX_SYNC_MANAGERS for a valid sync manager,
-                     but can also be \a 0xff to mark the end of the list. */
-    ec_direction_t dir; /**< Sync manager direction. */
-    unsigned int n_pdos; /**< Number of PDOs in \a pdos. */
-    ec_pdo_info_t *pdos; /**< Array with PDOs to assign. This must contain
-                            at least \a n_pdos PDOs. */
-    ec_watchdog_mode_t watchdog_mode; /**< Watchdog mode. */
+typedef struct
+{
+    uint8_t
+        index;                        /**<
+                                         同步管理器索引。必须小于#EC_MAX_SYNC_MANAGERS才能成为有效的同步管理器，但也可以是\a
+                                         0xff，表示列表的结尾。 */
+    ec_direction_t dir;               /**< 同步管理器方向。 */
+    unsigned int n_pdos;              /**< \a pdos中的PDO数量。 */
+    ec_pdo_info_t *pdos;              /**< 要分配的PDO数组。它必须包含至少\a n_pdos个PDO。 */
+    ec_watchdog_mode_t watchdog_mode; /**< 看门狗模式。 */
 } ec_sync_info_t;
 
 /*****************************************************************************/
 
-/** List record type for PDO entry mass-registration.
+/** 用于PDO条目批量注册的列表记录类型。
  *
- * This type is used for the array parameter of the
- * ecrt_domain_reg_pdo_entry_list()
+ * 此类型用于ecrt_domain_reg_pdo_entry_list()的数组参数。
  */
-typedef struct {
-    uint16_t alias; /**< Slave alias address. */
-    uint16_t position; /**< Slave position. */
-    uint32_t vendor_id; /**< Slave vendor ID. */
-    uint32_t product_code; /**< Slave product code. */
-    uint16_t index; /**< PDO entry index. */
-    uint8_t subindex; /**< PDO entry subindex. */
-    unsigned int *offset; /**< Pointer to a variable to store the PDO entry's
-                       (byte-)offset in the process data. */
-    unsigned int *bit_position; /**< Pointer to a variable to store a bit
-                                  position (0-7) within the \a offset. Can be
-                                  NULL, in which case an error is raised if the
-                                  PDO entry does not byte-align. */
+typedef struct
+{
+    uint16_t alias;             /**< 从站别名地址。 */
+    uint16_t position;          /**< 从站位置。 */
+    uint32_t vendor_id;         /**< 从站厂商ID。 */
+    uint32_t product_code;      /**< 从站产品代码。 */
+    uint16_t index;             /**< PDO条目索引。 */
+    uint8_t subindex;           /**< PDO条目子索引。 */
+    unsigned int *offset;       /**<
+                                   指向变量的指针，用于存储PDO条目在过程数据中的（字节）偏移量。
+                                 */
+    unsigned int *bit_position; /**< 指向变量的指针，用于存储位（0-7）在\a
+                                   offset内的位置。如果为NULL，则在PDO条目不字节对齐时引发错误。
+                                 */
 } ec_pdo_entry_reg_t;
 
 /*****************************************************************************/
 
-/** Request state.
+/** 请求状态。
  *
- * This is used as return type for ecrt_sdo_request_state() and
- * ecrt_voe_handler_state().
+ * 用作ecrt_sdo_request_state()和ecrt_voe_handler_state()的返回类型。
  */
-typedef enum {
-    EC_REQUEST_UNUSED, /**< Not requested. */
-    EC_REQUEST_BUSY, /**< Request is being processed. */
-    EC_REQUEST_SUCCESS, /**< Request was processed successfully. */
-    EC_REQUEST_ERROR, /**< Request processing failed. */
+typedef enum
+{
+    EC_REQUEST_UNUSED,  /**< 未请求。 */
+    EC_REQUEST_BUSY,    /**< 请求正在处理中。 */
+    EC_REQUEST_SUCCESS, /**< 请求已成功处理。 */
+    EC_REQUEST_ERROR,   /**< 请求处理失败。 */
 } ec_request_state_t;
 
 /*****************************************************************************/
 
-/** FoE error enumeration type.
+/** FoE错误枚举类型。
  */
-typedef enum {
-    FOE_BUSY               = 0, /**< Busy. */
-    FOE_READY              = 1, /**< Ready. */
-    FOE_IDLE               = 2, /**< Idle. */
-    FOE_WC_ERROR           = 3, /**< Working counter error. */
-    FOE_RECEIVE_ERROR      = 4, /**< Receive error. */
-    FOE_PROT_ERROR         = 5, /**< Protocol error. */
-    FOE_NODATA_ERROR       = 6, /**< No data error. */
-    FOE_PACKETNO_ERROR     = 7, /**< Packet number error. */
-    FOE_OPCODE_ERROR       = 8, /**< OpCode error. */
-    FOE_TIMEOUT_ERROR      = 9, /**< Timeout error. */
-    FOE_SEND_RX_DATA_ERROR = 10, /**< Error sending received data. */
-    FOE_RX_DATA_ACK_ERROR  = 11, /**< Error acknowledging received data. */
-    FOE_ACK_ERROR          = 12, /**< Acknowledge error. */
-    FOE_MBOX_FETCH_ERROR   = 13, /**< Error fetching data from mailbox. */
-    FOE_READ_NODATA_ERROR  = 14, /**< No data while reading. */
-    FOE_MBOX_PROT_ERROR    = 15, /**< Mailbox protocol error. */
-    FOE_READ_OVER_ERROR    = 16, /**< Read buffer overflow. */
+typedef enum
+{
+    FOE_BUSY = 0,                /**< 忙碌。 */
+    FOE_READY = 1,               /**< 就绪。 */
+    FOE_IDLE = 2,                /**< 空闲。 */
+    FOE_WC_ERROR = 3,            /**< 工作计数器错误。 */
+    FOE_RECEIVE_ERROR = 4,       /**< 接收错误。 */
+    FOE_PROT_ERROR = 5,          /**< 协议错误。 */
+    FOE_NODATA_ERROR = 6,        /**< 无数据错误。 */
+    FOE_PACKETNO_ERROR = 7,      /**< 数据包编号错误。 */
+    FOE_OPCODE_ERROR = 8,        /**< 操作码错误。 */
+    FOE_TIMEOUT_ERROR = 9,       /**< 超时错误。 */
+    FOE_SEND_RX_DATA_ERROR = 10, /**< 发送接收到的数据错误。 */
+    FOE_RX_DATA_ACK_ERROR = 11,  /**< 确认接收到的数据错误。 */
+    FOE_ACK_ERROR = 12,          /**< 确认错误。 */
+    FOE_MBOX_FETCH_ERROR = 13,   /**< 从邮箱获取数据错误。 */
+    FOE_READ_NODATA_ERROR = 14,  /**< 读取时无数据错误。 */
+    FOE_MBOX_PROT_ERROR = 15,    /**< 邮箱协议错误。 */
+    FOE_READ_OVER_ERROR = 16,    /**< 读取缓冲区溢出错误。 */
 } ec_foe_error_t;
 
 /*****************************************************************************/
 
 /** Application-layer state.
  */
-typedef enum {
-    EC_AL_STATE_INIT = 1, /**< Init. */
-    EC_AL_STATE_PREOP = 2, /**< Pre-operational. */
+typedef enum
+{
+    EC_AL_STATE_INIT = 1,   /**< Init. */
+    EC_AL_STATE_PREOP = 2,  /**< Pre-operational. */
     EC_AL_STATE_SAFEOP = 4, /**< Safe-operational. */
-    EC_AL_STATE_OP = 8, /**< Operational. */
+    EC_AL_STATE_OP = 8,     /**< Operational. */
 } ec_al_state_t;
 
 /******************************************************************************
@@ -581,1899 +551,1808 @@ typedef enum {
  *****************************************************************************/
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-/** Returns the version magic of the realtime interface.
- *
- * \return Value of ECRT_VERSION_MAGIC() at EtherCAT master compile time.
- */
-unsigned int ecrt_version_magic(void);
+    /** 返回实时接口的版本魔术数。
+     *
+     * \return EtherCAT主站编译时的ECRT_VERSION_MAGIC()的值。
+     */
+    unsigned int ecrt_version_magic(void);
 
-/** Requests an EtherCAT master for realtime operation.
- *
- * Before an application can access an EtherCAT master, it has to reserve one
- * for exclusive use.
- *
- * In userspace, this is a convenience function for ecrt_open_master() and
- * ecrt_master_reserve().
- *
- * This function has to be the first function an application has to call to
- * use EtherCAT. The function takes the index of the master as its argument.
- * The first master has index 0, the n-th master has index n - 1. The number
- * of masters has to be specified when loading the master module.
- *
- * \return Pointer to the reserved master, otherwise \a NULL.
- */
-ec_master_t *ecrt_request_master(
-        unsigned int master_index /**< Index of the master to request. */
-        );
+    /**
+     * @brief		请求一个用于实时操作的EtherCAT主站。
+     * @details
+     * 在应用程序可以访问EtherCAT主站之前，必须先为其保留独占使用权。
+     *
+     * 在用户空间，这是一个方便的函数，用于调用ecrt_open_master()和ecrt_master_reserve()。
+     *
+     * 这个函数必须是应用程序调用的第一个函数，用于使用EtherCAT。该函数以主站的索引作为参数。
+     * 第一个主站的索引为0，第n个主站的索引为n -
+     * 1。在加载主站模块时需要指定主站的数量。
+     *
+     * @param[in]	master_index 请求的主站索引。
+     * @return		指向已保留主站的指针，否则返回 \a NULL。
+     */
+    ec_master_t *
+    ecrt_request_master(unsigned int master_index /**< 请求的主站索引。 */
+    );
 
 #ifndef __KERNEL__
 
-/** Opens an EtherCAT master for userspace access.
- *
- * This function has to be the first function an application has to call to
- * use EtherCAT. The function takes the index of the master as its argument.
- * The first master has index 0, the n-th master has index n - 1. The number
- * of masters has to be specified when loading the master module.
- *
- * For convenience, the function ecrt_request_master() can be used.
- *
- * \return Pointer to the opened master, otherwise \a NULL.
- */
-ec_master_t *ecrt_open_master(
-        unsigned int master_index /**< Index of the master to request. */
-        );
+    /**
+     * @brief		打开一个用于用户空间访问的EtherCAT主站。
+     *
+     * 这个函数必须是应用程序调用的第一个函数，用于使用EtherCAT。该函数以主站的索引作为参数。
+     * 第一个主站的索引为0，第n个主站的索引为n -
+     * 1。在加载主站模块时需要指定主站的数量。
+     *
+     * 为了方便起见，可以使用函数ecrt_request_master()。
+     *
+     * @param[in]	master_index 请求的主站索引。
+     * @return		指向已打开主站的指针，否则返回 \a NULL。
+     */
+    ec_master_t *
+    ecrt_open_master(unsigned int master_index /**< 请求的主站索引。 */
+    );
 
 #endif // #ifndef __KERNEL__
 
-/** Releases a requested EtherCAT master.
- *
- * After use, a master it has to be released to make it available for other
- * applications.
- *
- * This method frees all created data structures. It should not be called in
- * realtime context.
- *
- * If the master was activated, ecrt_master_deactivate() is called internally.
- */
-void ecrt_release_master(
-        ec_master_t *master /**< EtherCAT master */
-        );
+    /**
+     * @brief		释放已请求的EtherCAT主站。
+     *
+     * 在使用完毕后，必须释放主站以便其他应用程序可以使用。
+     *
+     * 该方法释放所有创建的数据结构。不应在实时环境中调用。
+     *
+     * 如果主站已激活，则内部会调用ecrt_master_deactivate()。
+     *
+     * @param[in]	master EtherCAT主站。
+     */
+    void ecrt_release_master(ec_master_t *master /**< EtherCAT主站 */
+    );
 
-/******************************************************************************
- * Master methods
- *****************************************************************************/
+    /******************************************************************************
+     * Master methods
+     *****************************************************************************/
 
 #ifndef __KERNEL__
 
-/** Reserves an EtherCAT master for realtime operation.
- *
- * Before an application can use PDO/domain registration functions or SDO
- * request functions on the master, it has to reserve one for exclusive use.
- *
- * \return 0 in case of success, else < 0
- */
-int ecrt_master_reserve(
-        ec_master_t *master /**< EtherCAT master */
-        );
+    /**
+     * @brief		为实时操作保留一个EtherCAT主站。
+     *
+     * 在应用程序可以在主站上使用PDO/域注册函数或SDO请求函数之前，必须为其保留一个主站以供独占使用。
+     *
+     * @param[in]	master EtherCAT主站。
+     * @return		成功返回0，否则返回 < 0。
+     */
+    int ecrt_master_reserve(ec_master_t *master /**< EtherCAT主站 */
+    );
 
 #endif // #ifndef __KERNEL__
 
 #ifdef __KERNEL__
 
-/** Sets the locking callbacks.
- *
- * For concurrent master access, i. e. if other instances than the application
- * want to send and receive datagrams on the bus, the application has to
- * provide a callback mechanism. This method takes two function pointers as
- * its parameters. Asynchronous master access (like EoE processing) is only
- * possible if the callbacks have been set.
- *
- * The task of the send callback (\a send_cb) is to decide, if the bus is
- * currently accessible and whether or not to call the ecrt_master_send_ext()
- * method.
- *
- * The task of the receive callback (\a receive_cb) is to decide, if a call to
- * ecrt_master_receive() is allowed and to execute it respectively.
- *
- * \attention This method has to be called before ecrt_master_activate().
- */
-void ecrt_master_callbacks(
-        ec_master_t *master, /**< EtherCAT master */
-        void (*send_cb)(void *), /**< Datagram sending callback. */
-        void (*receive_cb)(void *), /**< Receive callback. */
-        void *cb_data /**< Arbitrary pointer passed to the callback functions.
-                       */
-        );
+    /**
+     * @brief		设置锁定回调函数。
+     *
+     * 对于并发主站访问，即如果除应用程序之外的其他实例要在总线上发送和接收数据报，应用程序必须提供回调机制。
+     * 该方法接受两个函数指针作为参数。只有在设置了回调函数后，才能进行异步主站访问（如EoE处理）。
+     *
+     * 发送回调函数（\a send_cb）的任务是判断总线当前是否可访问，并决定是否调用ecrt_master_send_ext()方法。
+     *
+     * 接收回调函数（\a receive_cb）的任务是判断是否允许调用ecrt_master_receive()并相应地执行它。
+     *
+     * \attention	该方法必须在调用ecrt_master_activate()之前调用。
+     *
+     * @param[in]	master		EtherCAT主站。
+     * @param[in]	send_cb		数据报发送回调函数。
+     * @param[in]	receive_cb	接收回调函数。
+     * @param[in]	cb_data		传递给回调函数的任意指针。
+     */
+    void ecrt_master_callbacks(
+        ec_master_t *master,        /**< EtherCAT主站 */
+        void (*send_cb)(void *),    /**< 数据报发送回调函数 */
+        void (*receive_cb)(void *), /**< 接收回调函数 */
+        void *cb_data               /**< 传递给回调函数的任意指针 */
+    );
 
 #endif /* __KERNEL__ */
 
-/** Creates a new process data domain.
- *
- * For process data exchange, at least one process data domain is needed.
- * This method creates a new process data domain and returns a pointer to the
- * new domain object. This object can be used for registering PDOs and
- * exchanging them in cyclic operation.
- *
- * This method allocates memory and should be called in non-realtime context
- * before ecrt_master_activate().
- *
- * \return Pointer to the new domain on success, else NULL.
- */
-ec_domain_t *ecrt_master_create_domain(
-        ec_master_t *master /**< EtherCAT master. */
-        );
+    /**
+     * @brief		创建一个新的过程数据域。
+     * @details		用于过程数据交换，至少需要一个过程数据域。
+     *              该方法创建一个新的过程数据域并返回指向新域对象的指针。
+     *              可以使用该对象来注册PDO并在周期性操作中进行交换。
+     *              该方法分配内存，应在非实时上下文中在调用ecrt_master_activate()之前调用。
+     * @param[in]	master	EtherCAT主站。
+     * @return		成功时返回指向新域的指针，否则返回NULL。
+     */
+    ec_domain_t *ecrt_master_create_domain(
+        ec_master_t *master /**< EtherCAT主站 */
+    );
 
-/** setup the domain's process data memory.
- *
- * Call this after all PDO entries have been registered and before activating
- * the master.
- *
- * Call this if you need to access the domain memory before activating the
- * master
- *
- * \return 0 on success, else non-zero.
- */
-int ecrt_master_setup_domain_memory(
-        ec_master_t *master /**< EtherCAT master. */
-        );
+    /**
+     * @brief		设置域的过程数据内存。
+     * @details		在所有PDO条目注册完成并激活主站之前调用此方法。
+     *              如果需要在激活主站之前访问域内存，请调用此方法。
+     * @param[in]	master	EtherCAT主站。
+     * @return		成功返回0，否则返回非零值。
+     */
+    int ecrt_master_setup_domain_memory(
+        ec_master_t *master /**< EtherCAT主站 */
+    );
+    /**
+     * @brief 获取从站配置。
+     *
+     * 为给定的别名和位置元组创建从站配置对象并返回。
+     * 如果已存在具有相同别名和位置的配置，则将重新使用它。
+     * 在后一种情况下，将与存储的厂商ID和产品代码进行比较。
+     * 如果不匹配，则会引发错误消息并返回NULL。
+     *
+     * 从站使用别名和位置参数进行寻址。
+     * - 如果别名为零，则位置被解释为所需从站的环位置。
+     * - 如果别名非零，则它与具有给定别名的从站匹配。
+     * 在这种情况下，位置被解释为从别名从站开始的环偏移量，
+     * 因此，位置为零表示别名从站本身，正值表示别名从站后面的第n个从站。
+     *
+     * 如果在总线配置期间找到具有给定地址的从站，
+     * 则将其厂商ID和产品代码与给定值进行匹配。
+     * 如果不匹配，则不配置该从站并引发错误消息。
+     *
+     * 如果在总线配置期间不同的从站配置指向同一个从站，
+     * 则会发出警告，并且只应用第一个配置。
+     *
+     * 该方法分配内存，并应在非实时上下文中在调用ecrt_master_activate()之前调用。
+     *
+     * @param master EtherCAT主站
+     * @param alias 从站别名
+     * @param position 从站位置
+     * @param vendor_id 期望的厂商ID
+     * @param product_code 期望的产品代码
+     * @retval >0 指向从站配置结构的指针
+     * @retval NULL 错误情况下返回NULL
+     */
+    ec_slave_config_t *ecrt_master_slave_config(
+        ec_master_t *master,
+        uint16_t alias,
+        uint16_t position,
+        uint32_t vendor_id,
+        uint32_t product_code);
 
-/** Obtains a slave configuration.
- *
- * Creates a slave configuration object for the given \a alias and \a position
- * tuple and returns it. If a configuration with the same \a alias and \a
- * position already exists, it will be re-used. In the latter case, the given
- * vendor ID and product code are compared to the stored ones. On mismatch, an
- * error message is raised and the function returns \a NULL.
- *
- * Slaves are addressed with the \a alias and \a position parameters.
- * - If \a alias is zero, \a position is interpreted as the desired slave's
- *   ring position.
- * - If \a alias is non-zero, it matches a slave with the given alias. In this
- *   case, \a position is interpreted as ring offset, starting from the
- *   aliased slave, so a position of zero means the aliased slave itself and a
- *   positive value matches the n-th slave behind the aliased one.
- *
- * If the slave with the given address is found during the bus configuration,
- * its vendor ID and product code are matched against the given value. On
- * mismatch, the slave is not configured and an error message is raised.
- *
- * If different slave configurations are pointing to the same slave during bus
- * configuration, a warning is raised and only the first configuration is
- * applied.
- *
- * This method allocates memory and should be called in non-realtime context
- * before ecrt_master_activate().
- *
- * \retval >0 Pointer to the slave configuration structure.
- * \retval NULL in the error case.
- */
-ec_slave_config_t *ecrt_master_slave_config(
-        ec_master_t *master, /**< EtherCAT master */
-        uint16_t alias, /**< Slave alias. */
-        uint16_t position, /**< Slave position. */
-        uint32_t vendor_id, /**< Expected vendor ID. */
-        uint32_t product_code /**< Expected product code. */
-        );
-
-/** Selects the reference clock for distributed clocks.
- *
- * If this method is not called for a certain master, or if the slave
- * configuration pointer is NULL, then the first slave with DC functionality
- * will provide the reference clock.
- *
- * \return 0 on success, otherwise negative error code.
- */
-int ecrt_master_select_reference_clock(
-        ec_master_t *master, /**< EtherCAT master. */
-        ec_slave_config_t *sc /**< Slave config of the slave to use as the
-                               * reference slave (or NULL). */
-        );
-
-/** Obtains master information.
- *
- * No memory is allocated on the heap in
- * this function.
- *
- * \attention The pointer to this structure must point to a valid variable.
- *
- * \return 0 in case of success, else < 0
- */
-int ecrt_master(
-        ec_master_t *master, /**< EtherCAT master */
-        ec_master_info_t *master_info /**< Structure that will output the
-                                        information */
-        );
-
-/** Obtains slave information.
- *
- * Tries to find the slave with the given ring position. The obtained
- * information is stored in a structure. No memory is allocated on the heap in
- * this function.
- *
- * \attention The pointer to this structure must point to a valid variable.
- *
- * \return 0 in case of success, else < 0
- */
-int ecrt_master_get_slave(
-        ec_master_t *master, /**< EtherCAT master */
-        uint16_t slave_position, /**< Slave position. */
-        ec_slave_info_t *slave_info /**< Structure that will output the
-                                      information */
-        );
+    /**
+     * @brief 选择分布式时钟的参考时钟。
+     *
+     * 如果对于某个主站未调用此方法，或者从站配置指针为NULL，
+     * 则具有DC功能的第一个从站将提供参考时钟。
+     *
+     * @param master EtherCAT主站
+     * @param sc 用作参考从站的从站配置（或NULL）
+     * @return 成功时返回0，否则返回负错误代码
+     */
+    int ecrt_master_select_reference_clock(
+        ec_master_t *master,  /**< EtherCAT主站 */
+        ec_slave_config_t *sc /**< 用作参考从站的从站配置（或NULL） */
+    );
+    /**
+     * @brief 获取主站信息。
+     *
+     * 此函数不会在堆上分配内存。
+     *
+     * @attention 对该结构的指针必须指向一个有效的变量。
+     *
+     * @param master EtherCAT主站
+     * @param master_info 将输出信息的结构体
+     * @return 成功时返回0，否则返回<0
+     */
+    int ecrt_master(
+        ec_master_t *master,          /**< EtherCAT主站 */
+        ec_master_info_t *master_info /**< 将输出信息的结构体 */
+    );
+    /**
+     * @brief 获取从站信息。
+     *
+     * 尝试找到给定环位置的从站。获取到的信息存储在一个结构体中。
+     * 此函数不会在堆上分配内存。
+     *
+     * @attention 对该结构的指针必须指向一个有效的变量。
+     *
+     * @param master EtherCAT主站
+     * @param slave_position 从站位置
+     * @param slave_info 将输出信息的结构体
+     * @return 成功时返回0，否则返回<0
+     */
+    int ecrt_master_get_slave(
+        ec_master_t *master,        /**< EtherCAT主站 */
+        uint16_t slave_position,    /**< 从站位置 */
+        ec_slave_info_t *slave_info /**< 将输出信息的结构体 */
+    );
 
 #ifndef __KERNEL__
 
-/** Returns the proposed configuration of a slave's sync manager.
- *
- * Fills a given ec_sync_info_t structure with the attributes of a sync
- * manager. The \a pdos field of the return value is left empty. Use
- * ecrt_master_get_pdo() to get the PDO information.
- *
- * \return zero on success, else non-zero
- */
-int ecrt_master_get_sync_manager(
-        ec_master_t *master, /**< EtherCAT master. */
-        uint16_t slave_position, /**< Slave position. */
-        uint8_t sync_index, /**< Sync manager index. Must be less
-                                than #EC_MAX_SYNC_MANAGERS. */
-        ec_sync_info_t *sync /**< Pointer to output structure. */
-        );
+    /**
+     * @brief 返回从站同步管理器的建议配置。
+     *
+     * 使用给定的ec_sync_info_t结构填充同步管理器的属性。
+     * 返回值的 \a pdos 字段为空。使用ecrt_master_get_pdo()来获取PDO信息。
+     *
+     * @param master EtherCAT主站
+     * @param slave_position 从站位置
+     * @param sync_index 同步管理器索引。必须小于 #EC_MAX_SYNC_MANAGERS。
+     * @param sync 指向输出结构的指针
+     * @return 成功时返回0，否则返回非零值
+     */
+    int ecrt_master_get_sync_manager(
+        ec_master_t *master,     /**< EtherCAT主站 */
+        uint16_t slave_position, /**< 从站位置 */
+        uint8_t sync_index,      /**< 同步管理器索引。必须小于 #EC_MAX_SYNC_MANAGERS。 */
+        ec_sync_info_t *sync     /**< 指向输出结构的指针 */
+    );
 
-/** Returns information about a currently assigned PDO.
- *
- * Fills a given ec_pdo_info_t structure with the attributes of a currently
- * assigned PDO of the given sync manager. The \a entries field of the return
- * value is left empty. Use ecrt_master_get_pdo_entry() to get the PDO
- * entry information.
- *
- * \retval zero on success, else non-zero
- */
-int ecrt_master_get_pdo(
-        ec_master_t *master, /**< EtherCAT master. */
-        uint16_t slave_position, /**< Slave position. */
-        uint8_t sync_index, /**< Sync manager index. Must be less
-                                 than #EC_MAX_SYNC_MANAGERS. */
-        uint16_t pos, /**< Zero-based PDO position. */
-        ec_pdo_info_t *pdo /**< Pointer to output structure. */
-        );
+    /**
+     * @brief 返回当前分配的PDO的信息。
+     *
+     * 使用给定的ec_pdo_info_t结构填充当前分配的PDO的属性，该PDO属于给定的同步管理器。
+     * 返回值的 \a entries 字段为空。使用ecrt_master_get_pdo_entry()来获取PDO条目信息。
+     *
+     * @param master EtherCAT主站
+     * @param slave_position 从站位置
+     * @param sync_index 同步管理器索引。必须小于 #EC_MAX_SYNC_MANAGERS。
+     * @param pos 基于零的PDO位置。
+     * @param pdo 指向输出结构的指针
+     * @return 成功时返回0，否则返回非零值
+     */
+    int ecrt_master_get_pdo(
+        ec_master_t *master,     /**< EtherCAT主站 */
+        uint16_t slave_position, /**< 从站位置 */
+        uint8_t sync_index,      /**< 同步管理器索引。必须小于 #EC_MAX_SYNC_MANAGERS。 */
+        uint16_t pos,            /**< 基于零的PDO位置。 */
+        ec_pdo_info_t *pdo       /**< 指向输出结构的指针 */
+    );
 
-/** Returns information about a currently mapped PDO entry.
- *
- * Fills a given ec_pdo_entry_info_t structure with the attributes of a
- * currently mapped PDO entry of the given PDO.
- *
- * \retval zero on success, else non-zero
- */
-int ecrt_master_get_pdo_entry(
-        ec_master_t *master, /**< EtherCAT master. */
-        uint16_t slave_position, /**< Slave position. */
-        uint8_t sync_index, /**< Sync manager index. Must be less
-                                 than #EC_MAX_SYNC_MANAGERS. */
-        uint16_t pdo_pos, /**< Zero-based PDO position. */
-        uint16_t entry_pos, /**< Zero-based PDO entry position. */
-        ec_pdo_entry_info_t *entry /**< Pointer to output structure. */
-        );
+    /**
+     * @brief 返回当前映射的PDO条目的信息。
+     *
+     * 使用给定的ec_pdo_entry_info_t结构填充当前映射的PDO条目的属性，该条目属于给定的PDO。
+     *
+     * @param master EtherCAT主站
+     * @param slave_position 从站位置
+     * @param sync_index 同步管理器索引。必须小于 #EC_MAX_SYNC_MANAGERS。
+     * @param pdo_pos 基于零的PDO位置。
+     * @param entry_pos 基于零的PDO条目位置。
+     * @param entry 指向输出结构的指针
+     * @return 成功时返回0，否则返回非零值
+     */
+    int ecrt_master_get_pdo_entry(
+        ec_master_t *master,       /**< EtherCAT主站 */
+        uint16_t slave_position,   /**< 从站位置 */
+        uint8_t sync_index,        /**< 同步管理器索引。必须小于 #EC_MAX_SYNC_MANAGERS。 */
+        uint16_t pdo_pos,          /**< 基于零的PDO位置。 */
+        uint16_t entry_pos,        /**< 基于零的PDO条目位置。 */
+        ec_pdo_entry_info_t *entry /**< 指向输出结构的指针 */
+    );
 
 #endif /* #ifndef __KERNEL__ */
 
-/** Executes an SDO download request to write data to a slave.
- *
- * This request is processed by the master state machine. This method blocks,
- * until the request has been processed and may not be called in realtime
- * context.
- *
- * \retval  0 Success.
- * \retval <0 Error code.
- */
-int ecrt_master_sdo_download(
-        ec_master_t *master, /**< EtherCAT master. */
-        uint16_t slave_position, /**< Slave position. */
-        uint16_t index, /**< Index of the SDO. */
-        uint8_t subindex, /**< Subindex of the SDO. */
-        const uint8_t *data, /**< Data buffer to download. */
-        size_t data_size, /**< Size of the data buffer. */
-        uint32_t *abort_code /**< Abort code of the SDO download. */
-        );
+    /**
+     * @brief 执行SDO下载请求，向从站写入数据。
+     *
+     * 此请求由主站状态机处理。此方法会阻塞，直到请求被处理完毕，并且不能在实时上下文中调用。
+     *
+     * @param master EtherCAT主站
+     * @param slave_position 从站位置
+     * @param index SDO的索引
+     * @param subindex SDO的子索引
+     * @param data 要下载的数据缓冲区
+     * @param data_size 数据缓冲区的大小
+     * @param abort_code SDO下载的中止代码
+     * @return 成功时返回0，否则返回负数错误代码
+     */
+    int ecrt_master_sdo_download(
+        ec_master_t *master,     /**< EtherCAT主站 */
+        uint16_t slave_position, /**< 从站位置 */
+        uint16_t index,          /**< SDO的索引 */
+        uint8_t subindex,        /**< SDO的子索引 */
+        const uint8_t *data,     /**< 要下载的数据缓冲区 */
+        size_t data_size,        /**< 数据缓冲区的大小 */
+        uint32_t *abort_code     /**< SDO下载的中止代码 */
+    );
 
-/** Executes an SDO download request to write data to a slave via complete
- * access.
- *
- * This request is processed by the master state machine. This method blocks,
- * until the request has been processed and may not be called in realtime
- * context.
- *
- * \retval  0 Success.
- * \retval <0 Error code.
- */
-int ecrt_master_sdo_download_complete(
-        ec_master_t *master, /**< EtherCAT master. */
-        uint16_t slave_position, /**< Slave position. */
-        uint16_t index, /**< Index of the SDO. */
-        const uint8_t *data, /**< Data buffer to download. */
-        size_t data_size, /**< Size of the data buffer. */
-        uint32_t *abort_code /**< Abort code of the SDO download. */
-        );
+    /**
+     * @brief 执行SDO下载请求，通过完全访问方式向从站写入数据。
+     *
+     * 此请求由主站状态机处理。此方法会阻塞，直到请求被处理完毕，并且不能在实时上下文中调用。
+     *
+     * @param master EtherCAT主站
+     * @param slave_position 从站位置
+     * @param index SDO的索引
+     * @param data 要下载的数据缓冲区
+     * @param data_size 数据缓冲区的大小
+     * @param abort_code SDO下载的中止代码
+     * @return 成功时返回0，否则返回负数错误代码
+     */
+    int ecrt_master_sdo_download_complete(
+        ec_master_t *master,     /**< EtherCAT主站 */
+        uint16_t slave_position, /**< 从站位置 */
+        uint16_t index,          /**< SDO的索引 */
+        const uint8_t *data,     /**< 要下载的数据缓冲区 */
+        size_t data_size,        /**< 数据缓冲区的大小 */
+        uint32_t *abort_code     /**< SDO下载的中止代码 */
+    );
 
-/** Executes an SDO upload request to read data from a slave.
- *
- * This request is processed by the master state machine. This method blocks,
- * until the request has been processed and may not be called in realtime
- * context.
- *
- * \retval  0 Success.
- * \retval <0 Error code.
- */
-int ecrt_master_sdo_upload(
-        ec_master_t *master, /**< EtherCAT master. */
-        uint16_t slave_position, /**< Slave position. */
-        uint16_t index, /**< Index of the SDO. */
-        uint8_t subindex, /**< Subindex of the SDO. */
-        uint8_t *target, /**< Target buffer for the upload. */
-        size_t target_size, /**< Size of the target buffer. */
-        size_t *result_size, /**< Uploaded data size. */
-        uint32_t *abort_code /**< Abort code of the SDO upload. */
-        );
+    /**
+     * @brief 执行SDO上传请求，从从站读取数据。
+     *
+     * 此请求由主站状态机处理。此方法会阻塞，直到请求被处理完毕，并且不能在实时上下文中调用。
+     *
+     * @param master EtherCAT主站
+     * @param slave_position 从站位置
+     * @param index SDO的索引
+     * @param subindex SDO的子索引
+     * @param target 用于上传的目标缓冲区
+     * @param target_size 目标缓冲区的大小
+     * @param result_size 上传的数据大小
+     * @param abort_code SDO上传的中止代码
+     * @return 成功时返回0，否则返回负数错误代码
+     */
+    int ecrt_master_sdo_upload(
+        ec_master_t *master,     /**< EtherCAT主站 */
+        uint16_t slave_position, /**< 从站位置 */
+        uint16_t index,          /**< SDO的索引 */
+        uint8_t subindex,        /**< SDO的子索引 */
+        uint8_t *target,         /**< 用于上传的目标缓冲区 */
+        size_t target_size,      /**< 目标缓冲区的大小 */
+        size_t *result_size,     /**< 上传的数据大小 */
+        uint32_t *abort_code     /**< SDO上传的中止代码 */
+    );
 
-/** Executes an SDO upload request to read data from a slave via complete access.
- *
- * This request is processed by the master state machine. This method blocks,
- * until the request has been processed and may not be called in realtime
- * context.
- *
- * \retval  0 Success.
- * \retval <0 Error code.
- */
-int ecrt_master_sdo_upload_complete(
-        ec_master_t *master, /**< EtherCAT master. */
-        uint16_t slave_position, /**< Slave position. */
-        uint16_t index, /**< Index of the SDO. */
-        uint8_t *target, /**< Target buffer for the upload. */
-        size_t target_size, /**< Size of the target buffer. */
-        size_t *result_size, /**< Uploaded data size. */
-        uint32_t *abort_code /**< Abort code of the SDO upload. */
-        );
+    /**
+     * @brief 执行SDO上传请求，通过完全访问方式从从站读取数据。
+     *
+     * 此请求由主站状态机处理。此方法会阻塞，直到请求被处理完毕，并且不能在实时上下文中调用。
+     *
+     * @param master EtherCAT主站
+     * @param slave_position 从站位置
+     * @param index SDO的索引
+     * @param target 用于上传的目标缓冲区
+     * @param target_size 目标缓冲区的大小
+     * @param result_size 上传的数据大小
+     * @param abort_code SDO上传的中止代码
+     * @return 成功时返回0，否则返回负数错误代码
+     */
+    int ecrt_master_sdo_upload_complete(
+        ec_master_t *master,     /**< EtherCAT主站 */
+        uint16_t slave_position, /**< 从站位置 */
+        uint16_t index,          /**< SDO的索引 */
+        uint8_t *target,         /**< 用于上传的目标缓冲区 */
+        size_t target_size,      /**< 目标缓冲区的大小 */
+        size_t *result_size,     /**< 上传的数据大小 */
+        uint32_t *abort_code     /**< SDO上传的中止代码 */
+    );
 
-/** Executes an SoE write request.
- *
- * Starts writing an IDN and blocks until the request was processed, or an
- * error occurred.
- *
- * \retval  0 Success.
- * \retval <0 Error code.
- */
-int ecrt_master_write_idn(
-        ec_master_t *master, /**< EtherCAT master. */
-        uint16_t slave_position, /**< Slave position. */
-        uint8_t drive_no, /**< Drive number. */
-        uint16_t idn, /**< SoE IDN (see ecrt_slave_config_idn()). */
-        uint8_t *data, /**< Pointer to data to write. */
-        size_t data_size, /**< Size of data to write. */
-        uint16_t *error_code /**< Pointer to variable, where an SoE error code
-                               can be stored. */
-        );
+    /**
+     * @brief 执行SoE写入请求。
+     *
+     * 开始写入一个IDN并阻塞，直到请求被处理完毕或发生错误。
+     *
+     * @param master EtherCAT主站
+     * @param slave_position 从站位置
+     * @param drive_no 驱动器编号
+     * @param idn SoE IDN（参见ecrt_slave_config_idn()）
+     * @param data 要写入的数据的指针
+     * @param data_size 要写入的数据的大小
+     * @param error_code 可以存储SoE错误代码的变量的指针
+     * @return 成功时返回0，否则返回负数错误代码
+     */
+    int ecrt_master_write_idn(
+        ec_master_t *master,     /**< EtherCAT主站 */
+        uint16_t slave_position, /**< 从站位置 */
+        uint8_t drive_no,        /**< 驱动器编号 */
+        uint16_t idn,            /**< SoE IDN（参见ecrt_slave_config_idn()） */
+        uint8_t *data,           /**< 要写入的数据的指针 */
+        size_t data_size,        /**< 要写入的数据的大小 */
+        uint16_t *error_code     /**< 可以存储SoE错误代码的变量的指针 */
+    );
 
-/** Executes an SoE read request.
- *
- * Starts reading an IDN and blocks until the request was processed, or an
- * error occurred.
- *
- * \retval  0 Success.
- * \retval <0 Error code.
- */
-int ecrt_master_read_idn(
-        ec_master_t *master, /**< EtherCAT master. */
-        uint16_t slave_position, /**< Slave position. */
-        uint8_t drive_no, /**< Drive number. */
-        uint16_t idn, /**< SoE IDN (see ecrt_slave_config_idn()). */
-        uint8_t *target, /**< Pointer to memory where the read data can be
-                           stored. */
-        size_t target_size, /**< Size of the memory \a target points to. */
-        size_t *result_size, /**< Actual size of the received data. */
-        uint16_t *error_code /**< Pointer to variable, where an SoE error code
-                               can be stored. */
-        );
+    /**
+     * @brief 执行SoE读取请求。
+     *
+     * 开始读取一个IDN并阻塞，直到请求被处理完毕或发生错误。
+     *
+     * @param master EtherCAT主站
+     * @param slave_position 从站位置
+     * @param drive_no 驱动器编号
+     * @param idn SoE IDN（参见ecrt_slave_config_idn()）
+     * @param target 用于存储读取数据的内存指针
+     * @param target_size 内存指针target指向的大小
+     * @param result_size 接收到的数据的实际大小
+     * @param error_code 可以存储SoE错误代码的变量的指针
+     * @return 成功时返回0，否则返回负数错误代码
+     */
+    int ecrt_master_read_idn(
+        ec_master_t *master,     /**< EtherCAT主站 */
+        uint16_t slave_position, /**< 从站位置 */
+        uint8_t drive_no,        /**< 驱动器编号 */
+        uint16_t idn,            /**< SoE IDN（参见ecrt_slave_config_idn()） */
+        uint8_t *target,         /**< 用于存储读取数据的内存指针 */
+        size_t target_size,      /**< 内存指针target指向的大小 */
+        size_t *result_size,     /**< 接收到的数据的实际大小 */
+        uint16_t *error_code     /**< 可以存储SoE错误代码的变量的指针 */
+    );
 
-/** Finishes the configuration phase and prepares for cyclic operation.
- *
- * This function tells the master that the configuration phase is finished and
- * the realtime operation will begin. The function allocates internal memory
- * for the domains and calculates the logical FMMU addresses for domain
- * members. It tells the master state machine that the bus configuration is
- * now to be applied.
- *
- * \attention After this function has been called, the realtime application is
- * in charge of cyclically calling ecrt_master_send() and
- * ecrt_master_receive() to ensure bus communication. Before calling this
- * function, the master thread is responsible for that, so these functions may
- * not be called! The method itself allocates memory and should not be called
- * in realtime context.
- *
- * \return 0 in case of success, else < 0
- */
-int ecrt_master_activate(
-        ec_master_t *master /**< EtherCAT master. */
-        );
+    /**
+     * @brief 完成配置阶段并准备进行周期性操作。
+     *
+     * 此函数告知主站配置阶段已经完成，并且实时操作将开始。该函数为域分配内部内存，并为域成员计算逻辑FMMU地址。它告诉主站状态机现在应用总线配置。
+     *
+     * 注意：在调用此函数之后，实时应用程序负责循环调用ecrt_master_send()和ecrt_master_receive()以确保总线通信。在调用此函数之前，主线程负责此操作，因此不能调用这些函数！该方法分配内存，不应在实时上下文中调用。
+     *
+     * @return 成功时返回0，否则返回负数错误代码
+     */
+    int ecrt_master_activate(ec_master_t *master /**< EtherCAT主站 */
+    );
 
-/** Deactivates the slaves distributed clocks and sends the slaves into PREOP.
- *
- * This can be called prior to ecrt_master_deactivate to avoid the slaves
- * getting sync errors.
- *
- * This method should be called in realtime context.
- *
- * Note: EoE slaves will not be changed to PREOP.
- */
-void ecrt_master_deactivate_slaves(
-        ec_master_t *master /**< EtherCAT master. */
-        );
+    /**
+     * @brief 取消激活从站分布式时钟并将从站发送到PREOP状态。
+     *
+     * 这可以在ecrt_master_deactivate之前调用，以避免从站出现同步错误。
+     *
+     * 此方法应在实时上下文中调用。
+     *
+     * 注意：EoE从站不会更改为PREOP状态。
+     */
+    void ecrt_master_deactivate_slaves(ec_master_t *master /**< EtherCAT主站 */
+    );
 
-/** Deactivates the master.
- *
- * Removes the bus configuration. All objects created by
- * ecrt_master_create_domain(), ecrt_master_slave_config(), ecrt_domain_data()
- * ecrt_slave_config_create_sdo_request() and
- * ecrt_slave_config_create_voe_handler() are freed, so pointers to them
- * become invalid.
- *
- * This method should not be called in realtime context.
- */
-void ecrt_master_deactivate(
-        ec_master_t *master /**< EtherCAT master. */
-        );
+    /**
+     * @brief 取消激活主站。
+     *
+     * 删除总线配置。由ecrt_master_create_domain()、ecrt_master_slave_config()、ecrt_domain_data()、ecrt_slave_config_create_sdo_request()和ecrt_slave_config_create_voe_handler()创建的所有对象都将被释放，因此指向它们的指针将变为无效。
+     *
+     * 此方法不应在实时上下文中调用。
+     */
+    void ecrt_master_deactivate(ec_master_t *master /**< EtherCAT主站 */
+    );
 
-/** Set interval between calls to ecrt_master_send().
- *
- * This information helps the master to decide, how much data can be appended
- * to a frame by the master state machine. When the master is configured with
- * --enable-hrtimers, this is used to calculate the scheduling of the master
- * thread.
- *
- * \retval 0 on success.
- * \retval <0 Error code.
- */
-int ecrt_master_set_send_interval(
-        ec_master_t *master, /**< EtherCAT master. */
-        size_t send_interval /**< Send interval in us */
-        );
+    /**
+     * @brief 设置ecrt_master_send()调用之间的间隔。
+     *
+     * 此信息帮助主站决定主站状态机可以向帧附加多少数据。当主站配置为--enable-hrtimers时，用于计算主线程的调度。
+     *
+     * @param master EtherCAT主站
+     * @param send_interval 发送间隔，单位为微秒
+     * @return 成功时返回0，否则返回负数错误代码
+     */
+    int ecrt_master_set_send_interval(
+        ec_master_t *master, /**< EtherCAT主站 */
+        size_t send_interval /**< 发送间隔，单位为微秒 */
+    );
 
-/** Sends all datagrams in the queue.
- *
- * This method takes all datagrams, that have been queued for transmission,
- * puts them into frames, and passes them to the Ethernet device for sending.
- *
- * Has to be called cyclically by the application after ecrt_master_activate()
- * has returned.
- *
- * Returns the number of bytes sent.
- */
-size_t ecrt_master_send(
-        ec_master_t *master /**< EtherCAT master. */
-        );
+    /**
+     * @brief 发送队列中的所有数据报。
+     *
+     * 此方法将所有已排队等待发送的数据报放入帧中，并将其传递给以太网设备进行发送。
+     *
+     * 在ecrt_master_activate()返回后，应用程序需要周期性调用此方法。
+     *
+     * 返回发送的字节数。
+     */
+    size_t ecrt_master_send(ec_master_t *master /**< EtherCAT主站 */
+    );
 
-/** Fetches received frames from the hardware and processes the datagrams.
- *
- * Queries the network device for received frames by calling the interrupt
- * service routine. Extracts received datagrams and dispatches the results to
- * the datagram objects in the queue. Received datagrams, and the ones that
- * timed out, will be marked, and dequeued.
- *
- * Has to be called cyclically by the realtime application after
- * ecrt_master_activate() has returned.
- */
-void ecrt_master_receive(
-        ec_master_t *master /**< EtherCAT master. */
-        );
+    /**
+     * @brief 从硬件获取接收到的帧并处理数据报。
+     *
+     * 通过调用中断服务例程查询网络设备以获取接收到的帧。提取接收到的数据报并将结果分派给队列中的数据报对象。接收到的数据报和超时的数据报将被标记并出队。
+     *
+     * 在ecrt_master_activate()返回后，实时应用程序需要周期性调用此方法。
+     */
+    void ecrt_master_receive(ec_master_t *master /**< EtherCAT主站 */
+    );
 
-/** Sends non-application datagrams.
- *
- * This method has to be called in the send callback function passed via
- * ecrt_master_callbacks() to allow the sending of non-application datagrams.
- *
- * Returns the number of bytes sent.
- */
-size_t ecrt_master_send_ext(
-        ec_master_t *master /**< EtherCAT master. */
-        );
+    /**
+     * @brief 发送非应用数据报。
+     *
+     * 必须在通过ecrt_master_callbacks()传递的发送回调函数中调用此方法，以允许发送非应用数据报。
+     *
+     * 返回发送的字节数。
+     */
+    size_t ecrt_master_send_ext(ec_master_t *master /**< EtherCAT主站 */
+    );
 
 #if !defined(__KERNEL__) && defined(EC_RTDM) && (EC_EOE)
 
-/** check if there are any open eoe handlers
- *
- * used by user space code to process EOE handlers
- *
- * \return 1 if any eoe handlers are open, zero if not,
- *   otherwise a negative error code.
- */
-int ecrt_master_eoe_is_open(
-        ec_master_t *master /**< EtherCAT master. */
-        );
+    /**
+     * @brief 检查是否存在打开的EOE处理程序。
+     *
+     * 由用户空间代码用于处理EOE处理程序。
+     *
+     * @return 如果存在打开的EOE处理程序，则返回1；如果不存在，则返回0；否则返回负数错误代码。
+     */
+    int ecrt_master_eoe_is_open(ec_master_t *master /**< EtherCAT主站 */
+    );
 
 /** return flag from ecrt_master_eoe_process() to indicate there is
  * something to send.  if this flag is set call ecrt_master_send_ext()
  */
 #define EOE_STH_TO_SEND 1
 
-/** return flag from ecrt_master_eoe_process() to indicate there is
- * something still pending.  if this flag is set yield the process
- * before starting the cycle again quickly, else sleep for a short time
- * (e.g. 1ms)
- */
+    /** return flag from ecrt_master_eoe_process() to indicate there is
+     * something still pending.  if this flag is set yield the process
+     * before starting the cycle again quickly, else sleep for a short time
+     * (e.g. 1ms)
+     */
 
 #define EOE_STH_PENDING 2
 
-/** Check if any EOE handlers are open.
- *
- * used by user space code to process EOE handlers
- *
- * \return 1 if something to send +
- *   2 if an eoe handler has something still pending
- */
-int ecrt_master_eoe_process(
-        ec_master_t *master /**< EtherCAT master. */
-        );
-        
+    /**
+     * @brief     检查是否有任何EOE处理程序处于打开状态。
+     * @details   用于用户空间代码处理EOE处理程序。
+     * @param     master EtherCAT主站。
+     * @retval    1表示有待发送的内容 +
+     *            2表示某个EOE处理程序仍有待处理的内容。
+     */
+    int ecrt_master_eoe_process(ec_master_t *master /**< EtherCAT主站。 */
+    );
+
 #endif /* !defined(__KERNEL__) && defined(EC_RTDM) && (EC_EOE) */
 
 #ifdef EC_EOE
 
-/** add an EOE network interface
- *
- * \return 0 on success else negative error code
- */
-int ecrt_master_eoe_addif(
-        ec_master_t *master, /**< EtherCAT master. */
-        uint16_t alias, /**< slave alias. */
-        uint16_t posn /**< slave position. */
-        );
-        
-/** delete an EOE network interface
- *
- * \return 0 on success else negative error code
- */
-int ecrt_master_eoe_delif(
-        ec_master_t *master, /**< EtherCAT master. */
-        uint16_t alias, /**< slave alias. */
-        uint16_t posn /**< slave position. */
-        );
+    /**
+     * @brief     添加一个EOE网络接口。
+     * @details   此函数用于向EtherCAT主站添加一个EOE网络接口。
+     * @param     master EtherCAT主站。
+     * @param     alias 从站别名。
+     * @param     posn 从站位置。
+     * @retval    成功返回0，否则返回负错误代码。
+     */
+    int ecrt_master_eoe_addif(ec_master_t *master, /**< EtherCAT主站。 */
+                              uint16_t alias,      /**< 从站别名。 */
+                              uint16_t posn        /**< 从站位置。 */
+    );
+
+    /**
+     * @brief     删除一个EOE网络接口。
+     * @details   此函数用于从EtherCAT主站删除一个EOE网络接口。
+     * @param     master EtherCAT主站。
+     * @param     alias 从站别名。
+     * @param     posn 从站位置。
+     * @retval    成功返回0，否则返回负错误代码。
+     */
+    int ecrt_master_eoe_delif(ec_master_t *master, /**< EtherCAT主站。 */
+                              uint16_t alias,      /**< 从站别名。 */
+                              uint16_t posn        /**< 从站位置。 */
+    );
 
 #endif /* EC_EOE */
 
-/** Reads the current master state.
- *
- * Stores the master state information in the given \a state structure.
- *
- * This method returns a global state. For the link-specific states in a
- * redundant bus topology, use the ecrt_master_link_state() method.
- */
-void ecrt_master_state(
-        const ec_master_t *master, /**< EtherCAT master. */
-        ec_master_state_t *state /**< Structure to store the information. */
-        );
+    /**
+     * @brief     读取当前主站状态。
+     * @details   将主站状态信息存储在给定的 \a state 结构中。
+     *
+     * 该方法返回全局状态。对于冗余总线拓扑中的链路特定状态，请使用 ecrt_master_link_state() 方法。
+     *
+     * @param     master EtherCAT主站。
+     * @param     state 用于存储信息的结构体。
+     */
+    void ecrt_master_state(
+        const ec_master_t *master, /**< EtherCAT主站。 */
+        ec_master_state_t *state   /**< 用于存储信息的结构体。 */
+    );
 
-/** Reads the current state of a redundant link.
- *
- * Stores the link state information in the given \a state structure.
- *
- * \return Zero on success, otherwise negative error code.
- */
-int ecrt_master_link_state(
-        const ec_master_t *master, /**< EtherCAT master. */
-        unsigned int dev_idx, /**< Index of the device (0 = main device, 1 =
-                                first backup device, ...). */
-        ec_master_link_state_t *state /**< Structure to store the information.
-                                       */
-        );
+    /**
+     * @brief     读取冗余链路的当前状态。
+     * @details   将链路状态信息存储在给定的 \a state 结构中。
+     *
+     * @param     master EtherCAT主站。
+     * @param     dev_idx 设备索引（0 = 主设备，1 = 第一个备份设备，...）。
+     * @param     state 用于存储信息的结构体。
+     * @retval    成功返回0，否则返回负错误代码。
+     */
+    int ecrt_master_link_state(
+        const ec_master_t *master,    /**< EtherCAT主站。 */
+        unsigned int dev_idx,         /**< 设备索引。 */
+        ec_master_link_state_t *state /**< 用于存储信息的结构体。 */
+    );
 
-/** Sets the application time.
- *
- * The master has to know the application's time when operating slaves with
- * distributed clocks. The time is not incremented by the master itself, so
- * this method has to be called cyclically.
- *
- * \attention The time passed to this method is used to calculate the phase of
- * the slaves' SYNC0/1 interrupts. It should be called constantly at the same
- * point of the realtime cycle. So it is recommended to call it at the start
- * of the calculations to avoid deviancies due to changing execution times.
- *
- * The time is used when setting the slaves' <tt>System Time Offset</tt> and
- * <tt>Cyclic Operation Start Time</tt> registers and when synchronizing the
- * DC reference clock to the application time via
- * ecrt_master_sync_reference_clock().
- *
- * The time is defined as nanoseconds from 2000-01-01 00:00. Converting an
- * epoch time can be done with the EC_TIMEVAL2NANO() macro, but is not
- * necessary, since the absolute value is not of any interest.
- */
-void ecrt_master_application_time(
-        ec_master_t *master, /**< EtherCAT master. */
-        uint64_t app_time /**< Application time. */
-        );
+    /**
+     * @brief     设置应用程序时间。
+     * @details   当使用分布式时钟操作从站时，主站需要知道应用程序的时间。时间不会由主站自行递增，因此必须周期性调用此方法。
+     *
+     * @attention 传递给此方法的时间用于计算从站的SYNC0/1中断的相位。它应该在实时周期的相同点不断调用。因此，建议在计算开始时调用它，以避免由于执行时间的变化而产生偏差。
+     *
+     * 时间在设置从站的<tt>System Time Offset</tt>和<tt>Cyclic Operation Start Time</tt>寄存器以及通过 ecrt_master_sync_reference_clock() 将DC参考时钟与应用程序时间同步时使用。
+     *
+     * 时间定义为从2000-01-01 00:00开始的纳秒数。可以使用 EC_TIMEVAL2NANO() 宏将纪元时间转换为纳秒数，但这并不是必需的，因为绝对值并不重要。
+     *
+     * @param     master EtherCAT主站。
+     * @param     app_time 应用程序时间。
+     */
+    void ecrt_master_application_time(ec_master_t *master, /**< EtherCAT主站。 */
+                                      uint64_t app_time    /**< 应用程序时间。 */
+    );
 
-/** Queues the DC reference clock drift compensation datagram for sending.
- *
- * The reference clock will by synchronized to the application time provided
- * by the last call off ecrt_master_application_time().
- */
-void ecrt_master_sync_reference_clock(
-        ec_master_t *master /**< EtherCAT master. */
-        );
+    /**
+     * @brief     将DC参考时钟漂移补偿数据报文加入发送队列。
+     * @details   参考时钟将与最后一次调用 ecrt_master_application_time() 提供的应用程序时间同步。
+     *
+     * @param     master EtherCAT主站。
+     */
+    void ecrt_master_sync_reference_clock(
+        ec_master_t *master /**< EtherCAT主站。 */
+    );
 
-/** Queues the DC reference clock drift compensation datagram for sending.
- *
- * The reference clock will by synchronized to the time passed in the
- * sync_time parameter.
- */
-void ecrt_master_sync_reference_clock_to(
-        ec_master_t *master, /**< EtherCAT master. */
-        uint64_t sync_time /**< Sync reference clock to this time. */
-        );
+    /**
+     * @brief     将DC参考时钟漂移补偿数据报文加入发送队列。
+     * @details   参考时钟将与 sync_time 参数中传递的时间同步。
+     *
+     * @param     master EtherCAT主站。
+     * @param     sync_time 将参考时钟同步到此时间。
+     */
+    void ecrt_master_sync_reference_clock_to(
+        ec_master_t *master, /**< EtherCAT主站。 */
+        uint64_t sync_time   /**< 同步参考时钟的时间。 */
+    );
 
-/** Queues the DC clock drift compensation datagram for sending.
- *
- * All slave clocks synchronized to the reference clock.
- */
-void ecrt_master_sync_slave_clocks(
-        ec_master_t *master /**< EtherCAT master. */
-        );
+    /**
+     * @brief     将DC时钟漂移补偿数据报文加入发送队列。
+     * @details   所有从站时钟与参考时钟同步。
+     *
+     * @param     master EtherCAT主站。
+     */
+    void
+    ecrt_master_sync_slave_clocks(ec_master_t *master /**< EtherCAT主站。 */
+    );
 
-/** Get the lower 32 bit of the reference clock system time.
- *
- * This method can be used to synchronize the master to the reference clock.
- *
- * The reference clock system time is queried via the
- * ecrt_master_sync_slave_clocks() method, that reads the system time of the
- * reference clock and writes it to the slave clocks (so be sure to call it
- * cyclically to get valid data).
- *
- * \attention The returned time is the system time of the reference clock
- * minus the transmission delay of the reference clock.
- *
- * \retval 0 success, system time was written into \a time.
- * \retval -ENXIO No reference clock found.
- * \retval -EIO Slave synchronization datagram was not received.
- */
-int ecrt_master_reference_clock_time(
-        ec_master_t *master, /**< EtherCAT master. */
-        uint32_t *time /**< Pointer to store the queried system time. */
-        );
+    /**
+     * @brief     获取参考时钟系统时间的低32位。
+     * @details   此方法可用于将主站与参考时钟同步。
+     *
+     * 参考时钟系统时间通过 ecrt_master_sync_slave_clocks() 方法查询，该方法读取参考时钟的系统时间并将其写入从站时钟（因此请确保周期性调用以获取有效数据）。
+     *
+     * @attention 返回的时间是参考时钟的系统时间减去参考时钟的传输延迟。
+     *
+     * @param     master EtherCAT主站。
+     * @param     time 用于存储查询的系统时间的指针。
+     * @retval    0 成功，系统时间已写入 \a time。
+     * @retval    -ENXIO 未找到参考时钟。
+     * @retval    -EIO 未接收到从站同步数据报文。
+     */
+    int ecrt_master_reference_clock_time(
+        ec_master_t *master, /**< EtherCAT主站。 */
+        uint32_t *time       /**< 用于存储查询的系统时间的指针。 */
+    );
 
-/** Queues the 64bit dc reference slave clock time value datagram for sending.
- *
- * The datagram read the 64bit dc timestamp of the DC reference slave.
- * (register \a 0x0910:0x0917). The result can be checked with the 
- * ecrt_master_64bit_reference_clock_time() method.
- */
-void ecrt_master_64bit_reference_clock_time_queue(
-        ec_master_t *master /**< EtherCAT master. */
-        );
+    /**
+     * @brief     将64位DC参考从站时钟时间值数据报文加入发送队列。
+     * @details   该数据报文读取DC参考从站的64位DC时间戳（寄存器 \a 0x0910:0x0917）。结果可使用 ecrt_master_64bit_reference_clock_time() 方法进行检查。
+     *
+     * @param     master EtherCAT主站。
+     */
+    void ecrt_master_64bit_reference_clock_time_queue(
+        ec_master_t *master /**< EtherCAT主站。 */
+    );
 
-/** Get the 64bit dc reference slave clock time.
- * 
- * ecrt_master_64bit_reference_clock_time_queue() must be called in the cycle
- * prior to calling this method
- *
- * \attention The returned time is the system time of the reference clock
- * minus the transmission delay of the reference clock.
- *
- * \retval 0 success, system time was written into \a time.
- * \retval -ENXIO No reference clock found.
- * \retval -EIO Slave synchronization datagram was not received.
- */
-int ecrt_master_64bit_reference_clock_time(
-        ec_master_t *master, /**< EtherCAT master. */
-        uint64_t *time /**< Pointer to store the queried time. */
-        );
+    /**
+     * @brief     获取64位DC参考从站时钟时间。
+     * @details   在调用此方法之前，必须在周期中调用 ecrt_master_64bit_reference_clock_time_queue()。
+     *
+     * @attention 返回的时间是参考时钟的系统时间减去参考时钟的传输延迟。
+     *
+     * @param     master EtherCAT主站。
+     * @param     time 用于存储查询的时间的指针。
+     * @retval    0 成功，系统时间已写入 \a time。
+     * @retval    -ENXIO 未找到参考时钟。
+     * @retval    -EIO 未接收到从站同步数据报文。
+     */
+    int ecrt_master_64bit_reference_clock_time(
+        ec_master_t *master, /**< EtherCAT主站。 */
+        uint64_t *time       /**< 用于存储查询的时间的指针。 */
+    );
 
-/** Queues the DC synchrony monitoring datagram for sending.
- *
- * The datagram broadcast-reads all "System time difference" registers (\a
- * 0x092c) to get an upper estimation of the DC synchrony. The result can be
- * checked with the ecrt_master_sync_monitor_process() method.
- */
-void ecrt_master_sync_monitor_queue(
-        ec_master_t *master /**< EtherCAT master. */
-        );
+    /**
+     * @brief     将DC同步监控数据报文加入发送队列。
+     * @details   该数据报文广播读取所有的“System time difference”寄存器（\a 0x092c），以获取DC同步的上限估计。结果可使用 ecrt_master_sync_monitor_process() 方法进行检查。
+     *
+     * @param     master EtherCAT主站。
+     */
+    void
+    ecrt_master_sync_monitor_queue(ec_master_t *master /**< EtherCAT主站。 */
+    );
 
-/** Processes the DC synchrony monitoring datagram.
- *
- * If the sync monitoring datagram was sent before with
- * ecrt_master_sync_monitor_queue(), the result can be queried with this
- * method.
- *
- * \return Upper estimation of the maximum time difference in ns.
- */
-uint32_t ecrt_master_sync_monitor_process(
-        ec_master_t *master /**< EtherCAT master. */
-        );
+    /**
+     * @brief     处理DC同步监控数据报文。
+     * @details   如果之前使用 ecrt_master_sync_monitor_queue() 发送了同步监控数据报文，则可以使用此方法查询结果。
+     *
+     * @param     master EtherCAT主站。
+     * @return    最大时间差的上限估计（以纳秒为单位）。
+     */
+    uint32_t ecrt_master_sync_monitor_process(
+        ec_master_t *master /**< EtherCAT主站。 */
+    );
 
-/** Selects whether to process slave requests by the application or the master
- *
- * if rt_slave_requests \a True, slave requests are to be handled by calls to 
- * ecrt_master_exec_requests() from the applications realtime context,
- * otherwise the master will handle them from its operation thread
- *
- * \return 0 on success, otherwise negative error code.
- */
-int ecrt_master_rt_slave_requests(
-        ec_master_t *master, /**< EtherCAT master. */
-        unsigned int rt_slave_requests /**< if \a True, slave requests are
-                                       to be handled by calls to 
-                                      ecrt_master_exec_requests() from
-                                      the applications realtime context. */
-        );
+    /**
+     * @brief     选择由应用程序还是主站处理从站请求。
+     * @details   如果 rt_slave_requests 为 \a True，则从站请求将由应用程序的实时上下文通过调用 ecrt_master_exec_requests() 处理，否则主站将在其操作线程中处理它们。
+     *
+     * @param     master EtherCAT主站。
+     * @param     rt_slave_requests 如果为 \a True，则从站请求将由应用程序的实时上下文处理。
+     * @return    成功返回0，否则返回负错误代码。
+     */
+    int ecrt_master_rt_slave_requests(
+        ec_master_t *master,           /**< EtherCAT主站。 */
+        unsigned int rt_slave_requests /**< 如果为 \a True，则从站请求将由应用程序的实时上下文处理。 */
+    );
 
-/** Explicit call to process slave requests.
- *
- * This needs to be called on a cyclical period by the applications
- * realtime context if ecrt_master_rt_slave_requests() has been called
- * with rt_slave_requests set to true.  If rt_slave_requests is \a False
- * (the default) slave requests will be processed within the master and
- * this call will be ignored.
- */
-void ecrt_master_exec_slave_requests(
-        ec_master_t *master /**< EtherCAT master. */
-        );
+    /**
+     * @brief     显式调用以处理从站请求。
+     * @details   如果在调用 ecrt_master_rt_slave_requests() 时将 rt_slave_requests 设置为 true，则应用程序的实时上下文需要按周期调用此函数来处理从站请求。如果 rt_slave_requests 为 \a False（默认值），则从站请求将在主站内部处理，此调用将被忽略。
+     *
+     * @param     master EtherCAT主站。
+     */
+    void
+    ecrt_master_exec_slave_requests(ec_master_t *master /**< EtherCAT主站。 */
+    );
 
-/** Retry configuring slaves.
- *
- * Via this method, the application can tell the master to bring all slaves to
- * OP state. In general, this is not necessary, because it is automatically
- * done by the master. But with special slaves, that can be reconfigured by
- * the vendor during runtime, it can be useful.
- */
-void ecrt_master_reset(
-        ec_master_t *master /**< EtherCAT master. */
-        );
+    /**
+     * @brief     重新尝试配置从站。
+     * @details   通过此方法，应用程序可以告知主站将所有从站置于OP状态。通常情况下，这是不必要的，因为主站会自动执行此操作。但对于可以在运行时由供应商重新配置的特殊从站，这可能是有用的。
+     *
+     * @param     master EtherCAT主站。
+     */
+    void ecrt_master_reset(ec_master_t *master /**< EtherCAT主站。 */
+    );
 
-/******************************************************************************
- * Slave configuration methods
- *****************************************************************************/
+    /******************************************************************************
+     * Slave configuration methods
+     *****************************************************************************/
 
-/** Configure a sync manager.
- *
- * Sets the direction of a sync manager. This overrides the direction bits
- * from the default control register from SII.
- *
- * This method has to be called in non-realtime context before
- * ecrt_master_activate().
- *
- * \return zero on success, else non-zero
- */
-int ecrt_slave_config_sync_manager(
-        ec_slave_config_t *sc, /**< Slave configuration. */
-        uint8_t sync_index, /**< Sync manager index. Must be less
-                              than #EC_MAX_SYNC_MANAGERS. */
-        ec_direction_t direction, /**< Input/Output. */
-        ec_watchdog_mode_t watchdog_mode /** Watchdog mode. */
-        );
+    /**
+     * @brief     配置同步管理器。
+     * @details   设置同步管理器的方向。这将覆盖SII中默认控制寄存器的方向位。
+     *
+     * 此方法必须在非实时上下文中在调用 ecrt_master_activate() 之前调用。
+     *
+     * @param     sc 从站配置。
+     * @param     sync_index 同步管理器索引。必须小于 #EC_MAX_SYNC_MANAGERS。
+     * @param     direction 输入/输出。
+     * @param     watchdog_mode 看门狗模式。
+     * @return    成功返回零，否则返回非零值。
+     */
+    int ecrt_slave_config_sync_manager(
+        ec_slave_config_t *sc,           /**< 从站配置。 */
+        uint8_t sync_index,              /**< 同步管理器索引。必须小于 #EC_MAX_SYNC_MANAGERS。 */
+        ec_direction_t direction,        /**< 输入/输出。 */
+        ec_watchdog_mode_t watchdog_mode /**< 看门狗模式。 */
+    );
 
-/** Configure a slave's watchdog times.
- *
- * This method has to be called in non-realtime context before
- * ecrt_master_activate().
- */
-void ecrt_slave_config_watchdog(
-        ec_slave_config_t *sc, /**< Slave configuration. */
-        uint16_t watchdog_divider, /**< Number of 40 ns intervals. Used as a
-                                     base unit for all slave watchdogs. If set
-                                     to zero, the value is not written, so the
-                                     default is used. */
-        uint16_t watchdog_intervals /**< Number of base intervals for process
-                                      data watchdog. If set to zero, the value
-                                      is not written, so the default is used.
-                                     */
-        );
+    /**
+     * @brief     配置从站的看门狗定时器。
+     * @details   此方法必须在非实时上下文中在调用 ecrt_master_activate() 之前调用。
+     *
+     * @param     sc 从站配置。
+     * @param     watchdog_divider 40 ns间隔数。用作所有从站看门狗的基本单位。如果设置为零，则不写入该值，使用默认值。
+     * @param     watchdog_intervals 进程数据看门狗的基本间隔数。如果设置为零，则不写入该值，使用默认值。
+     */
+    void ecrt_slave_config_watchdog(
+        ec_slave_config_t *sc,      /**< 从站配置。 */
+        uint16_t watchdog_divider,  /**< 40 ns间隔数。用作所有从站看门狗的基本单位。如果设置为零，则不写入该值，使用默认值。 */
+        uint16_t watchdog_intervals /**< 进程数据看门狗的基本间隔数。如果设置为零，则不写入该值，使用默认值。 */
+    );
 
-/** Configure whether a slave allows overlapping PDOs.
- *
- * Overlapping PDOs allows inputs to use the same space as outputs on the frame.
- * This reduces the frame length.
- */
-void ecrt_slave_config_overlapping_pdos(
-        ec_slave_config_t *sc, /**< Slave configuration. */
-        uint8_t allow_overlapping_pdos /**< Allow overlapping PDOs */
-        );
+    /**
+     * @brief     配置从站是否允许重叠的PDO。
+     * @details   允许重叠的PDO使输入在帧中使用与输出相同的空间。这减少了帧长度。
+     *
+     * @param     sc 从站配置。
+     * @param     allow_overlapping_pdos 允许重叠的PDO。
+     */
+    void ecrt_slave_config_overlapping_pdos(
+        ec_slave_config_t *sc,         /**< 从站配置。 */
+        uint8_t allow_overlapping_pdos /**< 允许重叠的PDO。 */
+    );
 
+    /**
+     * @brief     将PDO添加到同步管理器的PDO分配中。
+     * @details   此方法必须在非实时上下文中在调用 ecrt_master_activate() 之前调用。
+     *
+     * @param     sc 从站配置。
+     * @param     sync_index 同步管理器索引。必须小于 #EC_MAX_SYNC_MANAGERS。
+     * @param     index 要分配的PDO的索引。
+     * @return    成功返回零，否则返回非零值。
+     */
+    int ecrt_slave_config_pdo_assign_add(
+        ec_slave_config_t *sc, /**< 从站配置。 */
+        uint8_t sync_index,    /**< 同步管理器索引。必须小于 #EC_MAX_SYNC_MANAGERS。 */
+        uint16_t index         /**< 要分配的PDO的索引。 */
+    );
 
-/** Add a PDO to a sync manager's PDO assignment.
- *
- * This method has to be called in non-realtime context before
- * ecrt_master_activate().
- *
- * \see ecrt_slave_config_pdos()
- * \return zero on success, else non-zero
- */
-int ecrt_slave_config_pdo_assign_add(
-        ec_slave_config_t *sc, /**< Slave configuration. */
-        uint8_t sync_index, /**< Sync manager index. Must be less
-                              than #EC_MAX_SYNC_MANAGERS. */
-        uint16_t index /**< Index of the PDO to assign. */
-        );
+    /**
+     * @brief     清除同步管理器的PDO分配。
+     * @details   在通过 ecrt_slave_config_pdo_assign_add() 分配PDO之前，可以调用此函数来清除同步管理器的默认分配。
+     *
+     * 此方法必须在非实时上下文中在调用 ecrt_master_activate() 之前调用。
+     *
+     * @param     sc 从站配置。
+     * @param     sync_index 同步管理器索引。必须小于 #EC_MAX_SYNC_MANAGERS。
+     */
+    void ecrt_slave_config_pdo_assign_clear(
+        ec_slave_config_t *sc, /**< 从站配置。 */
+        uint8_t sync_index     /**< 同步管理器索引。必须小于 #EC_MAX_SYNC_MANAGERS。 */
+    );
 
-/** Clear a sync manager's PDO assignment.
- *
- * This can be called before assigning PDOs via
- * ecrt_slave_config_pdo_assign_add(), to clear the default assignment of a
- * sync manager.
- *
- * This method has to be called in non-realtime context before
- * ecrt_master_activate().
- *
- * \see ecrt_slave_config_pdos()
- */
-void ecrt_slave_config_pdo_assign_clear(
-        ec_slave_config_t *sc, /**< Slave configuration. */
-        uint8_t sync_index /**< Sync manager index. Must be less
-                              than #EC_MAX_SYNC_MANAGERS. */
-        );
+    /**
+     * @brief     将PDO条目添加到给定PDO的映射中。
+     * @details   此方法必须在非实时上下文中在调用 ecrt_master_activate() 之前调用。
+     *
+     * @param     sc 从站配置。
+     * @param     pdo_index PDO的索引。
+     * @param     entry_index 要添加到PDO映射的PDO条目的索引。
+     * @param     entry_subindex 要添加到PDO映射的PDO条目的子索引。
+     * @param     entry_bit_length PDO条目的位大小。
+     * @return    成功返回零，否则返回非零值。
+     */
+    int ecrt_slave_config_pdo_mapping_add(
+        ec_slave_config_t *sc,   /**< 从站配置。 */
+        uint16_t pdo_index,      /**< PDO的索引。 */
+        uint16_t entry_index,    /**< 要添加到PDO映射的PDO条目的索引。 */
+        uint8_t entry_subindex,  /**< 要添加到PDO映射的PDO条目的子索引。 */
+        uint8_t entry_bit_length /**< PDO条目的位大小。 */
+    );
 
-/** Add a PDO entry to the given PDO's mapping.
- *
- * This method has to be called in non-realtime context before
- * ecrt_master_activate().
- *
- * \see ecrt_slave_config_pdos()
- * \return zero on success, else non-zero
- */
-int ecrt_slave_config_pdo_mapping_add(
-        ec_slave_config_t *sc, /**< Slave configuration. */
-        uint16_t pdo_index, /**< Index of the PDO. */
-        uint16_t entry_index, /**< Index of the PDO entry to add to the PDO's
-                                mapping. */
-        uint8_t entry_subindex, /**< Subindex of the PDO entry to add to the
-                                  PDO's mapping. */
-        uint8_t entry_bit_length /**< Size of the PDO entry in bit. */
-        );
+    /**
+     * @brief     清除给定PDO的映射。
+     * @details   在通过 ecrt_slave_config_pdo_mapping_add() 进行PDO条目映射之前，可以调用此函数来清除默认映射。
+     *
+     * 此方法必须在非实时上下文中在调用 ecrt_master_activate() 之前调用。
+     *
+     * @param     sc 从站配置。
+     * @param     pdo_index PDO的索引。
+     */
+    void ecrt_slave_config_pdo_mapping_clear(
+        ec_slave_config_t *sc, /**< 从站配置。 */
+        uint16_t pdo_index     /**< PDO的索引。 */
+    );
 
-/** Clear the mapping of a given PDO.
- *
- * This can be called before mapping PDO entries via
- * ecrt_slave_config_pdo_mapping_add(), to clear the default mapping.
- *
- * This method has to be called in non-realtime context before
- * ecrt_master_activate().
- *
- * \see ecrt_slave_config_pdos()
- */
-void ecrt_slave_config_pdo_mapping_clear(
-        ec_slave_config_t *sc, /**< Slave configuration. */
-        uint16_t pdo_index /**< Index of the PDO. */
-        );
+    /**
+     * @brief     指定完整的PDO配置。
+     * @details   此函数是用于方便的函数包装，包括ecrt_slave_config_sync_manager()、
+     *            ecrt_slave_config_pdo_assign_clear()、ecrt_slave_config_pdo_assign_add()、
+     *            ecrt_slave_config_pdo_mapping_clear() 和 ecrt_slave_config_pdo_mapping_add()，
+     *            更适合于自动生成代码。
+     *
+     * 下面的示例展示了如何指定完整的配置，包括PDO映射。有了这些信息，即使从站在配置时不在场，主站也能够保留完整的过程数据：
+     *
+     * \code
+     * ec_pdo_entry_info_t el3162_channel1[] = {
+     *     {0x3101, 1,  8}, // 状态
+     *     {0x3101, 2, 16}  // 值
+     * };
+     *
+     * ec_pdo_entry_info_t el3162_channel2[] = {
+     *     {0x3102, 1,  8}, // 状态
+     *     {0x3102, 2, 16}  // 值
+     * };
+     *
+     * ec_pdo_info_t el3162_pdos[] = {
+     *     {0x1A00, 2, el3162_channel1},
+     *     {0x1A01, 2, el3162_channel2}
+     * };
+     *
+     * ec_sync_info_t el3162_syncs[] = {
+     *     {2, EC_DIR_OUTPUT},
+     *     {3, EC_DIR_INPUT, 2, el3162_pdos},
+     *     {0xff}
+     * };
+     *
+     * if (ecrt_slave_config_pdos(sc_ana_in, EC_END, el3162_syncs)) {
+     *     // 处理错误
+     * }
+     * \endcode
+     *
+     * 下一个示例展示了如何仅配置PDO分配。每个分配的PDO的条目取自PDO的默认映射。
+     * 请注意，如果PDO配置保持为空且从站处于离线状态，PDO条目注册将失败。
+     *
+     * \code
+     * ec_pdo_info_t pdos[] = {
+     *     {0x1600}, // 通道1
+     *     {0x1601}  // 通道2
+     * };
+     *
+     * ec_sync_info_t syncs[] = {
+     *     {3, EC_DIR_INPUT, 2, pdos},
+     * };
+     *
+     * if (ecrt_slave_config_pdos(slave_config_ana_in, 1, syncs)) {
+     *     // 处理错误
+     * }
+     * \endcode
+     *
+     * 如果满足以下条件之一，将停止处理 \a syncs：
+     * - 已处理的项目数达到 \a n_syncs，或者
+     * - ec_sync_info_t 项的 \a index 成员为 0xff。在这种情况下，\a n_syncs 应设置为大于列表项数的数字；
+     *   推荐使用 EC_END。
+     *
+     * 此方法必须在非实时上下文中在调用 ecrt_master_activate() 之前调用。
+     *
+     * @param     sc 从站配置。
+     * @param     n_syncs 同步管理器配置的数量。
+     * @param     syncs 同步管理器配置的数组。
+     * @return    成功返回零，否则返回非零值。
+     */
+    int ecrt_slave_config_pdos(
+        ec_slave_config_t *sc,       /**< 从站配置。 */
+        unsigned int n_syncs,        /**< 同步管理器配置的数量。 */
+        const ec_sync_info_t syncs[] /**< 同步管理器配置的数组。 */
+    );
 
-/** Specify a complete PDO configuration.
- *
- * This function is a convenience wrapper for the functions
- * ecrt_slave_config_sync_manager(), ecrt_slave_config_pdo_assign_clear(),
- * ecrt_slave_config_pdo_assign_add(), ecrt_slave_config_pdo_mapping_clear()
- * and ecrt_slave_config_pdo_mapping_add(), that are better suitable for
- * automatic code generation.
- *
- * The following example shows, how to specify a complete configuration,
- * including the PDO mappings. With this information, the master is able to
- * reserve the complete process data, even if the slave is not present at
- * configuration time:
- *
- * \code
- * ec_pdo_entry_info_t el3162_channel1[] = {
- *     {0x3101, 1,  8}, // status
- *     {0x3101, 2, 16}  // value
- * };
- *
- * ec_pdo_entry_info_t el3162_channel2[] = {
- *     {0x3102, 1,  8}, // status
- *     {0x3102, 2, 16}  // value
- * };
- *
- * ec_pdo_info_t el3162_pdos[] = {
- *     {0x1A00, 2, el3162_channel1},
- *     {0x1A01, 2, el3162_channel2}
- * };
- *
- * ec_sync_info_t el3162_syncs[] = {
- *     {2, EC_DIR_OUTPUT},
- *     {3, EC_DIR_INPUT, 2, el3162_pdos},
- *     {0xff}
- * };
- *
- * if (ecrt_slave_config_pdos(sc_ana_in, EC_END, el3162_syncs)) {
- *     // handle error
- * }
- * \endcode
- *
- * The next example shows, how to configure the PDO assignment only. The
- * entries for each assigned PDO are taken from the PDO's default mapping.
- * Please note, that PDO entry registration will fail, if the PDO
- * configuration is left empty and the slave is offline.
- *
- * \code
- * ec_pdo_info_t pdos[] = {
- *     {0x1600}, // Channel 1
- *     {0x1601}  // Channel 2
- * };
- *
- * ec_sync_info_t syncs[] = {
- *     {3, EC_DIR_INPUT, 2, pdos},
- * };
- *
- * if (ecrt_slave_config_pdos(slave_config_ana_in, 1, syncs)) {
- *     // handle error
- * }
- * \endcode
- *
- * Processing of \a syncs will stop, if
- * - the number of processed items reaches \a n_syncs, or
- * - the \a index member of an ec_sync_info_t item is 0xff. In this case,
- *   \a n_syncs should set to a number greater than the number of list items;
- *   using EC_END is recommended.
- *
- * This method has to be called in non-realtime context before
- * ecrt_master_activate().
- *
- * \return zero on success, else non-zero
- */
-int ecrt_slave_config_pdos(
-        ec_slave_config_t *sc, /**< Slave configuration. */
-        unsigned int n_syncs, /**< Number of sync manager configurations in
-                                \a syncs. */
-        const ec_sync_info_t syncs[] /**< Array of sync manager
-                                       configurations. */
-        );
+    /**
+     * @brief     注册一个用于在域中进行过程数据交换的PDO条目。
+     * @details   在分配的PDO中搜索给定的PDO条目。如果给定的条目没有映射，将引发错误。
+     *            否则，提供相应的同步管理器和FMMU配置以进行从站配置，并将相应的同步管理器的分配的
+     *            PDO附加到给定的域中（如果尚未完成）。返回请求的PDO条目数据在域的过程数据中的偏移量。
+     *            可选地，可以通过 \a bit_position 输出参数检索PDO条目的位位置（0-7）。
+     *            如果该指针为 \a NULL，则在PDO条目不字节对齐的情况下引发错误。
+     *
+     *            此方法必须在非实时上下文中在调用 ecrt_master_activate() 之前调用。
+     *
+     * @param     sc 从站配置。
+     * @param     entry_index 要注册的PDO条目的索引。
+     * @param     entry_subindex 要注册的PDO条目的子索引。
+     * @param     domain 域。
+     * @param     bit_position 可选地址，如果需要位寻址。
+     * @retval    >=0 成功：PDO条目的过程数据的偏移量。
+     * @retval    <0 错误代码。
+     */
+    int ecrt_slave_config_reg_pdo_entry(
+        ec_slave_config_t *sc,     /**< 从站配置。 */
+        uint16_t entry_index,      /**< 要注册的PDO条目的索引。 */
+        uint8_t entry_subindex,    /**< 要注册的PDO条目的子索引。 */
+        ec_domain_t *domain,       /**< 域。 */
+        unsigned int *bit_position /**< 可选地址，如果需要位寻址。 */
+    );
 
-/** Registers a PDO entry for process data exchange in a domain.
- *
- * Searches the assigned PDOs for the given PDO entry. An error is raised, if
- * the given entry is not mapped. Otherwise, the corresponding sync manager
- * and FMMU configurations are provided for slave configuration and the
- * respective sync manager's assigned PDOs are appended to the given domain,
- * if not already done. The offset of the requested PDO entry's data inside
- * the domain's process data is returned. Optionally, the PDO entry bit
- * position (0-7) can be retrieved via the \a bit_position output parameter.
- * This pointer may be \a NULL, in this case an error is raised if the PDO
- * entry does not byte-align.
- *
- * This method has to be called in non-realtime context before
- * ecrt_master_activate().
- *
- * \retval >=0 Success: Offset of the PDO entry's process data.
- * \retval  <0 Error code.
- */
-int ecrt_slave_config_reg_pdo_entry(
-        ec_slave_config_t *sc, /**< Slave configuration. */
-        uint16_t entry_index, /**< Index of the PDO entry to register. */
-        uint8_t entry_subindex, /**< Subindex of the PDO entry to register. */
-        ec_domain_t *domain, /**< Domain. */
-        unsigned int *bit_position /**< Optional address if bit addressing
-                                 is desired */
-        );
+    /**
+     * @brief     使用位置注册PDO条目。
+     * @details   类似于ecrt_slave_config_reg_pdo_entry()，但不使用PDO索引，而是使用PDO映射中的偏移量，
+     *            因为PDO条目索引在从站的PDO映射中可能不是唯一的。如果给定的位置超出范围，将引发错误。
+     *
+     *            此方法必须在非实时上下文中在调用 ecrt_master_activate() 之前调用。
+     *
+     * @param     sc 从站配置。
+     * @param     sync_index 同步管理器索引。
+     * @param     pdo_pos PDO在SM中的位置。
+     * @param     entry_pos 条目在PDO中的位置。
+     * @param     domain 域。
+     * @param     bit_position 可选地址，如果需要位寻址。
+     * @retval    >=0 成功：PDO条目的过程数据的偏移量。
+     * @retval    <0 错误代码。
+     */
+    int ecrt_slave_config_reg_pdo_entry_pos(
+        ec_slave_config_t *sc,     /**< 从站配置。 */
+        uint8_t sync_index,        /**< 同步管理器索引。 */
+        unsigned int pdo_pos,      /**< PDO在SM中的位置。 */
+        unsigned int entry_pos,    /**< 条目在PDO中的位置。 */
+        ec_domain_t *domain,       /**< 域。 */
+        unsigned int *bit_position /**< 可选地址，如果需要位寻址。 */
+    );
 
-/** Registers a PDO entry using its position.
- *
- * Similar to ecrt_slave_config_reg_pdo_entry(), but not using PDO indices but
- * offsets in the PDO mapping, because PDO entry indices may not be unique
- * inside a slave's PDO mapping. An error is raised, if
- * one of the given positions is out of range.
- *
- * This method has to be called in non-realtime context before
- * ecrt_master_activate().
- *
- * \retval >=0 Success: Offset of the PDO entry's process data.
- * \retval  <0 Error code.
- */
-int ecrt_slave_config_reg_pdo_entry_pos(
-        ec_slave_config_t *sc, /**< Slave configuration. */
-        uint8_t sync_index, /**< Sync manager index. */
-        unsigned int pdo_pos, /**< Position of the PDO inside the SM. */
-        unsigned int entry_pos, /**< Position of the entry inside the PDO. */
-        ec_domain_t *domain, /**< Domain. */
-        unsigned int *bit_position /**< Optional address if bit addressing
-                                 is desired */
-        );
+    /**
+     * @brief     配置分布式时钟。
+     * @details   设置AssignActivate字和同步信号的周期和偏移时间。
+     *
+     * AssignActivate字是供应商特定的，可以从XML设备描述文件中获取（Device -> Dc -> AssignActivate）。
+     * 如果从站不使用分布式时钟，则将其设置为零（默认值）。
+     *
+     * 此方法必须在非实时上下文中在调用ecrt_master_activate()之前调用。
+     *
+     * \attention 忽略 \a sync1_shift 时间。
+     *
+     * @param     sc 从站配置。
+     * @param     assign_activate AssignActivate字。
+     * @param     sync0_cycle SYNC0周期时间[纳秒]。
+     * @param     sync0_shift SYNC0偏移时间[纳秒]。
+     * @param     sync1_cycle SYNC1周期时间[纳秒]。
+     * @param     sync1_shift SYNC1偏移时间[纳秒]。
+     * @return    无返回值。
+     */
+    void ecrt_slave_config_dc(
+        ec_slave_config_t *sc,    /**< 从站配置。 */
+        uint16_t assign_activate, /**< AssignActivate字。 */
+        uint32_t sync0_cycle,     /**< SYNC0周期时间[纳秒]。 */
+        int32_t sync0_shift,      /**< SYNC0偏移时间[纳秒]。 */
+        uint32_t sync1_cycle,     /**< SYNC1周期时间[纳秒]。 */
+        int32_t sync1_shift       /**< SYNC1偏移时间[纳秒]。 */
+    );
 
-/** Configure distributed clocks.
- *
- * Sets the AssignActivate word and the cycle and shift times for the sync
- * signals.
- *
- * The AssignActivate word is vendor-specific and can be taken from the XML
- * device description file (Device -> Dc -> AssignActivate). Set this to zero,
- * if the slave shall be operated without distributed clocks (default).
- *
- * This method has to be called in non-realtime context before
- * ecrt_master_activate().
- *
- * \attention The \a sync1_shift time is ignored.
- */
-void ecrt_slave_config_dc(
-        ec_slave_config_t *sc, /**< Slave configuration. */
-        uint16_t assign_activate, /**< AssignActivate word. */
-        uint32_t sync0_cycle, /**< SYNC0 cycle time [ns]. */
-        int32_t sync0_shift, /**< SYNC0 shift time [ns]. */
-        uint32_t sync1_cycle, /**< SYNC1 cycle time [ns]. */
-        int32_t sync1_shift /**< SYNC1 shift time [ns]. */
-        );
+    /**
+     * @brief     添加SDO配置。
+     * @details   SDO配置存储在从站配置对象中，并在每次从主站配置从站时下载到从站。
+     *            这通常在主站激活时进行一次，但可以在之后重复执行，例如在从站的电源供应失败后。
+     *
+     * \attention 不应使用此函数配置PDO分配（\p 0x1C10 - \p 0x1C2F）和PDO映射（\p 0x1600 - \p 0x17FF 和 \p 0x1A00 - \p 0x1BFF），
+     *            因为它们是主站完成的从站配置的一部分。请改用 ecrt_slave_config_pdos() 和相关函数。
+     *
+     * 此函数用于添加通用的SDO配置。请注意，此函数不执行任何字节序修正。
+     * 如果需要特定数据类型的函数（自动修正字节序），请参考 ecrt_slave_config_sdo8()、ecrt_slave_config_sdo16() 和 ecrt_slave_config_sdo32()。
+     *
+     * 此方法必须在非实时上下文中在调用 ecrt_master_activate() 之前调用。
+     *
+     * @param     sc 从站配置。
+     * @param     index 要配置的SDO的索引。
+     * @param     subindex 要配置的SDO的子索引。
+     * @param     data 指向数据的指针。
+     * @param     size \a data 的大小。
+     * @return    成功返回 0，错误返回负数的错误代码。
+     */
+    int ecrt_slave_config_sdo(
+        ec_slave_config_t *sc, /**< 从站配置。 */
+        uint16_t index,        /**< 要配置的SDO的索引。 */
+        uint8_t subindex,      /**< 要配置的SDO的子索引。 */
+        const uint8_t *data,   /**< 指向数据的指针。 */
+        size_t size            /**< \a data 的大小。 */
+    );
 
-/** Add an SDO configuration.
- *
- * An SDO configuration is stored in the slave configuration object and is
- * downloaded to the slave whenever the slave is being configured by the
- * master. This usually happens once on master activation, but can be repeated
- * subsequently, for example after the slave's power supply failed.
- *
- * \attention The SDOs for PDO assignment (\p 0x1C10 - \p 0x1C2F) and PDO
- * mapping (\p 0x1600 - \p 0x17FF and \p 0x1A00 - \p 0x1BFF) should not be
- * configured with this function, because they are part of the slave
- * configuration done by the master. Please use ecrt_slave_config_pdos() and
- * friends instead.
- *
- * This is the generic function for adding an SDO configuration. Please note
- * that the this function does not do any endianness correction. If
- * datatype-specific functions are needed (that automatically correct the
- * endianness), have a look at ecrt_slave_config_sdo8(),
- * ecrt_slave_config_sdo16() and ecrt_slave_config_sdo32().
- *
- * This method has to be called in non-realtime context before
- * ecrt_master_activate().
- *
- * \retval  0 Success.
- * \retval <0 Error code.
- */
-int ecrt_slave_config_sdo(
-        ec_slave_config_t *sc, /**< Slave configuration. */
-        uint16_t index, /**< Index of the SDO to configure. */
-        uint8_t subindex, /**< Subindex of the SDO to configure. */
-        const uint8_t *data, /**< Pointer to the data. */
-        size_t size /**< Size of the \a data. */
-        );
+    /**
+     * @brief     添加8位SDO的配置值。
+     *
+     * 此方法必须在非实时上下文中在调用ecrt_master_activate()之前调用。
+     *
+     * \see ecrt_slave_config_sdo()。
+     *
+     * \retval  0 成功。
+     * \retval <0 错误代码。
+     */
+    int ecrt_slave_config_sdo8(
+        ec_slave_config_t *sc, /**< 从站配置 */
+        uint16_t sdo_index,    /**< 要配置的SDO的索引。 */
+        uint8_t sdo_subindex,  /**< 要配置的SDO的子索引。 */
+        uint8_t value          /**< 要设置的值。 */
+    );
 
-/** Add a configuration value for an 8-bit SDO.
- *
- * This method has to be called in non-realtime context before
- * ecrt_master_activate().
- *
- * \see ecrt_slave_config_sdo().
- *
- * \retval  0 Success.
- * \retval <0 Error code.
- */
-int ecrt_slave_config_sdo8(
-        ec_slave_config_t *sc, /**< Slave configuration */
-        uint16_t sdo_index, /**< Index of the SDO to configure. */
-        uint8_t sdo_subindex, /**< Subindex of the SDO to configure. */
-        uint8_t value /**< Value to set. */
-        );
+    /**
+     * @brief     添加16位SDO的配置值。
+     *
+     * 此方法必须在非实时上下文中在调用ecrt_master_activate()之前调用。
+     *
+     * \see ecrt_slave_config_sdo()。
+     *
+     * \retval  0 成功。
+     * \retval <0 错误代码。
+     */
+    int ecrt_slave_config_sdo16(
+        ec_slave_config_t *sc, /**< 从站配置 */
+        uint16_t sdo_index,    /**< 要配置的SDO的索引。 */
+        uint8_t sdo_subindex,  /**< 要配置的SDO的子索引。 */
+        uint16_t value         /**< 要设置的值。 */
+    );
 
-/** Add a configuration value for a 16-bit SDO.
- *
- * This method has to be called in non-realtime context before
- * ecrt_master_activate().
- *
- * \see ecrt_slave_config_sdo().
- *
- * \retval  0 Success.
- * \retval <0 Error code.
- */
-int ecrt_slave_config_sdo16(
-        ec_slave_config_t *sc, /**< Slave configuration */
-        uint16_t sdo_index, /**< Index of the SDO to configure. */
-        uint8_t sdo_subindex, /**< Subindex of the SDO to configure. */
-        uint16_t value /**< Value to set. */
-        );
+    /**
+     * @brief     添加32位SDO的配置值。
+     *
+     * 此方法必须在非实时上下文中在调用ecrt_master_activate()之前调用。
+     *
+     * \see ecrt_slave_config_sdo()。
+     *
+     * \retval  0 成功。
+     * \retval <0 错误代码。
+     */
+    int ecrt_slave_config_sdo32(
+        ec_slave_config_t *sc, /**< 从站配置 */
+        uint16_t sdo_index,    /**< 要配置的SDO的索引。 */
+        uint8_t sdo_subindex,  /**< 要配置的SDO的子索引。 */
+        uint32_t value         /**< 要设置的值。 */
+    );
 
-/** Add a configuration value for a 32-bit SDO.
- *
- * This method has to be called in non-realtime context before
- * ecrt_master_activate().
- *
- * \see ecrt_slave_config_sdo().
- *
- * \retval  0 Success.
- * \retval <0 Error code.
- */
-int ecrt_slave_config_sdo32(
-        ec_slave_config_t *sc, /**< Slave configuration */
-        uint16_t sdo_index, /**< Index of the SDO to configure. */
-        uint8_t sdo_subindex, /**< Subindex of the SDO to configure. */
-        uint32_t value /**< Value to set. */
-        );
+    /**
+     * @brief     添加完整SDO的配置数据。
+     *
+     * SDO数据通过CompleteAccess传输。必须包含第一个子索引（0）的数据。
+     *
+     * 此方法必须在非实时上下文中在调用ecrt_master_activate()之前调用。
+     *
+     * \see ecrt_slave_config_sdo()。
+     *
+     * \retval  0 成功。
+     * \retval <0 错误代码。
+     */
+    int ecrt_slave_config_complete_sdo(
+        ec_slave_config_t *sc, /**< 从站配置。 */
+        uint16_t index,        /**< 要配置的SDO的索引。 */
+        const uint8_t *data,   /**< 指向数据的指针。 */
+        size_t size            /**< \a data 的大小。 */
+    );
 
-/** Add configuration data for a complete SDO.
- *
- * The SDO data are transferred via CompleteAccess. Data for the first
- * subindex (0) have to be included.
- *
- * This method has to be called in non-realtime context before
- * ecrt_master_activate().
- *
- * \see ecrt_slave_config_sdo().
- *
- * \retval  0 Success.
- * \retval <0 Error code.
- */
-int ecrt_slave_config_complete_sdo(
-        ec_slave_config_t *sc, /**< Slave configuration. */
-        uint16_t index, /**< Index of the SDO to configure. */
-        const uint8_t *data, /**< Pointer to the data. */
-        size_t size /**< Size of the \a data. */
-        );
+    /**
+     * @brief     设置CoE紧急环形缓冲区的大小。
+     *
+     * 初始大小为零，因此所有消息都将被丢弃。即使在主站激活后也可以调用此方法，但它将清除环形缓冲区！
+     *
+     * 此方法必须在非实时上下文中在调用ecrt_master_activate()之前调用。
+     *
+     * \return 成功返回0，否则返回负数的错误代码。
+     */
+    int ecrt_slave_config_emerg_size(
+        ec_slave_config_t *sc, /**< 从站配置。 */
+        size_t elements        /**< CoE紧急环形缓冲区的记录数。 */
+    );
 
-/** Set the size of the CoE emergency ring buffer.
- *
- * The initial size is zero, so all messages will be dropped. This method can
- * be called even after master activation, but it will clear the ring buffer!
- *
- * This method has to be called in non-realtime context before
- * ecrt_master_activate().
- *
- * \return 0 on success, or negative error code.
- */
-int ecrt_slave_config_emerg_size(
-        ec_slave_config_t *sc, /**< Slave configuration. */
-        size_t elements /**< Number of records of the CoE emergency ring. */
-        );
+    /**
+     * @brief     从CoE紧急环形缓冲区中读取并移除一条记录。
+     *
+     * 一条记录由8个字节组成：
+     *
+     * 字节 0-1：错误码（小端序）
+     * 字节   2：错误寄存器
+     * 字节 3-7：数据
+     *
+     * \return 成功返回0（弹出记录），否则返回负数的错误代码（例如 -ENOENT，如果环形缓冲区为空）。
+     */
+    int ecrt_slave_config_emerg_pop(
+        ec_slave_config_t *sc, /**< 从站配置。 */
+        uint8_t *target        /**< 目标内存的指针（至少EC_COE_EMERGENCY_MSG_SIZE字节）。 */
+    );
 
-/** Read and remove one record from the CoE emergency ring buffer.
- *
- * A record consists of 8 bytes:
- *
- * Byte 0-1: Error code (little endian)
- * Byte   2: Error register
- * Byte 3-7: Data
- *
- * \return 0 on success (record popped), or negative error code (i. e.
- * -ENOENT, if ring is empty).
- */
-int ecrt_slave_config_emerg_pop(
-        ec_slave_config_t *sc, /**< Slave configuration. */
-        uint8_t *target /**< Pointer to target memory (at least
-                          EC_COE_EMERGENCY_MSG_SIZE bytes). */
-        );
+    /**
+     * @brief     清除CoE紧急环形缓冲区和溢出计数器。
+     *
+     * \return 成功返回0，否则返回负数的错误代码。
+     */
+    int ecrt_slave_config_emerg_clear(
+        ec_slave_config_t *sc /**< 从站配置。 */
+    );
 
-/** Clears CoE emergency ring buffer and the overrun counter.
- *
- * \return 0 on success, or negative error code.
- */
-int ecrt_slave_config_emerg_clear(
-        ec_slave_config_t *sc /**< Slave configuration. */
-        );
+    /**
+     * @brief     读取CoE紧急溢出次数。
+     *
+     * 当CoE紧急消息无法存储在环形缓冲区中并且必须被丢弃时，溢出计数器将递增。调用ecrt_slave_config_emerg_clear()以重置计数器。
+     *
+     * \return 上次清除以来的溢出次数，否则返回负数的错误代码。
+     */
+    int ecrt_slave_config_emerg_overruns(
+        ec_slave_config_t *sc /**< 从站配置。 */
+    );
 
-/** Read the number of CoE emergency overruns.
- *
- * The overrun counter will be incremented when a CoE emergency message could
- * not be stored in the ring buffer and had to be dropped. Call
- * ecrt_slave_config_emerg_clear() to reset the counter.
- *
- * \return Number of overruns since last clear, or negative error code.
- */
-int ecrt_slave_config_emerg_overruns(
-        ec_slave_config_t *sc /**< Slave configuration. */
-        );
+    /**
+     * @brief     创建一个SDO请求，在实时操作期间交换SDO。
+     *
+     * 创建的SDO请求对象在主站释放时会自动释放。
+     *
+     * 此方法必须在非实时上下文中在调用ecrt_master_activate()之前调用。
+     *
+     * \return 新的SDO请求，或者在错误时返回NULL。
+     */
+    ec_sdo_request_t *ecrt_slave_config_create_sdo_request(
+        ec_slave_config_t *sc, /**< 从站配置。 */
+        uint16_t index,        /**< SDO索引。 */
+        uint8_t subindex,      /**< SDO子索引。 */
+        size_t size            /**< 要预留的数据大小。 */
+    );
 
-/** Create an SDO request to exchange SDOs during realtime operation.
- *
- * The created SDO request object is freed automatically when the master is
- * released.
- *
- * This method has to be called in non-realtime context before
- * ecrt_master_activate().
- *
- * \return New SDO request, or NULL on error.
- */
-ec_sdo_request_t *ecrt_slave_config_create_sdo_request(
-        ec_slave_config_t *sc, /**< Slave configuration. */
-        uint16_t index, /**< SDO index. */
-        uint8_t subindex, /**< SDO subindex. */
-        size_t size /**< Data size to reserve. */
-        );
+    /**
+     * @brief     创建一个使用完全访问的SDO请求，在实时操作期间交换SDO。
+     *
+     * 创建的SDO请求对象在主站释放时会自动释放。
+     *
+     * 此方法必须在非实时上下文中在调用ecrt_master_activate()之前调用。
+     *
+     * \return 新的SDO请求，或者在错误时返回NULL。
+     */
+    ec_sdo_request_t *ecrt_slave_config_create_sdo_request_complete(
+        ec_slave_config_t *sc, /**< 从站配置。 */
+        uint16_t index,        /**< SDO索引。 */
+        size_t size            /**< 要预留的数据大小。 */
+    );
 
-/** Create an SDO request to exchange SDOs during realtime operation
- *  using complete access.
- *
- * The created SDO request object is freed automatically when the master is
- * released.
- *
- * This method has to be called in non-realtime context before
- * ecrt_master_activate().
- *
- * \return New SDO request, or NULL on error.
- */
-ec_sdo_request_t *ecrt_slave_config_create_sdo_request_complete(
-        ec_slave_config_t *sc, /**< Slave configuration. */
-        uint16_t index, /**< SDO index. */
-        size_t size /**< Data size to reserve. */
-        );
+    /**
+     * @brief     创建一个FoE请求，在实时操作期间交换文件。
+     *
+     * 创建的FoE请求对象在主站释放时会自动释放。
+     *
+     * 此方法必须在非实时上下文中在调用ecrt_master_activate()之前调用。
+     *
+     * \return 新的FoE请求，或者在错误时返回NULL。
+     */
+    ec_foe_request_t *ecrt_slave_config_create_foe_request(
+        ec_slave_config_t *sc, /**< 从站配置。 */
+        size_t size            /**< 要预留的数据大小。 */
+    );
 
-/** Create an FoE request to exchange files during realtime operation.
- *
- * The created FoE request object is freed automatically when the master is
- * released.
- *
- * This method has to be called in non-realtime context before
- * ecrt_master_activate().
- *
- * \return New FoE request, or NULL on error.
- */
-ec_foe_request_t *ecrt_slave_config_create_foe_request(
-        ec_slave_config_t *sc, /**< Slave configuration. */
-        size_t size /**< Data size to reserve. */
-        );
+    /**
+     * @brief     创建一个VoE处理器，在实时操作期间交换供应商特定数据。
+     *
+     * 每个从站配置的VoE处理器数量没有限制，但通常创建一个用于发送和一个用于接收，如果两者可以同时进行。
+     *
+     * 创建的VoE处理器对象在主站释放时会自动释放。
+     *
+     * 此方法必须在非实时上下文中在调用ecrt_master_activate()之前调用。
+     *
+     * \return 新的VoE处理器，或者在错误时返回NULL。
+     */
+    ec_voe_handler_t *ecrt_slave_config_create_voe_handler(
+        ec_slave_config_t *sc, /**< 从站配置。 */
+        size_t size            /**< 要预留的数据大小。 */
+    );
 
-/** Create an VoE handler to exchange vendor-specific data during realtime
- * operation.
- *
- * The number of VoE handlers per slave configuration is not limited, but
- * usually it is enough to create one for sending and one for receiving, if
- * both can be done simultaneously.
- *
- * The created VoE handler object is freed automatically when the master is
- * released.
- *
- * This method has to be called in non-realtime context before
- * ecrt_master_activate().
- *
- * \return New VoE handler, or NULL on error.
- */
-ec_voe_handler_t *ecrt_slave_config_create_voe_handler(
-        ec_slave_config_t *sc, /**< Slave configuration. */
-        size_t size /**< Data size to reserve. */
-        );
+    /**
+     * @brief     创建一个寄存器请求，在实时操作期间交换EtherCAT寄存器内容。
+     *
+     * 此接口不应用于接管主站功能，而是用于调试和监视的目的。
+     *
+     * 创建的寄存器请求对象在主站释放时会自动释放。
+     *
+     * 此方法必须在非实时上下文中在调用ecrt_master_activate()之前调用。
+     *
+     * \return 新的寄存器请求，或者在错误时返回NULL。
+     */
+    ec_reg_request_t *ecrt_slave_config_create_reg_request(
+        ec_slave_config_t *sc, /**< 从站配置。 */
+        size_t size            /**< 要预留的数据大小。 */
+    );
 
-/** Create a register request to exchange EtherCAT register contents during
- * realtime operation.
- *
- * This interface should not be used to take over master functionality,
- * instead it is intended for debugging and monitoring reasons.
- *
- * The created register request object is freed automatically when the master
- * is released.
- *
- * This method has to be called in non-realtime context before
- * ecrt_master_activate().
- *
- * \return New register request, or NULL on error.
- */
-ec_reg_request_t *ecrt_slave_config_create_reg_request(
-        ec_slave_config_t *sc, /**< Slave configuration. */
-        size_t size /**< Data size to reserve. */
-        );
+    /**
+     * @brief     输出从站配置的状态。
+     *
+     * 将状态信息存储在给定的\a state结构中。状态信息由主站状态机更新，因此可能需要几个周期才会更改。
+     *
+     * \attention 如果要实时监视过程数据交换的状态，应使用ecrt_domain_state()。
+     */
+    void ecrt_slave_config_state(
+        const ec_slave_config_t *sc,   /**< 从站配置。 */
+        ec_slave_config_state_t *state /**< 要写入的状态对象。 */
+    );
 
-/** Outputs the state of the slave configuration.
- *
- * Stores the state information in the given \a state structure. The state
- * information is updated by the master state machine, so it may take a few
- * cycles, until it changes.
- *
- * \attention If the state of process data exchange shall be monitored in
- * realtime, ecrt_domain_state() should be used.
- */
-void ecrt_slave_config_state(
-        const ec_slave_config_t *sc, /**< Slave configuration */
-        ec_slave_config_state_t *state /**< State object to write to. */
-        );
+    /**
+     * @brief     添加SoE IDN配置。
+     *
+     * Sercos-over-EtherCAT（SoE）IDN的配置存储在从站配置对象中，并在每次从主站配置从站时写入从站。
+     * 这通常在主站激活时进行一次，但可以在之后重复执行，例如在从站的电源供应失败后。
+     *
+     * \a idn参数可以分为几个部分：
+     *  - 位 15：标准数据（0）或产品数据（1）
+     *  - 位 14 - 12：参数集（0 - 7）
+     *  - 位 11 - 0：数据块号（0 - 4095）
+     *
+     * 请注意，此函数不执行任何字节序修正。多字节数据必须以EtherCAT字节序（小端序）传递。
+     *
+     * 此方法必须在非实时上下文中在调用ecrt_master_activate()之前调用。
+     *
+     * \retval  0 成功。
+     * \retval <0 错误代码。
+     */
+    int ecrt_slave_config_idn(
+        ec_slave_config_t *sc, /**< 从站配置。 */
+        uint8_t drive_no,      /**< 驱动器编号。 */
+        uint16_t idn,          /**< SoE IDN。 */
+        ec_al_state_t state,   /**< 要写入IDN的AL状态（PREOP或SAFEOP）。 */
+        const uint8_t *data,   /**< 指向数据的指针。 */
+        size_t size            /**< \a data 的大小。 */
+    );
 
-/** Add an SoE IDN configuration.
- *
- * A configuration for a Sercos-over-EtherCAT IDN is stored in the slave
- * configuration object and is written to the slave whenever the slave is
- * being configured by the master. This usually happens once on master
- * activation, but can be repeated subsequently, for example after the slave's
- * power supply failed.
- *
- * The \a idn parameter can be separated into several sections:
- *  - Bit 15: Standard data (0) or Product data (1)
- *  - Bit 14 - 12: Parameter set (0 - 7)
- *  - Bit 11 - 0: Data block number (0 - 4095)
- *
- * Please note that the this function does not do any endianness correction.
- * Multi-byte data have to be passed in EtherCAT endianness (little-endian).
- *
- * This method has to be called in non-realtime context before
- * ecrt_master_activate().
- *
- * \retval  0 Success.
- * \retval <0 Error code.
- */
-int ecrt_slave_config_idn(
-        ec_slave_config_t *sc, /**< Slave configuration. */
-        uint8_t drive_no, /**< Drive number. */
-        uint16_t idn, /**< SoE IDN. */
-        ec_al_state_t state, /**< AL state in which to write the IDN (PREOP or
-                               SAFEOP). */
-        const uint8_t *data, /**< Pointer to the data. */
-        size_t size /**< Size of the \a data. */
-        );
+    /******************************************************************************
+     * Domain methods
+     *****************************************************************************/
 
-/******************************************************************************
- * Domain methods
- *****************************************************************************/
+    /**
+     * @brief     注册一组PDO条目到域中。
+     *
+     * 此方法必须在非实时上下文中在调用ecrt_master_activate()之前调用。
+     *
+     * \see ecrt_slave_config_reg_pdo_entry()
+     *
+     * \attention 注册数组必须以一个空结构或者一个\index字段设置为零的结构结束！
+     * \return 成功返回0，否则返回非零值。
+     */
+    int ecrt_domain_reg_pdo_entry_list(
+        ec_domain_t *domain,                     /**< 域。 */
+        const ec_pdo_entry_reg_t *pdo_entry_regs /**< PDO注册数组。 */
+    );
 
-/** Registers a bunch of PDO entries for a domain.
- *
- * This method has to be called in non-realtime context before
- * ecrt_master_activate().
- *
- * \see ecrt_slave_config_reg_pdo_entry()
- *
- * \attention The registration array has to be terminated with an empty
- *            structure, or one with the \a index field set to zero!
- * \return 0 on success, else non-zero.
- */
-int ecrt_domain_reg_pdo_entry_list(
-        ec_domain_t *domain, /**< Domain. */
-        const ec_pdo_entry_reg_t *pdo_entry_regs /**< Array of PDO
-                                                   registrations. */
-        );
-
-/** Returns the current size of the domain's process data.
- *
- * \return Size of the process data image, or a negative error code.
- */
-size_t ecrt_domain_size(
-        const ec_domain_t *domain /**< Domain. */
-        );
+    /** 返回域的当前过程数据大小。
+     *
+     * \return 过程数据镜像的大小，或者负数的错误代码。
+     */
+    size_t ecrt_domain_size(const ec_domain_t *domain /**< 域。 */
+    );
 
 #ifdef __KERNEL__
 
-/** Provide external memory to store the domain's process data.
- *
- * Call this after all PDO entries have been registered and before activating
- * the master.
- *
- * The size of the allocated memory must be at least ecrt_domain_size(), after
- * all PDO entries have been registered.
- *
- * This method has to be called in non-realtime context before
- * ecrt_master_activate().
- *
- */
-void ecrt_domain_external_memory(
-        ec_domain_t *domain, /**< Domain. */
-        uint8_t *memory /**< Address of the memory to store the process
-                          data in. */
-        );
+    /**
+     * @brief 提供外部内存以存储域的过程数据。
+     *
+     * 在所有PDO条目都注册完成并激活主站之前调用此函数。
+     *
+     * 分配的内存大小必须至少为ecrt_domain_size()，在所有PDO条目都注册完成后。
+     *
+     * 此方法必须在非实时上下文中，在激活主站之前调用。
+     *
+     * @param domain 域。
+     * @param memory 存储过程数据的内存地址。
+     */
+    void ecrt_domain_external_memory(ec_domain_t *domain, /**< 域。 */
+                                     uint8_t *memory      /**< 存储过程数据的内存地址。 */
+    );
 
 #endif /* __KERNEL__ */
 
-/** Returns the domain's process data.
- *
- * - In kernel context: If external memory was provided with
- * ecrt_domain_external_memory(), the returned pointer will contain the
- * address of that memory. Otherwise it will point to the internally allocated
- * memory. In the latter case, this method may not be called before
- * ecrt_master_activate().
- *
- * - In userspace context: This method has to be called after
- * ecrt_master_activate() to get the mapped domain process data memory.
- *
- * \return Pointer to the process data memory.
- */
-uint8_t *ecrt_domain_data(
-        ec_domain_t *domain /**< Domain. */
-        );
+    /**
+     * @brief       返回域的进程数据。
+     * @details     - 在内核上下文中：如果使用ecrt_domain_external_memory()提供了外部内存，
+     *                  返回的指针将包含该内存的地址。否则，它将指向内部分配的内存。
+     *                  在后一种情况下，此方法在ecrt_master_activate()之前可能无法调用。
+     *              - 在用户空间上下文中：必须在ecrt_master_activate()之后调用此方法以获取映射的域进程数据内存。
+     * @param       domain 域。
+     * @retval      指向进程数据内存的指针。
+     */
+    uint8_t *ecrt_domain_data(ec_domain_t *domain /**< 域。 */
+    );
 
-/** Determines the states of the domain's datagrams.
- *
- * Evaluates the working counters of the received datagrams and outputs
- * statistics, if necessary. This must be called after ecrt_master_receive()
- * is expected to receive the domain datagrams in order to make
- * ecrt_domain_state() return the result of the last process data exchange.
- */
-void ecrt_domain_process(
-        ec_domain_t *domain /**< Domain. */
-        );
+    /**
+     * @brief       确定域数据报的状态。
+     * @details     评估接收到的数据报的工作计数器，并在必要时输出统计信息。
+     *              在调用ecrt_master_receive()之后，应调用此函数来接收域数据报，
+     *              以使ecrt_domain_state()返回最后一次进程数据交换的结果。
+     * @param       domain 域。
+     */
+    void ecrt_domain_process(ec_domain_t *domain /**< 域。 */
+    );
 
-/** (Re-)queues all domain datagrams in the master's datagram queue.
- *
- * Call this function to mark the domain's datagrams for exchanging at the
- * next call of ecrt_master_send().
- */
-void ecrt_domain_queue(
-        ec_domain_t *domain /**< Domain. */
-        );
+    /**
+     * @brief       （重新）将所有域数据报排队到主站数据报队列中。
+     * @details     在下一次调用ecrt_master_send()时，调用此函数标记域数据报进行交换。
+     * @param       domain 域。
+     */
+    void ecrt_domain_queue(ec_domain_t *domain /**< 域。 */
+    );
 
-/** Reads the state of a domain.
- *
- * Stores the domain state in the given \a state structure.
- *
- * Using this method, the process data exchange can be monitored in realtime.
- */
-void ecrt_domain_state(
-        const ec_domain_t *domain, /**< Domain. */
-        ec_domain_state_t *state /**< Pointer to a state object to store the
-                                   information. */
-        );
+    /**
+     * @brief       读取域的状态。
+     * @details     将域的状态存储在给定的状态结构中。
+     *              使用此方法可以实时监视进程数据交换。
+     * @param       domain 域。
+     * @param       state 存储信息的状态对象的指针。
+     */
+    void ecrt_domain_state(const ec_domain_t *domain, /**< 域。 */
+                           ec_domain_state_t *state   /**< 指向状态对象的指针，用于存储信息。 */
+    );
 
-/*****************************************************************************
- * SDO request methods.
- ****************************************************************************/
+    /*****************************************************************************
+     * SDO request methods.
+     ****************************************************************************/
 
-/** Set the SDO index and subindex and prepare for non-complete-access.
- *
- * This is valid even if the request was created for complete-access.
- *
- * \attention If the SDO index and/or subindex is changed while
- * ecrt_sdo_request_state() returns EC_REQUEST_BUSY, this may lead to
- * unexpected results.
- */
-void ecrt_sdo_request_index(
-        ec_sdo_request_t *req, /**< SDO request. */
-        uint16_t index, /**< SDO index. */
-        uint8_t subindex /**< SDO subindex. */
-        );
+    /**
+     * @brief       设置SDO索引和子索引，并准备进行非完全访问。
+     * @details     即使请求是为完全访问创建的，此操作也是有效的。
+     * @attention   如果在ecrt_sdo_request_state()返回EC_REQUEST_BUSY时更改SDO索引和/或子索引，
+     *              可能会导致意外结果。
+     * @param       req SDO请求。
+     * @param       index SDO索引。
+     * @param       subindex SDO子索引。
+     */
+    void ecrt_sdo_request_index(ec_sdo_request_t *req, /**< SDO请求。 */
+                                uint16_t index,        /**< SDO索引。 */
+                                uint8_t subindex       /**< SDO子索引。 */
+    );
 
-/** Set the SDO index and prepare for complete-access.
- *
- * This is valid even if the request was not created for complete-access.
- *
- * \attention If the SDO index is changed while ecrt_sdo_request_state()
- * returns EC_REQUEST_BUSY, this may lead to unexpected results.
- */
-void ecrt_sdo_request_index_complete(
-        ec_sdo_request_t *req, /**< SDO request. */
-        uint16_t index /**< SDO index. */
-        );
+    /**
+     * @brief       设置SDO索引并准备进行完全访问。
+     * @details     即使请求未为完全访问创建，此操作也是有效的。
+     * @attention   如果在ecrt_sdo_request_state()返回EC_REQUEST_BUSY时更改SDO索引，
+     *              可能会导致意外结果。
+     * @param       req SDO请求。
+     * @param       index SDO索引。
+     */
+    void ecrt_sdo_request_index_complete(ec_sdo_request_t *req, /**< SDO请求。 */
+                                         uint16_t index         /**< SDO索引。 */
+    );
 
-/** Set the timeout for an SDO request.
- *
- * If the request cannot be processed in the specified time, if will be marked
- * as failed.
- *
- * The timeout is permanently stored in the request object and is valid until
- * the next call of this method.
- */
-void ecrt_sdo_request_timeout(
-        ec_sdo_request_t *req, /**< SDO request. */
-        uint32_t timeout /**< Timeout in milliseconds. Zero means no
-                           timeout. */
-        );
+    /**
+     * @brief       设置SDO请求的超时时间。
+     * @details     如果请求在指定的时间内无法处理，将标记为失败。
+     *              超时时间将永久存储在请求对象中，并在下一次调用此方法时生效。
+     * @param       req SDO请求。
+     * @param       timeout 超时时间（以毫秒为单位）。
+     *              零表示无超时。
+     */
+    void ecrt_sdo_request_timeout(ec_sdo_request_t *req, /**< SDO请求。 */
+                                  uint32_t timeout       /**< 超时时间（以毫秒为单位）。
+                                                           零表示无超时。 */
+    );
 
-/** Access to the SDO request's data.
- *
- * This function returns a pointer to the request's internal SDO data memory.
- *
- * - After a read operation was successful, integer data can be evaluated using
- *   the EC_READ_*() macros as usual. Example:
- *   \code
- *   uint16_t value = EC_READ_U16(ecrt_sdo_request_data(sdo)));
- *   \endcode
- * - If a write operation shall be triggered, the data have to be written to
- *   the internal memory. Use the EC_WRITE_*() macros, if you are writing
- *   integer data. Be sure, that the data fit into the memory. The memory size
- *   is a parameter of ecrt_slave_config_create_sdo_request().
- *   \code
- *   EC_WRITE_U16(ecrt_sdo_request_data(sdo), 0xFFFF);
- *   \endcode
- *
- * \attention The return value can be invalid during a read operation, because
- * the internal SDO data memory could be re-allocated if the read SDO data do
- * not fit inside.
- *
- * \return Pointer to the internal SDO data memory.
- */
-uint8_t *ecrt_sdo_request_data(
-        ec_sdo_request_t *req /**< SDO request. */
-        );
+    /**
+     * @brief       访问SDO请求的数据。
+     * @details     此函数返回指向请求的内部SDO数据内存的指针。
+     *              - 在读取操作成功后，可以使用EC_READ_*()宏来评估整数数据。例如：
+     *                \code uint16_t value = EC_READ_U16(ecrt_sdo_request_data(sdo))); \endcode
+     *              - 如果要触发写操作，则必须将数据写入内部内存。
+     *                如果要写入整数数据，请使用EC_WRITE_*()宏。
+     *                确保数据适合内存中。内存大小是ecrt_slave_config_create_sdo_request()的参数。
+     *                \code EC_WRITE_U16(ecrt_sdo_request_data(sdo), 0xFFFF); \endcode
+     * @attention   在读取操作期间，返回值可能无效，因为如果读取的SDO数据不适合内部SDO数据内存，
+     *              则可能会重新分配内部SDO数据内存。
+     * @return      指向内部SDO数据内存的指针。
+     */
+    uint8_t *ecrt_sdo_request_data(ec_sdo_request_t *req /**< SDO请求。 */
+    );
 
-/** Returns the current SDO data size.
- *
- * When the SDO request is created, the data size is set to the size of the
- * reserved memory. After a read operation the size is set to the size of the
- * read data. The size is not modified in any other situation.
- *
- * \return SDO data size in bytes.
- */
-size_t ecrt_sdo_request_data_size(
-        const ec_sdo_request_t *req /**< SDO request. */
-        );
+    /**
+     * @brief       返回当前SDO数据的大小。
+     * @details     在创建SDO请求时，数据大小设置为保留内存的大小。
+     *              在读取操作后，大小设置为读取数据的大小。
+     *              在其他情况下，大小不会被修改。
+     * @param       req SDO请求。
+     * @return      SDO数据大小（以字节为单位）。
+     */
+    size_t ecrt_sdo_request_data_size(const ec_sdo_request_t *req /**< SDO请求。 */
+    );
 
-/** Get the current state of the SDO request.
- *
- * \return Request state.
+/**
+ * @brief       获取SDO请求的当前状态。
+ * @details     这是一个简要描述。
+ * @param       req SDO请求。
+ * @retval      请求状态。
  */
 #ifdef __KERNEL__
-ec_request_state_t ecrt_sdo_request_state(
-        const ec_sdo_request_t *req /**< SDO request. */
+    ec_request_state_t
+    ecrt_sdo_request_state(const ec_sdo_request_t *req /**< SDO请求。 */
     );
 #else
-ec_request_state_t ecrt_sdo_request_state(
-        ec_sdo_request_t *req /**< SDO request. */
-    );
+ec_request_state_t
+ecrt_sdo_request_state(ec_sdo_request_t *req /**< SDO请求。 */
+);
 #endif
 
-/** Schedule an SDO write operation.
+   /**
+ * @brief       安排一个SDO写操作。
+ * @details     这是一个简要描述。
+ * @param       req SDO请求。
+ * @retval      无返回值。
  *
- * \attention This method may not be called while ecrt_sdo_request_state()
- * returns EC_REQUEST_BUSY.
+ * \attention   在ecrt_sdo_request_state()返回EC_REQUEST_BUSY时，不可调用此方法。
  */
-void ecrt_sdo_request_write(
-        ec_sdo_request_t *req /**< SDO request. */
-        );
+void ecrt_sdo_request_write(ec_sdo_request_t *req /**< SDO请求。 */
+);
 
-/** Schedule an SDO write operation.
+/** 
+ * @brief       安排一个SDO写操作。
+ * @details     这是一个详细描述。
+ * @param       req SDO请求。
+ * @param       size 要写入的数据大小。
+ * @retval      无返回值。
  *
- * \attention This method may not be called while ecrt_sdo_request_state()
- * returns EC_REQUEST_BUSY.
- *
- * \attention The size must be less than or equal to the size specified
- * when the request was created.
+ * \attention   在ecrt_sdo_request_state()返回EC_REQUEST_BUSY时，不可调用此方法。
+ * \attention   大小必须小于或等于创建请求时指定的大小。
  */
-void ecrt_sdo_request_write_with_size(
-        ec_sdo_request_t *req, /**< SDO request. */
-        size_t size /**< Size of data to write. */
-        );
+void ecrt_sdo_request_write_with_size(ec_sdo_request_t *req, /**< SDO请求。 */
+                                      size_t size            /**< 要写入的数据大小。 */
+);
 
-/** Schedule an SDO read operation.
+/** 
+ * @brief       安排一个SDO读操作。
+ * @details     这是一个详细描述。
+ * @param       req SDO请求。
+ * @retval      无返回值。
  *
- * \attention This method may not be called while ecrt_sdo_request_state()
- * returns EC_REQUEST_BUSY.
- *
- * \attention After calling this function, the return value of
- * ecrt_sdo_request_data() must be considered as invalid while
- * ecrt_sdo_request_state() returns EC_REQUEST_BUSY.
+ * \attention   在ecrt_sdo_request_state()返回EC_REQUEST_BUSY时，不可调用此方法。
+ * \attention   在调用此函数后，ecrt_sdo_request_data()的返回值在ecrt_sdo_request_state()返回EC_REQUEST_BUSY时应被视为无效。
  */
-void ecrt_sdo_request_read(
-        ec_sdo_request_t *req /**< SDO request. */
-        );
+void ecrt_sdo_request_read(ec_sdo_request_t *req /**< SDO请求。 */
+);
 
-/*****************************************************************************
- * FoE request methods.
- ****************************************************************************/
+    /*****************************************************************************
+     * FoE request methods.
+     ****************************************************************************/
 
-/** Select the filename to use for the next FoE operation.
+  /**
+ * @brief       选择下一个FoE操作要使用的文件名。
+ * @details     这是一个简要描述。
+ * @param       req FoE请求。
+ * @param       file_name 文件名。
+ * @param       password 密码。
+ * @retval      无返回值。
  */
-void ecrt_foe_request_file(
-        ec_foe_request_t *req, /**< FoE request. */
-        const char *file_name, /**< File name. */
-        uint32_t password /**< Password. */
-        );
+void ecrt_foe_request_file(ec_foe_request_t *req, /**< FoE请求。 */
+                           const char *file_name, /**< 文件名。 */
+                           uint32_t password      /**< 密码。 */
+);
 
-/** Set the timeout for an FoE request.
- *
- * If the request cannot be processed in the specified time, if will be marked
- * as failed.
- *
- * The timeout is permanently stored in the request object and is valid until
- * the next call of this method.
+/**
+ * @brief       设置FoE请求的超时时间。
+ * @details     这是一个详细描述。
+ * @param       req FoE请求。
+ * @param       timeout 超时时间（毫秒）。
+ *              如果请求在指定的时间内无法处理，将被标记为失败。
+ *              超时时间会永久存储在请求对象中，有效直到下一次调用此方法。
+ * @retval      无返回值。
  */
-void ecrt_foe_request_timeout(
-        ec_foe_request_t *req, /**< FoE request. */
-        uint32_t timeout /**< Timeout in milliseconds. Zero means no
-                           timeout. */
-        );
+void ecrt_foe_request_timeout(ec_foe_request_t *req, /**< FoE请求。 */
+                              uint32_t timeout       /**< 超时时间（毫秒）。
+                                                       0表示无超时。 */
+);
 
-/** Access to the FoE request's data.
- *
- * This function returns a pointer to the request's internal data memory.
- *
- * - After a read operation was successful, the data can be read from this
- *   buffer up to the ecrt_foe_request_data_size().
- * - If a write operation shall be triggered, the data has to be written to
- *   the internal memory. Be sure that the data fit into the memory. The
- *   memory size is a parameter of ecrt_slave_config_create_foe_request().
- *
- * \attention The return value can be invalid during a read operation, because
- * the internal data memory could be re-allocated if the read data does not
- * fit inside.
- *
- * \return Pointer to the internal file data memory.
+/**
+ * @brief       访问FoE请求的数据。
+ * @details     这个函数返回指向请求的内部数据内存的指针。
+ * @attention   在读操作成功后，可以从此缓冲区读取数据，直到ecrt_foe_request_data_size()。
+ *              如果要触发写操作，则必须将数据写入内部内存。
+ *              确保数据适合内存。内存大小是ecrt_slave_config_create_foe_request()的一个参数。
+ * @return      指向内部文件数据内存的指针。
  */
-uint8_t *ecrt_foe_request_data(
-        ec_foe_request_t *req /**< FoE request. */
-        );
+uint8_t *ecrt_foe_request_data(ec_foe_request_t *req /**< FoE请求。 */
+);
 
-/** Returns the current FoE data size.
- *
- * When the FoE request is created, the data size is set to the size of the
- * reserved memory. After a read operation completes the size is set to the
- * size of the read data. After a write operation starts the size is set to
- * the size of the data to write.
- *
- * \return FoE data size in bytes.
+/**
+ * @brief       返回当前FoE数据的大小。
+ * @details     当创建FoE请求时，数据大小设置为保留内存的大小。
+ *              在读操作完成后，大小设置为读取数据的大小。
+ *              在写操作开始后，大小设置为要写入的数据的大小。
+ * @return      FoE数据大小（字节）。
  */
-size_t ecrt_foe_request_data_size(
-        const ec_foe_request_t *req /**< FoE request. */
-        );
+size_t ecrt_foe_request_data_size(const ec_foe_request_t *req /**< FoE请求。 */
+);
 
-/** Get the current state of the FoE request.
- *
- * \return Request state.
+/**
+ * @brief       获取FoE请求的当前状态。
+ * @return      请求状态。
  */
 #ifdef __KERNEL__
-ec_request_state_t ecrt_foe_request_state(
-        const ec_foe_request_t *req /**< FoE request. */
+    ec_request_state_t
+    ecrt_foe_request_state(const ec_foe_request_t *req /**< FoE请求。 */
     );
 #else
-ec_request_state_t ecrt_foe_request_state(
-        ec_foe_request_t *req /**< FoE request. */
-    );
+ec_request_state_t
+ecrt_foe_request_state(ec_foe_request_t *req /**< FoE请求。 */
+);
 #endif
 
-/** Get the result of the FoE request.
- *
- * \attention This method may not be called while ecrt_foe_request_state()
- * returns EC_REQUEST_BUSY.
- *
- * \return FoE transfer result.
+/**
+ * @brief       获取FoE请求的结果。
+ * @details     这是一个详细描述。
+ * @attention   在ecrt_foe_request_state()返回EC_REQUEST_BUSY时，不可调用此方法。
+ * @return      FoE传输结果。
  */
-ec_foe_error_t ecrt_foe_request_result(
-        const ec_foe_request_t *req /**< FoE request. */
-    );
+ec_foe_error_t
+ecrt_foe_request_result(const ec_foe_request_t *req /**< FoE请求。 */
+);
 
-/** Get the FoE error code from the FoE request.
- *
- * \attention This value is only valid when ecrt_foe_request_result()
- * returns FOE_OPCODE_ERROR.
- *
- * \return FoE error code.  If the returned value is zero, then the error
- * is that an unexpected opcode was received; if it is non-zero then the
- * value is the code reported by the slave in the FoE ERROR opcode.
+/**
+ * @brief       从FoE请求中获取FoE错误码。
+ * @details     这个值只在ecrt_foe_request_result()返回FOE_OPCODE_ERROR时有效。
+ * @return      FoE错误码。
+ *              如果返回值为零，则表示错误是接收到一个意外的操作码；
+ *              如果返回值非零，则该值是从FoE ERROR操作码中报告的从站代码。
  */
-uint32_t ecrt_foe_request_error_code(
-        const ec_foe_request_t *req /**< FoE request. */
-    );
+uint32_t
+ecrt_foe_request_error_code(const ec_foe_request_t *req /**< FoE请求。 */
+);
 
-/** Returns the progress of the current @EC_REQUEST_BUSY transfer.
- *
- * \attention Must be called after ecrt_foe_request_state().
- *
- * \return Progress in bytes.
+/**
+ * @brief       返回当前@EC_REQUEST_BUSY传输的进度。
+ * @attention   必须在调用ecrt_foe_request_state()之后调用。
+ * @return      进度（字节）。
  */
-size_t ecrt_foe_request_progress(
-        const ec_foe_request_t *req /**< FoE request. */
-        );
+size_t
+ecrt_foe_request_progress(const ec_foe_request_t *req /**< FoE请求。 */
+);
 
-/** Schedule an FoE write operation.
- *
- * \attention This method may not be called while ecrt_foe_request_state()
- * returns EC_REQUEST_BUSY.
- *
- * \attention The size must be less than or equal to the size specified
- * when the request was created.
+/**
+ * @brief       安排一个FoE写操作。
+ * @details     这是一个详细描述。
+ * @attention   在ecrt_foe_request_state()返回EC_REQUEST_BUSY时，不可调用此方法。
+ * @attention   大小必须小于或等于创建请求时指定的大小。
+ * @param       req FoE请求。
+ * @param       size 要写入的数据大小。
+ * @retval      无返回值。
  */
-void ecrt_foe_request_write(
-        ec_foe_request_t *req, /**< FoE request. */
-        size_t size /**< Size of data to write. */
-        );
+void ecrt_foe_request_write(ec_foe_request_t *req, /**< FoE请求。 */
+                            size_t size            /**< 要写入的数据大小。 */
+);
 
-/** Schedule an FoE read operation.
- *
- * \attention This method may not be called while ecrt_foe_request_state()
- * returns EC_REQUEST_BUSY.
- *
- * \attention After calling this function, the return value of
- * ecrt_foe_request_data() must be considered as invalid while
- * ecrt_foe_request_state() returns EC_REQUEST_BUSY.
+/**
+ * @brief       安排一个FoE读操作。
+ * @details     这是一个详细描述。
+ * @attention   在ecrt_foe_request_state()返回EC_REQUEST_BUSY时，不可调用此方法。
+ * @attention   在调用此函数后，ecrt_foe_request_data()的返回值在ecrt_foe_request_state()返回EC_REQUEST_BUSY时应被视为无效。
+ * @param       req FoE请求。
+ * @retval      无返回值。
  */
-void ecrt_foe_request_read(
-        ec_foe_request_t *req /**< FoE request. */
-        );
+void ecrt_foe_request_read(ec_foe_request_t *req /**< FoE请求。 */
+);
 
-/*****************************************************************************
- * VoE handler methods.
- ****************************************************************************/
+    /*****************************************************************************
+     * VoE handler methods.
+     ****************************************************************************/
 
-/** Sets the VoE header for future send operations.
- *
- * A VoE message shall contain a 4-byte vendor ID, followed by a 2-byte vendor
- * type at as header. These numbers can be set with this function. The values
- * are valid and will be used for future send operations until the next call
- * of this method.
+  /**
+ * @brief       设置未来发送操作的VoE头部。
+ * @details     一个VoE消息应包含一个4字节的供应商ID，后跟一个2字节的供应商类型作为头部。
+ *              这些数字可以通过此函数设置。这些值是有效的，并将用于未来的发送操作，直到下一次调用此方法。
+ * @param       voe VoE处理器。
+ * @param       vendor_id 供应商ID。
+ * @param       vendor_type 供应商特定类型。
+ * @retval      无返回值。
  */
 void ecrt_voe_handler_send_header(
-        ec_voe_handler_t *voe, /**< VoE handler. */
-        uint32_t vendor_id, /**< Vendor ID. */
-        uint16_t vendor_type /**< Vendor-specific type. */
-        );
+    ec_voe_handler_t *voe, /**< VoE处理器。 */
+    uint32_t vendor_id,    /**< 供应商ID。 */
+    uint16_t vendor_type   /**< 供应商特定类型。 */
+);
 
-/** Reads the header data of a received VoE message.
- *
- * This method can be used to get the received VoE header information after a
- * read operation has succeeded.
- *
- * The header information is stored at the memory given by the pointer
- * parameters.
+/**
+ * @brief       读取接收到的VoE消息的头部数据。
+ * @details     此方法可用于在读操作成功后获取接收到的VoE头部信息。
+ *              头部信息存储在由指针参数给出的内存中。
+ * @param       voe VoE处理器。
+ * @param       vendor_id 供应商ID。
+ * @param       vendor_type 供应商特定类型。
+ * @retval      无返回值。
  */
 void ecrt_voe_handler_received_header(
-        const ec_voe_handler_t *voe, /**< VoE handler. */
-        uint32_t *vendor_id, /**< Vendor ID. */
-        uint16_t *vendor_type /**< Vendor-specific type. */
-        );
+    const ec_voe_handler_t *voe, /**< VoE处理器。 */
+    uint32_t *vendor_id,         /**< 供应商ID。 */
+    uint16_t *vendor_type        /**< 供应商特定类型。 */
+);
 
-/** Access to the VoE handler's data.
- *
- * This function returns a pointer to the VoE handler's internal memory, that
- * points to the actual VoE data right after the VoE header (see
- * ecrt_voe_handler_send_header()).
- *
- * - After a read operation was successful, the memory contains the received
- *   data. The size of the received data can be determined via
- *   ecrt_voe_handler_data_size().
- * - Before a write operation is triggered, the data have to be written to the
- *   internal memory. Be sure, that the data fit into the memory. The reserved
- *   memory size is a parameter of ecrt_slave_config_create_voe_handler().
- *
- * \attention The returned pointer is not necessarily persistent: After a read
- * operation, the internal memory may have been reallocated. This can be
- * avoided by reserving enough memory via the \a size parameter of
- * ecrt_slave_config_create_voe_handler().
- *
- * \return Pointer to the internal memory.
+/**
+ * @brief       访问VoE处理器的数据。
+ * @details     此函数返回指向VoE处理器内部内存的指针，该内存指向VoE头部后的实际VoE数据（参见ecrt_voe_handler_send_header()）。
+ * @attention   在读操作成功后，内存中包含接收到的数据。接收到的数据的大小可以通过ecrt_voe_handler_data_size()确定。
+ *              在触发写操作之前，数据必须写入内部内存。确保数据适合内存。保留内存大小是ecrt_slave_config_create_voe_handler()的一个参数。
+ * @return      指向内部内存的指针。
  */
-uint8_t *ecrt_voe_handler_data(
-        ec_voe_handler_t *voe /**< VoE handler. */
-        );
+uint8_t *ecrt_voe_handler_data(ec_voe_handler_t *voe /**< VoE处理器。 */
+);
 
-/** Returns the current data size.
- *
- * The data size is the size of the VoE data without the header (see
- * ecrt_voe_handler_send_header()).
- *
- * When the VoE handler is created, the data size is set to the size of the
- * reserved memory. At a write operation, the data size is set to the number
- * of bytes to write. After a read operation the size is set to the size of
- * the read data. The size is not modified in any other situation.
- *
- * \return Data size in bytes.
+/**
+ * @brief       返回当前数据的大小。
+ * @details     数据大小是VoE数据的大小，不包括头部（参见ecrt_voe_handler_send_header()）。
+ *              当创建VoE处理器时，数据大小设置为保留内存的大小。
+ *              在写操作时，数据大小设置为要写入的字节数。在读操作后，大小设置为读取数据的大小。
+ *              在其他情况下，大小不会被修改。
+ * @return      数据大小（字节）。
  */
-size_t ecrt_voe_handler_data_size(
-        const ec_voe_handler_t *voe /**< VoE handler. */
-        );
+size_t
+ecrt_voe_handler_data_size(const ec_voe_handler_t *voe /**< VoE处理器。 */
+);
 
-/** Start a VoE write operation.
- *
- * After this function has been called, the ecrt_voe_handler_execute() method
- * must be called in every bus cycle as long as it returns EC_REQUEST_BUSY. No
- * other operation may be started while the handler is busy.
+/**
+ * @brief       启动一个VoE写操作。
+ * @details     在调用此函数后，必须在每个总线周期中调用ecrt_voe_handler_execute()方法，
+ *              只要它返回EC_REQUEST_BUSY。当处理器忙碌时，不可启动其他操作。
+ * @param       voe VoE处理器。
+ * @param       size 要写入的字节数（不包括VoE头部）。
+ * @retval      无返回值。
  */
 void ecrt_voe_handler_write(
-        ec_voe_handler_t *voe, /**< VoE handler. */
-        size_t size /**< Number of bytes to write (without the VoE header). */
-        );
+    ec_voe_handler_t *voe, /**< VoE处理器。 */
+    size_t size            /**< 要写入的字节数（不包括VoE头部）。 */
+);
 
-/** Start a VoE read operation.
- *
- * After this function has been called, the ecrt_voe_handler_execute() method
- * must be called in every bus cycle as long as it returns EC_REQUEST_BUSY. No
- * other operation may be started while the handler is busy.
- *
- * The state machine queries the slave's send mailbox for new data to be send
- * to the master. If no data appear within the EC_VOE_RESPONSE_TIMEOUT
- * (defined in master/voe_handler.c), the operation fails.
- *
- * On success, the size of the read data can be determined via
- * ecrt_voe_handler_data_size(), while the VoE header of the received data
- * can be retrieved with ecrt_voe_handler_received_header().
+/**
+ * @brief       启动一个VoE读操作。
+ * @details     在调用此函数后，必须在每个总线周期中调用ecrt_voe_handler_execute()方法，
+ *              只要它返回EC_REQUEST_BUSY。当处理器忙碌时，不可启动其他操作。
+ *              状态机查询从站的发送邮箱以获取要发送到主站的新数据。
+ *              如果在EC_VOE_RESPONSE_TIMEOUT（在master/voe_handler.c中定义）内没有数据出现，则操作失败。
+ *              成功时，可以通过ecrt_voe_handler_data_size()确定读取数据的大小，
+ *              而接收到的数据的VoE头部可以通过ecrt_voe_handler_received_header()检索。
+ * @param       voe VoE处理器。
+ * @retval      无返回值。
  */
-void ecrt_voe_handler_read(
-        ec_voe_handler_t *voe /**< VoE handler. */
-        );
+void ecrt_voe_handler_read(ec_voe_handler_t *voe /**< VoE处理器。 */
+);
 
-/** Start a VoE read operation without querying the sync manager status.
- *
- * After this function has been called, the ecrt_voe_handler_execute() method
- * must be called in every bus cycle as long as it returns EC_REQUEST_BUSY. No
- * other operation may be started while the handler is busy.
- *
- * The state machine queries the slave by sending an empty mailbox. The slave
- * fills its data to the master in this mailbox. If no data appear within the
- * EC_VOE_RESPONSE_TIMEOUT (defined in master/voe_handler.c), the operation
- * fails.
- *
- * On success, the size of the read data can be determined via
- * ecrt_voe_handler_data_size(), while the VoE header of the received data
- * can be retrieved with ecrt_voe_handler_received_header().
+/**
+ * @brief       启动一个VoE读操作，而无需查询同步管理器状态。
+ * @details     在调用此函数后，必须在每个总线周期中调用ecrt_voe_handler_execute()方法，
+ *              只要它返回EC_REQUEST_BUSY。当处理器忙碌时，不可启动其他操作。
+ *              状态机通过发送一个空邮箱查询从站。从站将其数据填充到主站的邮箱中。
+ *              如果在EC_VOE_RESPONSE_TIMEOUT（在master/voe_handler.c中定义）内没有数据出现，则操作失败。
+ *              成功时，可以通过ecrt_voe_handler_data_size()确定读取数据的大小，
+ *              而接收到的数据的VoE头部可以通过ecrt_voe_handler_received_header()检索。
+ * @param       voe VoE处理器。
+ * @retval      无返回值。
  */
-void ecrt_voe_handler_read_nosync(
-        ec_voe_handler_t *voe /**< VoE handler. */
-        );
+void ecrt_voe_handler_read_nosync(ec_voe_handler_t *voe /**< VoE处理器。 */
+);
 
-/** Execute the handler.
- *
- * This method executes the VoE handler. It has to be called in every bus
- * cycle as long as it returns EC_REQUEST_BUSY.
- *
- * \return Handler state.
+/**
+ * @brief       执行处理器。
+ * @details     此方法执行VoE处理器。在每个总线周期中必须调用它，只要它返回EC_REQUEST_BUSY。
+ * @return      处理器状态。
  */
-ec_request_state_t ecrt_voe_handler_execute(
-    ec_voe_handler_t *voe /**< VoE handler. */
-    );
+ec_request_state_t
+ecrt_voe_handler_execute(ec_voe_handler_t *voe /**< VoE处理器。 */
+);
 
-/*****************************************************************************
- * Register request methods.
- ****************************************************************************/
+    /*****************************************************************************
+     * Register request methods.
+     ****************************************************************************/
 
-/** Access to the register request's data.
- *
- * This function returns a pointer to the request's internal memory.
- *
- * - After a read operation was successful, integer data can be evaluated
- *   using the EC_READ_*() macros as usual. Example:
- *   \code
- *   uint16_t value = EC_READ_U16(ecrt_reg_request_data(reg_request)));
- *   \endcode
- * - If a write operation shall be triggered, the data have to be written to
- *   the internal memory. Use the EC_WRITE_*() macros, if you are writing
- *   integer data. Be sure, that the data fit into the memory. The memory size
- *   is a parameter of ecrt_slave_config_create_reg_request().
- *   \code
- *   EC_WRITE_U16(ecrt_reg_request_data(reg_request), 0xFFFF);
- *   \endcode
- *
- * \return Pointer to the internal memory.
+    /**
+ * @brief       访问寄存器请求的数据。
+ * @details     此函数返回指向请求的内部内存的指针。
+ * @attention   - 在读操作成功后，可以使用EC_READ_*()宏来评估整数数据，如常规操作。
+ *                示例：
+ *                \code
+ *                uint16_t value = EC_READ_U16(ecrt_reg_request_data(reg_request));
+ *                \endcode
+ *              - 如果要触发写操作，数据必须写入内部内存。如果要写入整数数据，请使用EC_WRITE_*()宏。
+ *                确保数据适合内存。内存大小是ecrt_slave_config_create_reg_request()的一个参数。
+ *                \code
+ *                EC_WRITE_U16(ecrt_reg_request_data(reg_request), 0xFFFF);
+ *                \endcode
+ * @return      指向内部内存的指针。
  */
-uint8_t *ecrt_reg_request_data(
-        ec_reg_request_t *req /**< Register request. */
-        );
+uint8_t *
+ecrt_reg_request_data(ec_reg_request_t *req /**< 寄存器请求。 */
+);
 
-/** Get the current state of the register request.
+/** 获取寄存器请求的当前状态。
  *
- * \return Request state.
+ * @return      请求状态。
  */
 #ifdef __KERNEL__
-ec_request_state_t ecrt_reg_request_state(
-        const ec_reg_request_t *req /**< Register request. */
-    );
+ec_request_state_t
+ecrt_reg_request_state(const ec_reg_request_t *req /**< 寄存器请求。 */
+);
 #else
-ec_request_state_t ecrt_reg_request_state(
-        ec_reg_request_t *req /**< Register request. */
-    );
+ec_request_state_t
+ecrt_reg_request_state(ec_reg_request_t *req /**< 寄存器请求。 */
+);
 #endif
 
-/** Schedule an register write operation.
+/** 安排一个寄存器写操作。
  *
- * \attention This method may not be called while ecrt_reg_request_state()
- * returns EC_REQUEST_BUSY.
+ * @attention   当ecrt_reg_request_state()返回EC_REQUEST_BUSY时，不可调用此方法。
  *
- * \attention The \a size parameter is truncated to the size given at request
- * creation.
+ * @attention   \a size参数将被截断为请求创建时给定的大小。
  */
-void ecrt_reg_request_write(
-        ec_reg_request_t *req, /**< Register request. */
-        uint16_t address, /**< Register address. */
-        size_t size /**< Size to write. */
-        );
+void ecrt_reg_request_write(ec_reg_request_t *req, /**< 寄存器请求。 */
+                            uint16_t address,      /**< 寄存器地址。 */
+                            size_t size            /**< 要写入的大小。 */
+);
 
-/** Schedule a register read operation.
+/** 安排一个寄存器读操作。
  *
- * \attention This method may not be called while ecrt_reg_request_state()
- * returns EC_REQUEST_BUSY.
+ * @attention   当ecrt_reg_request_state()返回EC_REQUEST_BUSY时，不可调用此方法。
  *
- * \attention The \a size parameter is truncated to the size given at request
- * creation.
+ * @attention   \a size参数将被截断为请求创建时给定的大小。
  */
-void ecrt_reg_request_read(
-        ec_reg_request_t *req, /**< Register request. */
-        uint16_t address, /**< Register address. */
-        size_t size /**< Size to write. */
-        );
+void ecrt_reg_request_read(ec_reg_request_t *req, /**< 寄存器请求。 */
+                           uint16_t address,      /**< 寄存器地址。 */
+                           size_t size            /**< 要读取的大小。 */
+);
 
 /******************************************************************************
  * Bitwise read/write macros
  *****************************************************************************/
-
-/** Read a certain bit of an EtherCAT data byte.
+/** 读取EtherCAT数据字节的特定位。
  *
- * \param DATA EtherCAT data pointer
- * \param POS bit position
+ * \param DATA EtherCAT数据指针
+ * \param POS 位位置
  */
-#define EC_READ_BIT(DATA, POS) ((*((uint8_t *) (DATA)) >> (POS)) & 0x01)
+#define EC_READ_BIT(DATA, POS) ((*((uint8_t *)(DATA)) >> (POS)) & 0x01)
 
-/** Write a certain bit of an EtherCAT data byte.
+/** 写入EtherCAT数据字节的特定位。
  *
- * \param DATA EtherCAT data pointer
- * \param POS bit position
- * \param VAL new bit value
+ * \param DATA EtherCAT数据指针
+ * \param POS 位位置
+ * \param VAL 新的位值
  */
-#define EC_WRITE_BIT(DATA, POS, VAL) \
-    do { \
-        if (VAL) *((uint8_t *) (DATA)) |=  (1 << (POS)); \
-        else     *((uint8_t *) (DATA)) &= ~(1 << (POS)); \
+#define EC_WRITE_BIT(DATA, POS, VAL)               \
+    do                                             \
+    {                                              \
+        if (VAL)                                   \
+            *((uint8_t *)(DATA)) |= (1 << (POS));  \
+        else                                       \
+            *((uint8_t *)(DATA)) &= ~(1 << (POS)); \
     } while (0)
 
-/******************************************************************************
- * Byte-swapping functions for user space
+   /******************************************************************************
+ * 用户空间的字节交换函数
  *****************************************************************************/
 
 #ifndef __KERNEL__
@@ -2491,25 +2370,11 @@ void ecrt_reg_request_read(
 #elif __BYTE_ORDER == __BIG_ENDIAN
 
 #define swap16(x) \
-        ((uint16_t)( \
-        (((uint16_t)(x) & 0x00ffU) << 8) | \
-        (((uint16_t)(x) & 0xff00U) >> 8) ))
+    ((uint16_t)((((uint16_t)(x) & 0x00ffU) << 8) | (((uint16_t)(x) & 0xff00U) >> 8)))
 #define swap32(x) \
-        ((uint32_t)( \
-        (((uint32_t)(x) & 0x000000ffUL) << 24) | \
-        (((uint32_t)(x) & 0x0000ff00UL) <<  8) | \
-        (((uint32_t)(x) & 0x00ff0000UL) >>  8) | \
-        (((uint32_t)(x) & 0xff000000UL) >> 24) ))
+    ((uint32_t)((((uint32_t)(x) & 0x000000ffUL) << 24) | (((uint32_t)(x) & 0x0000ff00UL) << 8) | (((uint32_t)(x) & 0x00ff0000UL) >> 8) | (((uint32_t)(x) & 0xff000000UL) >> 24)))
 #define swap64(x) \
-        ((uint64_t)( \
-        (((uint64_t)(x) & 0x00000000000000ffULL) << 56) | \
-        (((uint64_t)(x) & 0x000000000000ff00ULL) << 40) | \
-        (((uint64_t)(x) & 0x0000000000ff0000ULL) << 24) | \
-        (((uint64_t)(x) & 0x00000000ff000000ULL) <<  8) | \
-        (((uint64_t)(x) & 0x000000ff00000000ULL) >>  8) | \
-        (((uint64_t)(x) & 0x0000ff0000000000ULL) >> 24) | \
-        (((uint64_t)(x) & 0x00ff000000000000ULL) >> 40) | \
-        (((uint64_t)(x) & 0xff00000000000000ULL) >> 56) ))
+    ((uint64_t)((((uint64_t)(x) & 0x00000000000000ffULL) << 56) | (((uint64_t)(x) & 0x000000000000ff00ULL) << 40) | (((uint64_t)(x) & 0x0000000000ff0000ULL) << 24) | (((uint64_t)(x) & 0x00000000ff000000ULL) << 8) | (((uint64_t)(x) & 0x000000ff00000000ULL) >> 8) | (((uint64_t)(x) & 0x0000ff0000000000ULL) >> 24) | (((uint64_t)(x) & 0x00ff000000000000ULL) >> 40) | (((uint64_t)(x) & 0xff00000000000000ULL) >> 56)))
 
 #define le16_to_cpu(x) swap16(x)
 #define le32_to_cpu(x) swap32(x)
@@ -2528,231 +2393,227 @@ void ecrt_reg_request_read(
 #endif /* ifndef __KERNEL__ */
 
 /******************************************************************************
- * Read macros
+ * 读取宏
  *****************************************************************************/
 
-/** Read an 8-bit unsigned value from EtherCAT data.
+/** 从EtherCAT数据中读取一个8位无符号值。
  *
- * \return EtherCAT data value
+ * \return EtherCAT数据值
  */
-#define EC_READ_U8(DATA) \
-    ((uint8_t) *((uint8_t *) (DATA)))
+#define EC_READ_U8(DATA) ((uint8_t) * ((uint8_t *)(DATA)))
 
-/** Read an 8-bit signed value from EtherCAT data.
+/** 从EtherCAT数据中读取一个8位有符号值。
  *
- * \param DATA EtherCAT data pointer
- * \return EtherCAT data value
+ * \param DATA EtherCAT数据指针
+ * \return EtherCAT数据值
  */
-#define EC_READ_S8(DATA) \
-     ((int8_t) *((uint8_t *) (DATA)))
+#define EC_READ_S8(DATA) ((int8_t) * ((uint8_t *)(DATA)))
 
-/** Read a 16-bit unsigned value from EtherCAT data.
+/** 从EtherCAT数据中读取一个16位无符号值。
  *
- * \param DATA EtherCAT data pointer
- * \return EtherCAT data value
+ * \param DATA EtherCAT数据指针
+ * \return EtherCAT数据值
  */
-#define EC_READ_U16(DATA) \
-     ((uint16_t) le16_to_cpup((void *) (DATA)))
+#define EC_READ_U16(DATA) ((uint16_t)le16_to_cpup((void *)(DATA)))
 
-/** Read a 16-bit signed value from EtherCAT data.
+/** 从EtherCAT数据中读取一个16位有符号值。
  *
- * \param DATA EtherCAT data pointer
- * \return EtherCAT data value
+ * \param DATA EtherCAT数据指针
+ * \return EtherCAT数据值
  */
-#define EC_READ_S16(DATA) \
-     ((int16_t) le16_to_cpup((void *) (DATA)))
+#define EC_READ_S16(DATA) ((int16_t)le16_to_cpup((void *)(DATA)))
 
-/** Read a 32-bit unsigned value from EtherCAT data.
+/** 从EtherCAT数据中读取一个32位无符号值。
  *
- * \param DATA EtherCAT data pointer
- * \return EtherCAT data value
+ * \param DATA EtherCAT数据指针
+ * \return EtherCAT数据值
  */
-#define EC_READ_U32(DATA) \
-     ((uint32_t) le32_to_cpup((void *) (DATA)))
+#define EC_READ_U32(DATA) ((uint32_t)le32_to_cpup((void *)(DATA)))
 
-/** Read a 32-bit signed value from EtherCAT data.
+/** 从EtherCAT数据中读取一个32位有符号值。
  *
- * \param DATA EtherCAT data pointer
- * \return EtherCAT data value
+ * \param DATA EtherCAT数据指针
+ * \return EtherCAT数据值
  */
-#define EC_READ_S32(DATA) \
-     ((int32_t) le32_to_cpup((void *) (DATA)))
+#define EC_READ_S32(DATA) ((int32_t)le32_to_cpup((void *)(DATA)))
 
-/** Read a 64-bit unsigned value from EtherCAT data.
+/** 从EtherCAT数据中读取一个64位无符号值。
  *
- * \param DATA EtherCAT data pointer
- * \return EtherCAT data value
+ * \param DATA EtherCAT数据指针
+ * \return EtherCAT数据值
  */
-#define EC_READ_U64(DATA) \
-     ((uint64_t) le64_to_cpup((void *) (DATA)))
+#define EC_READ_U64(DATA) ((uint64_t)le64_to_cpup((void *)(DATA)))
 
-/** Read a 64-bit signed value from EtherCAT data.
+/** 从EtherCAT数据中读取一个64位有符号值。
  *
- * \param DATA EtherCAT data pointer
- * \return EtherCAT data value
+ * \param DATA EtherCAT数据指针
+ * \return EtherCAT数据值
  */
-#define EC_READ_S64(DATA) \
-     ((int64_t) le64_to_cpup((void *) (DATA)))
-
+#define EC_READ_S64(DATA) ((int64_t)le64_to_cpup((void *)(DATA)))
 /******************************************************************************
- * Floating-point read functions and macros (userspace only)
+ * 浮点数读取函数和宏（仅限用户空间）
  *****************************************************************************/
 
 #ifndef __KERNEL__
 
-/** Read a 32-bit floating-point value from EtherCAT data.
+/** 从EtherCAT数据中读取32位浮点数值。
  *
- * \param data EtherCAT data pointer
- * \return EtherCAT data value
+ * \param data EtherCAT数据指针
+ * \return EtherCAT数据值
  */
 float ecrt_read_real(const void *data);
 
-/** Read a 32-bit floating-point value from EtherCAT data.
+/** 从EtherCAT数据中读取32位浮点数值。
  *
- * \param DATA EtherCAT data pointer
- * \return EtherCAT data value
+ * \param DATA EtherCAT数据指针
+ * \return EtherCAT数据值
  */
 #define EC_READ_REAL(DATA) ecrt_read_real(DATA)
 
-/** Read a 64-bit floating-point value from EtherCAT data.
+/** 从EtherCAT数据中读取64位浮点数值。
  *
- * \param data EtherCAT data pointer
- * \return EtherCAT data value
+ * \param data EtherCAT数据指针
+ * \return EtherCAT数据值
  */
 double ecrt_read_lreal(const void *data);
 
-/** Read a 64-bit floating-point value from EtherCAT data.
+/** 从EtherCAT数据中读取64位浮点数值。
  *
- * \param DATA EtherCAT data pointer
- * \return EtherCAT data value
+ * \param DATA EtherCAT数据指针
+ * \return EtherCAT数据值
  */
 #define EC_READ_LREAL(DATA) ecrt_read_lreal(DATA)
 
 #endif // ifndef __KERNEL__
 
+
 /******************************************************************************
- * Write macros
+ * 写入宏
  *****************************************************************************/
 
-/** Write an 8-bit unsigned value to EtherCAT data.
+/** 将一个8位无符号值写入EtherCAT数据。
  *
- * \param DATA EtherCAT data pointer
- * \param VAL new value
+ * \param DATA EtherCAT数据指针
+ * \param VAL 新值
  */
-#define EC_WRITE_U8(DATA, VAL) \
-    do { \
-        *((uint8_t *)(DATA)) = ((uint8_t) (VAL)); \
+#define EC_WRITE_U8(DATA, VAL)                   \
+    do                                           \
+    {                                            \
+        *((uint8_t *)(DATA)) = ((uint8_t)(VAL)); \
     } while (0)
 
-/** Write an 8-bit signed value to EtherCAT data.
+/** 将一个8位有符号值写入EtherCAT数据。
  *
- * \param DATA EtherCAT data pointer
- * \param VAL new value
+ * \param DATA EtherCAT数据指针
+ * \param VAL 新值
  */
 #define EC_WRITE_S8(DATA, VAL) EC_WRITE_U8(DATA, VAL)
 
-/** Write a 16-bit unsigned value to EtherCAT data.
+/** 将一个16位无符号值写入EtherCAT数据。
  *
- * \param DATA EtherCAT data pointer
- * \param VAL new value
+ * \param DATA EtherCAT数据指针
+ * \param VAL 新值
  */
-#define EC_WRITE_U16(DATA, VAL) \
-    do { \
-        *((uint16_t *) (DATA)) = cpu_to_le16((uint16_t) (VAL)); \
+#define EC_WRITE_U16(DATA, VAL)                               \
+    do                                                        \
+    {                                                         \
+        *((uint16_t *)(DATA)) = cpu_to_le16((uint16_t)(VAL)); \
     } while (0)
 
-/** Write a 16-bit signed value to EtherCAT data.
+/** 将一个16位有符号值写入EtherCAT数据。
  *
- * \param DATA EtherCAT data pointer
- * \param VAL new value
+ * \param DATA EtherCAT数据指针
+ * \param VAL 新值
  */
 #define EC_WRITE_S16(DATA, VAL) EC_WRITE_U16(DATA, VAL)
 
-/** Write a 32-bit unsigned value to EtherCAT data.
+/** 将一个32位无符号值写入EtherCAT数据。
  *
- * \param DATA EtherCAT data pointer
- * \param VAL new value
+ * \param DATA EtherCAT数据指针
+ * \param VAL 新值
  */
-#define EC_WRITE_U32(DATA, VAL) \
-    do { \
-        *((uint32_t *) (DATA)) = cpu_to_le32((uint32_t) (VAL)); \
+#define EC_WRITE_U32(DATA, VAL)                               \
+    do                                                        \
+    {                                                         \
+        *((uint32_t *)(DATA)) = cpu_to_le32((uint32_t)(VAL)); \
     } while (0)
 
-/** Write a 32-bit signed value to EtherCAT data.
+/** 将一个32位有符号值写入EtherCAT数据。
  *
- * \param DATA EtherCAT data pointer
- * \param VAL new value
+ * \param DATA EtherCAT数据指针
+ * \param VAL 新值
  */
 #define EC_WRITE_S32(DATA, VAL) EC_WRITE_U32(DATA, VAL)
 
-/** Write a 64-bit unsigned value to EtherCAT data.
+/** 将一个64位无符号值写入EtherCAT数据。
  *
- * \param DATA EtherCAT data pointer
- * \param VAL new value
+ * \param DATA EtherCAT数据指针
+ * \param VAL 新值
  */
-#define EC_WRITE_U64(DATA, VAL) \
-    do { \
-        *((uint64_t *) (DATA)) = cpu_to_le64((uint64_t) (VAL)); \
+#define EC_WRITE_U64(DATA, VAL)                               \
+    do                                                        \
+    {                                                         \
+        *((uint64_t *)(DATA)) = cpu_to_le64((uint64_t)(VAL)); \
     } while (0)
 
-/** Write a 64-bit signed value to EtherCAT data.
+/** 将一个64位有符号值写入EtherCAT数据。
  *
- * \param DATA EtherCAT data pointer
- * \param VAL new value
+ * \param DATA EtherCAT数据指针
+ * \param VAL 新值
  */
 #define EC_WRITE_S64(DATA, VAL) EC_WRITE_U64(DATA, VAL)
 
-/******************************************************************************
- * Floating-point write functions and macros (userspace only)
+
+  /******************************************************************************
+ * 浮点数写入函数和宏（仅限用户空间）
  *****************************************************************************/
 
 #ifndef __KERNEL__
 
-/** Write a 32-bit floating-point value to EtherCAT data.
+/** 将一个32位浮点数值写入EtherCAT数据。
  *
- * \param data EtherCAT data pointer
- * \param value new value
+ * \param data EtherCAT数据指针
+ * \param value 新值
  */
 void ecrt_write_real(void *data, float value);
 
-/** Write a 32-bit floating-point value to EtherCAT data.
+/** 将一个32位浮点数值写入EtherCAT数据。
  *
- * \param DATA EtherCAT data pointer
- * \param VAL new value
+ * \param DATA EtherCAT数据指针
+ * \param VAL 新值
  */
 #define EC_WRITE_REAL(DATA, VAL) ecrt_write_real(DATA, VAL)
 
-/** Write a 64-bit floating-point value to EtherCAT data.
+/** 将一个64位浮点数值写入EtherCAT数据。
  *
- * \param data EtherCAT data pointer
- * \param value new value
+ * \param data EtherCAT数据指针
+ * \param value 新值
  */
 void ecrt_write_lreal(void *data, double value);
 
-/** Write a 64-bit floating-point value to EtherCAT data.
+/** 将一个64位浮点数值写入EtherCAT数据。
  *
- * \param DATA EtherCAT data pointer
- * \param VAL new value
+ * \param DATA EtherCAT数据指针
+ * \param VAL 新值
  */
 #define EC_WRITE_LREAL(DATA, VAL) ecrt_write_lreal(DATA, VAL)
 
 #endif // ifndef __KERNEL__
 
-/** Schedule a register read-write operation.
+/** 调度一个寄存器读写操作。
  *
- * \attention This method may not be called while ecrt_reg_request_state()
- * returns EC_REQUEST_BUSY.
+ * \attention 在ecrt_reg_request_state()返回EC_REQUEST_BUSY时，不能调用此方法。
  *
- * \attention The \a size parameter is truncated to the size given at request
- * creation.
+ * \attention \a size参数会被截断为请求创建时给定的大小。
  */
-void ecrt_reg_request_readwrite(
-        ec_reg_request_t *req, /**< Register request. */
-        uint16_t address, /**< Register address. */
-        size_t size /**< Size to read-write. */
-        );
+void
+ecrt_reg_request_readwrite(ec_reg_request_t *req, /**< 寄存器请求。 */
+                           uint16_t address,      /**< 寄存器地址。 */
+                           size_t size            /**< 读写大小。 */
+);
 
-/*****************************************************************************/
+
+    /*****************************************************************************/
 
 #ifdef __cplusplus
 }

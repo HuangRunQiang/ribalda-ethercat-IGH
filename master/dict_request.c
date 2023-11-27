@@ -35,7 +35,6 @@
 
 #include "dict_request.h"
 
-
 /*****************************************************************************/
 
 /** Dictionary request constructor.
@@ -55,7 +54,6 @@ void ec_dict_request_read(ec_dict_request_t *req)
 /*****************************************************************************/
 
 /** \cond */
-
 
 /** \endcond */
 

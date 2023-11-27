@@ -44,8 +44,8 @@
 /** PDO constructor.
  */
 void ec_pdo_init(
-        ec_pdo_t *pdo /**< EtherCAT PDO */
-        )
+    ec_pdo_t *pdo /**< EtherCAT PDO */
+)
 {
     pdo->sync_index = -1; // not assigned
     pdo->name = NULL;
@@ -60,9 +60,9 @@ void ec_pdo_init(
  * \retval <0 Error code.
  */
 int ec_pdo_init_copy(
-        ec_pdo_t *pdo, /**< PDO to create. */
-        const ec_pdo_t *other_pdo /**< PDO to copy from. */
-        )
+    ec_pdo_t *pdo,            /**< PDO to create. */
+    const ec_pdo_t *other_pdo /**< PDO to copy from. */
+)
 {
     int ret = 0;
 
@@ -108,7 +108,8 @@ void ec_pdo_clear_entries(ec_pdo_t *pdo /**< EtherCAT PDO. */)
     ec_pdo_entry_t *entry, *next;
 
     // free all PDO entries
-    list_for_each_entry_safe(entry, next, &pdo->entries, list) {
+    list_for_each_entry_safe(entry, next, &pdo->entries, list)
+    {
         list_del(&entry->list);
         ec_pdo_entry_clear(entry);
         kfree(entry);
@@ -123,9 +124,9 @@ void ec_pdo_clear_entries(ec_pdo_t *pdo /**< EtherCAT PDO. */)
  * \retval <0 Error code.
  */
 int ec_pdo_set_name(
-        ec_pdo_t *pdo, /**< PDO. */
-        const char *name /**< New name. */
-        )
+    ec_pdo_t *pdo,   /**< PDO. */
+    const char *name /**< New name. */
+)
 {
     unsigned int len;
 
@@ -135,13 +136,17 @@ int ec_pdo_set_name(
     if (pdo->name)
         kfree(pdo->name);
 
-    if (name && (len = strlen(name))) {
-        if (!(pdo->name = (char *) kmalloc(len + 1, GFP_KERNEL))) {
+    if (name && (len = strlen(name)))
+    {
+        if (!(pdo->name = (char *)kmalloc(len + 1, GFP_KERNEL)))
+        {
             EC_ERR("Failed to allocate PDO name.\n");
             return -ENOMEM;
         }
         memcpy(pdo->name, name, len + 1);
-    } else {
+    }
+    else
+    {
         pdo->name = NULL;
     }
 
@@ -155,15 +160,16 @@ int ec_pdo_set_name(
  * \retval Pointer to the added entry, otherwise a ERR_PTR() code.
  */
 ec_pdo_entry_t *ec_pdo_add_entry(
-        ec_pdo_t *pdo, /**< PDO. */
-        uint16_t index, /**< New entry's index. */
-        uint8_t subindex, /**< New entry's subindex. */
-        uint8_t bit_length /**< New entry's bit length. */
-        )
+    ec_pdo_t *pdo,     /**< PDO. */
+    uint16_t index,    /**< New entry's index. */
+    uint8_t subindex,  /**< New entry's subindex. */
+    uint8_t bit_length /**< New entry's bit length. */
+)
 {
     ec_pdo_entry_t *entry;
 
-    if (!(entry = kmalloc(sizeof(ec_pdo_entry_t), GFP_KERNEL))) {
+    if (!(entry = kmalloc(sizeof(ec_pdo_entry_t), GFP_KERNEL)))
+    {
         EC_ERR("Failed to allocate memory for PDO entry.\n");
         return ERR_PTR(-ENOMEM);
     }
@@ -184,24 +190,27 @@ ec_pdo_entry_t *ec_pdo_add_entry(
  * \retval <0 Error code.
  */
 int ec_pdo_copy_entries(
-        ec_pdo_t *pdo, /**< PDO whos entries shall be replaced. */
-        const ec_pdo_t *other /**< Pdo with entries to copy. */
-        )
+    ec_pdo_t *pdo,        /**< PDO whos entries shall be replaced. */
+    const ec_pdo_t *other /**< Pdo with entries to copy. */
+)
 {
     ec_pdo_entry_t *entry, *other_entry;
     int ret;
 
     ec_pdo_clear_entries(pdo);
 
-    list_for_each_entry(other_entry, &other->entries, list) {
+    list_for_each_entry(other_entry, &other->entries, list)
+    {
         if (!(entry = (ec_pdo_entry_t *)
-                    kmalloc(sizeof(ec_pdo_entry_t), GFP_KERNEL))) {
+                  kmalloc(sizeof(ec_pdo_entry_t), GFP_KERNEL)))
+        {
             EC_ERR("Failed to allocate memory for PDO entry copy.\n");
             return -ENOMEM;
         }
 
         ret = ec_pdo_entry_init_copy(entry, other_entry);
-        if (ret < 0) {
+        if (ret < 0)
+        {
             kfree(entry);
             return ret;
         }
@@ -220,9 +229,9 @@ int ec_pdo_copy_entries(
  * \retval 0 The entries of the given PDOs differ.
  */
 int ec_pdo_equal_entries(
-        const ec_pdo_t *pdo1, /**< First PDO. */
-        const ec_pdo_t *pdo2 /**< Second PDO. */
-        )
+    const ec_pdo_t *pdo1, /**< First PDO. */
+    const ec_pdo_t *pdo2  /**< Second PDO. */
+)
 {
     const struct list_head *head1, *head2, *item1, *item2;
     const ec_pdo_entry_t *entry1, *entry2;
@@ -230,7 +239,8 @@ int ec_pdo_equal_entries(
     head1 = item1 = &pdo1->entries;
     head2 = item2 = &pdo2->entries;
 
-    while (1) {
+    while (1)
+    {
         item1 = item1->next;
         item2 = item2->next;
 
@@ -255,13 +265,14 @@ int ec_pdo_equal_entries(
  * \return Number of PDO entries.
  */
 unsigned int ec_pdo_entry_count(
-        const ec_pdo_t *pdo /**< PDO. */
-        )
+    const ec_pdo_t *pdo /**< PDO. */
+)
 {
     const ec_pdo_entry_t *entry;
     unsigned int num = 0;
 
-    list_for_each_entry(entry, &pdo->entries, list) {
+    list_for_each_entry(entry, &pdo->entries, list)
+    {
         num++;
     }
 
@@ -277,13 +288,14 @@ unsigned int ec_pdo_entry_count(
  * \return Search result, or NULL.
  */
 const ec_pdo_entry_t *ec_pdo_find_entry_by_pos_const(
-        const ec_pdo_t *pdo, /**< PDO. */
-        unsigned int pos /**< Position in the list. */
-        )
+    const ec_pdo_t *pdo, /**< PDO. */
+    unsigned int pos     /**< Position in the list. */
+)
 {
     const ec_pdo_entry_t *entry;
 
-    list_for_each_entry(entry, &pdo->entries, list) {
+    list_for_each_entry(entry, &pdo->entries, list)
+    {
         if (pos--)
             continue;
         return entry;
@@ -297,17 +309,21 @@ const ec_pdo_entry_t *ec_pdo_find_entry_by_pos_const(
 /** Outputs the PDOs in the list.
  */
 void ec_pdo_print_entries(
-        const ec_pdo_t *pdo /**< PDO. */
-        )
+    const ec_pdo_t *pdo /**< PDO. */
+)
 {
     const ec_pdo_entry_t *entry;
 
-    if (list_empty(&pdo->entries)) {
+    if (list_empty(&pdo->entries))
+    {
         printk(KERN_CONT "(none)");
-    } else {
-        list_for_each_entry(entry, &pdo->entries, list) {
+    }
+    else
+    {
+        list_for_each_entry(entry, &pdo->entries, list)
+        {
             printk(KERN_CONT "0x%04X:%02X/%u",
-                    entry->index, entry->subindex, entry->bit_length);
+                   entry->index, entry->subindex, entry->bit_length);
             if (entry->list.next != &pdo->entries)
                 printk(KERN_CONT " ");
         }

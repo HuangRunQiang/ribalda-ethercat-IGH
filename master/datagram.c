@@ -43,15 +43,15 @@
 
 /** \cond */
 
-#define EC_FUNC_HEADER \
+#define EC_FUNC_HEADER                               \
     ret = ec_datagram_prealloc(datagram, data_size); \
-    if (unlikely(ret)) \
-        return ret; \
-    datagram->index = 0; \
-    datagram->working_counter = 0; \
+    if (unlikely(ret))                               \
+        return ret;                                  \
+    datagram->index = 0;                             \
+    datagram->working_counter = 0;                   \
     datagram->state = EC_DATAGRAM_INIT;
 
-#define EC_FUNC_FOOTER \
+#define EC_FUNC_FOOTER               \
     datagram->data_size = data_size; \
     return 0;
 
@@ -78,8 +78,7 @@ static const char *type_strings[] = {
     "LWR",
     "LRW",
     "ARMW",
-    "FRMW"
-};
+    "FRMW"};
 
 /*****************************************************************************/
 
@@ -120,7 +119,8 @@ void ec_datagram_clear(ec_datagram_t *datagram /**< EtherCAT datagram. */)
 {
     ec_datagram_unqueue(datagram);
 
-    if (datagram->data_origin == EC_ORIG_INTERNAL && datagram->data) {
+    if (datagram->data_origin == EC_ORIG_INTERNAL && datagram->data)
+    {
         kfree(datagram->data);
         datagram->data = NULL;
     }
@@ -132,7 +132,8 @@ void ec_datagram_clear(ec_datagram_t *datagram /**< EtherCAT datagram. */)
  */
 void ec_datagram_unqueue(ec_datagram_t *datagram /**< EtherCAT datagram. */)
 {
-    if (!list_empty(&datagram->queue)) {
+    if (!list_empty(&datagram->queue))
+    {
         list_del_init(&datagram->queue);
     }
 }
@@ -149,21 +150,22 @@ void ec_datagram_unqueue(ec_datagram_t *datagram /**< EtherCAT datagram. */)
  * \return 0 in case of success, otherwise \a -ENOMEM.
  */
 int ec_datagram_prealloc(
-        ec_datagram_t *datagram, /**< EtherCAT datagram. */
-        size_t size /**< New payload size in bytes. */
-        )
+    ec_datagram_t *datagram, /**< EtherCAT datagram. */
+    size_t size              /**< New payload size in bytes. */
+)
 {
-    if (datagram->data_origin == EC_ORIG_EXTERNAL
-            || size <= datagram->mem_size)
+    if (datagram->data_origin == EC_ORIG_EXTERNAL || size <= datagram->mem_size)
         return 0;
 
-    if (datagram->data) {
+    if (datagram->data)
+    {
         kfree(datagram->data);
         datagram->data = NULL;
         datagram->mem_size = 0;
     }
 
-    if (!(datagram->data = kmalloc(size, GFP_KERNEL))) {
+    if (!(datagram->data = kmalloc(size, GFP_KERNEL)))
+    {
         EC_ERR("Failed to allocate %zu bytes of datagram memory!\n", size);
         return -ENOMEM;
     }
@@ -184,17 +186,18 @@ void ec_datagram_zero(ec_datagram_t *datagram /**< EtherCAT datagram. */)
 /*****************************************************************************/
 
 /** Copies a previously constructed datagram for repeated send.
- * 
+ *
  * \return Return value of ec_datagram_prealloc().
  */
 int ec_datagram_repeat(
-        ec_datagram_t *datagram, /**< EtherCAT datagram to update. */
-        const ec_datagram_t *source /**< EtherCAT datagram to copy. */)
+    ec_datagram_t *datagram, /**< EtherCAT datagram to update. */
+    const ec_datagram_t *source /**< EtherCAT datagram to copy. */)
 {
     int ret;
     size_t data_size = source->data_size;
     EC_FUNC_HEADER;
-    if (datagram != source) {
+    if (datagram != source)
+    {
         datagram->type = source->type;
         memcpy(datagram->address, source->address, sizeof(datagram->address));
         memcpy(datagram->data, source->data, data_size);
@@ -209,16 +212,16 @@ int ec_datagram_repeat(
  * \return Return value of ec_datagram_prealloc().
  */
 int ec_datagram_aprd(
-        ec_datagram_t *datagram, /**< EtherCAT datagram. */
-        uint16_t ring_position, /**< Auto-increment address. */
-        uint16_t mem_address, /**< Physical memory address. */
-        size_t data_size /**< Number of bytes to read. */
-        )
+    ec_datagram_t *datagram, /**< EtherCAT datagram. */
+    uint16_t ring_position,  /**< Auto-increment address. */
+    uint16_t mem_address,    /**< Physical memory address. */
+    size_t data_size         /**< Number of bytes to read. */
+)
 {
     int ret;
     EC_FUNC_HEADER;
     datagram->type = EC_DATAGRAM_APRD;
-    EC_WRITE_S16(datagram->address, (int16_t) ring_position * (-1));
+    EC_WRITE_S16(datagram->address, (int16_t)ring_position * (-1));
     EC_WRITE_U16(datagram->address + 2, mem_address);
     EC_FUNC_FOOTER;
 }
@@ -230,16 +233,16 @@ int ec_datagram_aprd(
  * \return Return value of ec_datagram_prealloc().
  */
 int ec_datagram_apwr(
-        ec_datagram_t *datagram, /**< EtherCAT datagram. */
-        uint16_t ring_position, /**< Auto-increment address. */
-        uint16_t mem_address, /**< Physical memory address. */
-        size_t data_size /**< Number of bytes to write. */
-        )
+    ec_datagram_t *datagram, /**< EtherCAT datagram. */
+    uint16_t ring_position,  /**< Auto-increment address. */
+    uint16_t mem_address,    /**< Physical memory address. */
+    size_t data_size         /**< Number of bytes to write. */
+)
 {
     int ret;
     EC_FUNC_HEADER;
     datagram->type = EC_DATAGRAM_APWR;
-    EC_WRITE_S16(datagram->address, (int16_t) ring_position * (-1));
+    EC_WRITE_S16(datagram->address, (int16_t)ring_position * (-1));
     EC_WRITE_U16(datagram->address + 2, mem_address);
     EC_FUNC_FOOTER;
 }
@@ -251,16 +254,16 @@ int ec_datagram_apwr(
  * \return Return value of ec_datagram_prealloc().
  */
 int ec_datagram_aprw(
-        ec_datagram_t *datagram, /**< EtherCAT datagram. */
-        uint16_t ring_position, /**< Auto-increment address. */
-        uint16_t mem_address, /**< Physical memory address. */
-        size_t data_size /**< Number of bytes to write. */
-        )
+    ec_datagram_t *datagram, /**< EtherCAT datagram. */
+    uint16_t ring_position,  /**< Auto-increment address. */
+    uint16_t mem_address,    /**< Physical memory address. */
+    size_t data_size         /**< Number of bytes to write. */
+)
 {
     int ret;
     EC_FUNC_HEADER;
     datagram->type = EC_DATAGRAM_APRW;
-    EC_WRITE_S16(datagram->address, (int16_t) ring_position * (-1));
+    EC_WRITE_S16(datagram->address, (int16_t)ring_position * (-1));
     EC_WRITE_U16(datagram->address + 2, mem_address);
     EC_FUNC_FOOTER;
 }
@@ -272,16 +275,16 @@ int ec_datagram_aprw(
  * \return Return value of ec_datagram_prealloc().
  */
 int ec_datagram_armw(
-        ec_datagram_t *datagram, /**< EtherCAT datagram. */
-        uint16_t ring_position, /**< Auto-increment address. */
-        uint16_t mem_address, /**< Physical memory address. */
-        size_t data_size /**< Number of bytes to read. */
-        )
+    ec_datagram_t *datagram, /**< EtherCAT datagram. */
+    uint16_t ring_position,  /**< Auto-increment address. */
+    uint16_t mem_address,    /**< Physical memory address. */
+    size_t data_size         /**< Number of bytes to read. */
+)
 {
     int ret;
     EC_FUNC_HEADER;
     datagram->type = EC_DATAGRAM_ARMW;
-    EC_WRITE_S16(datagram->address, (int16_t) ring_position * (-1));
+    EC_WRITE_S16(datagram->address, (int16_t)ring_position * (-1));
     EC_WRITE_U16(datagram->address + 2, mem_address);
     EC_FUNC_FOOTER;
 }
@@ -293,11 +296,11 @@ int ec_datagram_armw(
  * \return Return value of ec_datagram_prealloc().
  */
 int ec_datagram_fprd(
-        ec_datagram_t *datagram, /**< EtherCAT datagram. */
-        uint16_t configured_address, /**< Configured station address. */
-        uint16_t mem_address, /**< Physical memory address. */
-        size_t data_size /**< Number of bytes to read. */
-        )
+    ec_datagram_t *datagram,     /**< EtherCAT datagram. */
+    uint16_t configured_address, /**< Configured station address. */
+    uint16_t mem_address,        /**< Physical memory address. */
+    size_t data_size             /**< Number of bytes to read. */
+)
 {
     int ret;
 
@@ -318,11 +321,11 @@ int ec_datagram_fprd(
  * \return Return value of ec_datagram_prealloc().
  */
 int ec_datagram_fpwr(
-        ec_datagram_t *datagram, /**< EtherCAT datagram. */
-        uint16_t configured_address, /**< Configured station address. */
-        uint16_t mem_address, /**< Physical memory address. */
-        size_t data_size /**< Number of bytes to write. */
-        )
+    ec_datagram_t *datagram,     /**< EtherCAT datagram. */
+    uint16_t configured_address, /**< Configured station address. */
+    uint16_t mem_address,        /**< Physical memory address. */
+    size_t data_size             /**< Number of bytes to write. */
+)
 {
     int ret;
 
@@ -343,11 +346,11 @@ int ec_datagram_fpwr(
  * \return Return value of ec_datagram_prealloc().
  */
 int ec_datagram_fprw(
-        ec_datagram_t *datagram, /**< EtherCAT datagram. */
-        uint16_t configured_address, /**< Configured station address. */
-        uint16_t mem_address, /**< Physical memory address. */
-        size_t data_size /**< Number of bytes to write. */
-        )
+    ec_datagram_t *datagram,     /**< EtherCAT datagram. */
+    uint16_t configured_address, /**< Configured station address. */
+    uint16_t mem_address,        /**< Physical memory address. */
+    size_t data_size             /**< Number of bytes to write. */
+)
 {
     int ret;
 
@@ -368,11 +371,11 @@ int ec_datagram_fprw(
  * \return Return value of ec_datagram_prealloc().
  */
 int ec_datagram_frmw(
-        ec_datagram_t *datagram, /**< EtherCAT datagram. */
-        uint16_t configured_address, /**< Configured station address. */
-        uint16_t mem_address, /**< Physical memory address. */
-        size_t data_size /**< Number of bytes to write. */
-        )
+    ec_datagram_t *datagram,     /**< EtherCAT datagram. */
+    uint16_t configured_address, /**< Configured station address. */
+    uint16_t mem_address,        /**< Physical memory address. */
+    size_t data_size             /**< Number of bytes to write. */
+)
 {
     int ret;
 
@@ -393,10 +396,10 @@ int ec_datagram_frmw(
  * \return Return value of ec_datagram_prealloc().
  */
 int ec_datagram_brd(
-        ec_datagram_t *datagram, /**< EtherCAT datagram. */
-        uint16_t mem_address, /**< Physical memory address. */
-        size_t data_size /**< Number of bytes to read. */
-        )
+    ec_datagram_t *datagram, /**< EtherCAT datagram. */
+    uint16_t mem_address,    /**< Physical memory address. */
+    size_t data_size         /**< Number of bytes to read. */
+)
 {
     int ret;
     EC_FUNC_HEADER;
@@ -413,10 +416,10 @@ int ec_datagram_brd(
  * \return Return value of ec_datagram_prealloc().
  */
 int ec_datagram_bwr(
-        ec_datagram_t *datagram, /**< EtherCAT datagram. */
-        uint16_t mem_address, /**< Physical memory address. */
-        size_t data_size /**< Number of bytes to write. */
-        )
+    ec_datagram_t *datagram, /**< EtherCAT datagram. */
+    uint16_t mem_address,    /**< Physical memory address. */
+    size_t data_size         /**< Number of bytes to write. */
+)
 {
     int ret;
     EC_FUNC_HEADER;
@@ -433,10 +436,10 @@ int ec_datagram_bwr(
  * \return Return value of ec_datagram_prealloc().
  */
 int ec_datagram_brw(
-        ec_datagram_t *datagram, /**< EtherCAT datagram. */
-        uint16_t mem_address, /**< Physical memory address. */
-        size_t data_size /**< Number of bytes to write. */
-        )
+    ec_datagram_t *datagram, /**< EtherCAT datagram. */
+    uint16_t mem_address,    /**< Physical memory address. */
+    size_t data_size         /**< Number of bytes to write. */
+)
 {
     int ret;
     EC_FUNC_HEADER;
@@ -453,10 +456,10 @@ int ec_datagram_brw(
  * \return Return value of ec_datagram_prealloc().
  */
 int ec_datagram_lrd(
-        ec_datagram_t *datagram, /**< EtherCAT datagram. */
-        uint32_t offset, /**< Logical address. */
-        size_t data_size /**< Number of bytes to read/write. */
-        )
+    ec_datagram_t *datagram, /**< EtherCAT datagram. */
+    uint32_t offset,         /**< Logical address. */
+    size_t data_size         /**< Number of bytes to read/write. */
+)
 {
     int ret;
     EC_FUNC_HEADER;
@@ -472,10 +475,10 @@ int ec_datagram_lrd(
  * \return Return value of ec_datagram_prealloc().
  */
 int ec_datagram_lwr(
-        ec_datagram_t *datagram, /**< EtherCAT datagram. */
-        uint32_t offset, /**< Logical address. */
-        size_t data_size /**< Number of bytes to read/write. */
-        )
+    ec_datagram_t *datagram, /**< EtherCAT datagram. */
+    uint32_t offset,         /**< Logical address. */
+    size_t data_size         /**< Number of bytes to read/write. */
+)
 {
     int ret;
     EC_FUNC_HEADER;
@@ -491,10 +494,10 @@ int ec_datagram_lwr(
  * \return Return value of ec_datagram_prealloc().
  */
 int ec_datagram_lrw(
-        ec_datagram_t *datagram, /**< EtherCAT datagram. */
-        uint32_t offset, /**< Logical address. */
-        size_t data_size /**< Number of bytes to read/write. */
-        )
+    ec_datagram_t *datagram, /**< EtherCAT datagram. */
+    uint32_t offset,         /**< Logical address. */
+    size_t data_size         /**< Number of bytes to read/write. */
+)
 {
     int ret;
     EC_FUNC_HEADER;
@@ -513,11 +516,11 @@ int ec_datagram_lrw(
  * \return Return value of ec_datagram_prealloc().
  */
 int ec_datagram_lrd_ext(
-        ec_datagram_t *datagram, /**< EtherCAT datagram. */
-        uint32_t offset, /**< Logical address. */
-        size_t data_size, /**< Number of bytes to read/write. */
-        uint8_t *external_memory /**< Pointer to the memory to use. */
-        )
+    ec_datagram_t *datagram, /**< EtherCAT datagram. */
+    uint32_t offset,         /**< Logical address. */
+    size_t data_size,        /**< Number of bytes to read/write. */
+    uint8_t *external_memory /**< Pointer to the memory to use. */
+)
 {
     int ret;
     datagram->data = external_memory;
@@ -538,11 +541,11 @@ int ec_datagram_lrd_ext(
  * \return Return value of ec_datagram_prealloc().
  */
 int ec_datagram_lwr_ext(
-        ec_datagram_t *datagram, /**< EtherCAT datagram. */
-        uint32_t offset, /**< Logical address. */
-        size_t data_size, /**< Number of bytes to read/write. */
-        uint8_t *external_memory /**< Pointer to the memory to use. */
-        )
+    ec_datagram_t *datagram, /**< EtherCAT datagram. */
+    uint32_t offset,         /**< Logical address. */
+    size_t data_size,        /**< Number of bytes to read/write. */
+    uint8_t *external_memory /**< Pointer to the memory to use. */
+)
 {
     int ret;
     datagram->data = external_memory;
@@ -563,11 +566,11 @@ int ec_datagram_lwr_ext(
  * \return Return value of ec_datagram_prealloc().
  */
 int ec_datagram_lrw_ext(
-        ec_datagram_t *datagram, /**< EtherCAT datagram. */
-        uint32_t offset, /**< Logical address. */
-        size_t data_size, /**< Number of bytes to read/write. */
-        uint8_t *external_memory /**< Pointer to the memory to use. */
-        )
+    ec_datagram_t *datagram, /**< EtherCAT datagram. */
+    uint32_t offset,         /**< Logical address. */
+    size_t data_size,        /**< Number of bytes to read/write. */
+    uint8_t *external_memory /**< Pointer to the memory to use. */
+)
 {
     int ret;
     datagram->data = external_memory;
@@ -585,34 +588,35 @@ int ec_datagram_lrw_ext(
  * Outputs a text message.
  */
 void ec_datagram_print_state(
-        const ec_datagram_t *datagram /**< EtherCAT datagram */
-        )
+    const ec_datagram_t *datagram /**< EtherCAT datagram */
+)
 {
     printk(KERN_CONT "Datagram ");
-    switch (datagram->state) {
-        case EC_DATAGRAM_INIT:
-            printk(KERN_CONT "initialized");
-            break;
-        case EC_DATAGRAM_QUEUED:
-            printk(KERN_CONT "queued");
-            break;
-        case EC_DATAGRAM_SENT:
-            printk(KERN_CONT "sent");
-            break;
-        case EC_DATAGRAM_RECEIVED:
-            printk(KERN_CONT "received");
-            break;
-        case EC_DATAGRAM_TIMED_OUT:
-            printk(KERN_CONT "timed out");
-            break;
-        case EC_DATAGRAM_ERROR:
-            printk(KERN_CONT "error");
-            break;
-        case EC_DATAGRAM_INVALID:
-            printk(KERN_CONT "invalid");
-            break;
-        default:
-            printk(KERN_CONT "???");
+    switch (datagram->state)
+    {
+    case EC_DATAGRAM_INIT:
+        printk(KERN_CONT "initialized");
+        break;
+    case EC_DATAGRAM_QUEUED:
+        printk(KERN_CONT "queued");
+        break;
+    case EC_DATAGRAM_SENT:
+        printk(KERN_CONT "sent");
+        break;
+    case EC_DATAGRAM_RECEIVED:
+        printk(KERN_CONT "received");
+        break;
+    case EC_DATAGRAM_TIMED_OUT:
+        printk(KERN_CONT "timed out");
+        break;
+    case EC_DATAGRAM_ERROR:
+        printk(KERN_CONT "error");
+        break;
+    case EC_DATAGRAM_INVALID:
+        printk(KERN_CONT "invalid");
+        break;
+    default:
+        printk(KERN_CONT "???");
     }
 
     printk(KERN_CONT ".\n");
@@ -625,8 +629,8 @@ void ec_datagram_print_state(
  * Outputs an error message.
  */
 void ec_datagram_print_wc_error(
-        const ec_datagram_t *datagram /**< EtherCAT datagram */
-        )
+    const ec_datagram_t *datagram /**< EtherCAT datagram */
+)
 {
     if (datagram->working_counter == 0)
         printk(KERN_CONT "No response.");
@@ -642,13 +646,14 @@ void ec_datagram_print_wc_error(
 /** Outputs datagram statistics at most every second.
  */
 void ec_datagram_output_stats(
-        ec_datagram_t *datagram
-        )
+    ec_datagram_t *datagram)
 {
-    if (jiffies - datagram->stats_output_jiffies > HZ) {
+    if (jiffies - datagram->stats_output_jiffies > HZ)
+    {
         datagram->stats_output_jiffies = jiffies;
 
-        if (unlikely(datagram->skip_count)) {
+        if (unlikely(datagram->skip_count))
+        {
             EC_WARN("Datagram %p (%s) was SKIPPED %u time%s.\n",
                     datagram, datagram->name,
                     datagram->skip_count,
@@ -665,8 +670,8 @@ void ec_datagram_output_stats(
  * \return Pointer on a static memory containing the requested string.
  */
 const char *ec_datagram_type_string(
-        const ec_datagram_t *datagram /**< EtherCAT datagram. */
-        )
+    const ec_datagram_t *datagram /**< EtherCAT datagram. */
+)
 {
     return type_strings[datagram->type];
 }
@@ -677,14 +682,13 @@ const char *ec_datagram_type_string(
  *
  */
 void ec_mbox_data_init(
-        ec_mbox_data_t *mbox_data /**< Mailbox response data. */
-        )
+    ec_mbox_data_t *mbox_data /**< Mailbox response data. */
+)
 {
     mbox_data->data = NULL;
     mbox_data->data_size = 0;
     mbox_data->payload_size = 0;
 }
-
 
 /*****************************************************************************/
 
@@ -692,16 +696,16 @@ void ec_mbox_data_init(
  *
  */
 void ec_mbox_data_clear(
-        ec_mbox_data_t *mbox_data /**< Mailbox response data. */
-        )
+    ec_mbox_data_t *mbox_data /**< Mailbox response data. */
+)
 {
-    if (mbox_data->data) {
+    if (mbox_data->data)
+    {
         kfree(mbox_data->data);
         mbox_data->data = NULL;
         mbox_data->data_size = 0;
     }
 }
-
 
 /*****************************************************************************/
 
@@ -710,17 +714,19 @@ void ec_mbox_data_clear(
  * \return 0 in case of success, otherwise \a -ENOMEM.
  */
 int ec_mbox_data_prealloc(
-        ec_mbox_data_t *mbox_data, /**< Mailbox response data. */
-        size_t size /**< Mailbox size in bytes. */
-        )
+    ec_mbox_data_t *mbox_data, /**< Mailbox response data. */
+    size_t size                /**< Mailbox size in bytes. */
+)
 {
-    if (mbox_data->data) {
+    if (mbox_data->data)
+    {
         kfree(mbox_data->data);
         mbox_data->data = NULL;
         mbox_data->data_size = 0;
     }
 
-    if (!(mbox_data->data = kmalloc(size, GFP_KERNEL))) {
+    if (!(mbox_data->data = kmalloc(size, GFP_KERNEL)))
+    {
         EC_ERR("Failed to allocate %zu bytes of mailbox data memory!\n", size);
         return -ENOMEM;
     }
@@ -728,54 +734,72 @@ int ec_mbox_data_prealloc(
     return 0;
 }
 
-
 /*****************************************************************************/
 
 /** Allocates internal memory for mailbox response data for all slave
  *  supported mailbox protocols .
  *
-  */
+ */
 void ec_mbox_prot_data_prealloc(
-        ec_slave_t *slave, /**< EtherCAT slave. */
-        uint16_t protocols, /**< Supported protocols. */
-        size_t size /**< Mailbox size in bytes. */
-        )
+    ec_slave_t *slave,  /**< EtherCAT slave. */
+    uint16_t protocols, /**< Supported protocols. */
+    size_t size         /**< Mailbox size in bytes. */
+)
 {
-    if ((size > 0) && (size <= EC_MAX_DATA_SIZE)) {
+    if ((size > 0) && (size <= EC_MAX_DATA_SIZE))
+    {
 #ifdef EC_EOE
-        if (protocols & EC_MBOX_EOE) {
+        if (protocols & EC_MBOX_EOE)
+        {
             ec_mbox_data_prealloc(&slave->mbox_eoe_frag_data, size);
             ec_mbox_data_prealloc(&slave->mbox_eoe_init_data, size);
-        } else {
+        }
+        else
+        {
             ec_mbox_data_clear(&slave->mbox_eoe_frag_data);
             ec_mbox_data_clear(&slave->mbox_eoe_init_data);
         }
 #endif
-        if (protocols & EC_MBOX_COE) {
+        if (protocols & EC_MBOX_COE)
+        {
             ec_mbox_data_prealloc(&slave->mbox_coe_data, size);
-        } else {
+        }
+        else
+        {
             ec_mbox_data_clear(&slave->mbox_coe_data);
         }
-        if (protocols & EC_MBOX_FOE) {
+        if (protocols & EC_MBOX_FOE)
+        {
             ec_mbox_data_prealloc(&slave->mbox_foe_data, size);
-        } else {
+        }
+        else
+        {
             ec_mbox_data_clear(&slave->mbox_foe_data);
         }
-        if (protocols & EC_MBOX_SOE) {
+        if (protocols & EC_MBOX_SOE)
+        {
             ec_mbox_data_prealloc(&slave->mbox_soe_data, size);
-        } else {
+        }
+        else
+        {
             ec_mbox_data_clear(&slave->mbox_soe_data);
         }
-        if (protocols & EC_MBOX_VOE) {
+        if (protocols & EC_MBOX_VOE)
+        {
             ec_mbox_data_prealloc(&slave->mbox_voe_data, size);
-        } else {
+        }
+        else
+        {
             ec_mbox_data_clear(&slave->mbox_voe_data);
         }
-        
+
         // alloc mailbox gateway if slave supports any protocol
-        if (protocols) {
+        if (protocols)
+        {
             ec_mbox_data_prealloc(&slave->mbox_mbg_data, size);
-        } else {
+        }
+        else
+        {
             ec_mbox_data_clear(&slave->mbox_mbg_data);
         }
     }

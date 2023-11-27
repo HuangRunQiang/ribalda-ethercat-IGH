@@ -48,12 +48,12 @@
  * data size.
  */
 void ec_fmmu_config_init(
-        ec_fmmu_config_t *fmmu, /**< EtherCAT FMMU configuration. */
-        ec_slave_config_t *sc, /**< EtherCAT slave configuration. */
-        ec_domain_t *domain, /**< EtherCAT domain. */
-        uint8_t sync_index, /**< Sync manager index to use. */
-        ec_direction_t dir /**< PDO direction. */
-        )
+    ec_fmmu_config_t *fmmu, /**< EtherCAT FMMU configuration. */
+    ec_slave_config_t *sc,  /**< EtherCAT slave configuration. */
+    ec_domain_t *domain,    /**< EtherCAT domain. */
+    uint8_t sync_index,     /**< Sync manager index to use. */
+    ec_direction_t dir      /**< PDO direction. */
+)
 {
     INIT_LIST_HEAD(&fmmu->list);
     fmmu->sc = sc;
@@ -67,11 +67,11 @@ void ec_fmmu_config_init(
 }
 
 void ec_fmmu_set_domain_offset_size(
-        ec_fmmu_config_t *fmmu, /**< EtherCAT FMMU configuration. */
-        uint32_t logical_domain_offset, /**< Logical offset address
-            relative to domain->logical_base_address. */
-        unsigned data_size /**< Covered PDO size. */
-        )
+    ec_fmmu_config_t *fmmu,         /**< EtherCAT FMMU configuration. */
+    uint32_t logical_domain_offset, /**< Logical offset address
+        relative to domain->logical_base_address. */
+    unsigned data_size              /**< Covered PDO size. */
+)
 {
     fmmu->logical_domain_offset = logical_domain_offset;
     fmmu->data_size = data_size;
@@ -84,25 +84,25 @@ void ec_fmmu_set_domain_offset_size(
  * The referenced memory (\a data) must be at least EC_FMMU_PAGE_SIZE bytes.
  */
 void ec_fmmu_config_page(
-        const ec_fmmu_config_t *fmmu, /**< EtherCAT FMMU configuration. */
-        const ec_sync_t *sync, /**< Sync manager. */
-        uint8_t *data /**> Configuration page memory. */
-        )
+    const ec_fmmu_config_t *fmmu, /**< EtherCAT FMMU configuration. */
+    const ec_sync_t *sync,        /**< Sync manager. */
+    uint8_t *data                 /**> Configuration page memory. */
+)
 {
     EC_CONFIG_DBG(fmmu->sc, 1, "FMMU: LogOff 0x%08X, Size %3u,"
-            " PhysAddr 0x%04X, SM%u, Dir %s\n",
-            fmmu->logical_domain_offset, fmmu->data_size,
-            sync->physical_start_address, fmmu->sync_index,
-            fmmu->dir == EC_DIR_INPUT ? "in" : "out");
+                               " PhysAddr 0x%04X, SM%u, Dir %s\n",
+                  fmmu->logical_domain_offset, fmmu->data_size,
+                  sync->physical_start_address, fmmu->sync_index,
+                  fmmu->dir == EC_DIR_INPUT ? "in" : "out");
 
-    EC_WRITE_U32(data,      fmmu->domain->logical_base_address +
-        fmmu->logical_domain_offset);
-    EC_WRITE_U16(data + 4,  fmmu->data_size); // size of fmmu
-    EC_WRITE_U8 (data + 6,  0x00); // logical start bit
-    EC_WRITE_U8 (data + 7,  0x07); // logical end bit
-    EC_WRITE_U16(data + 8,  sync->physical_start_address);
-    EC_WRITE_U8 (data + 10, 0x00); // physical start bit
-    EC_WRITE_U8 (data + 11, fmmu->dir == EC_DIR_INPUT ? 0x01 : 0x02);
+    EC_WRITE_U32(data, fmmu->domain->logical_base_address +
+                           fmmu->logical_domain_offset);
+    EC_WRITE_U16(data + 4, fmmu->data_size); // size of fmmu
+    EC_WRITE_U8(data + 6, 0x00);             // logical start bit
+    EC_WRITE_U8(data + 7, 0x07);             // logical end bit
+    EC_WRITE_U16(data + 8, sync->physical_start_address);
+    EC_WRITE_U8(data + 10, 0x00); // physical start bit
+    EC_WRITE_U8(data + 11, fmmu->dir == EC_DIR_INPUT ? 0x01 : 0x02);
     EC_WRITE_U16(data + 12, 0x0001); // enable
     EC_WRITE_U16(data + 14, 0x0000); // reserved
 }

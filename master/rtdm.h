@@ -41,8 +41,9 @@ struct rtdm_device;
 
 /** EtherCAT RTDM device.
  */
-typedef struct ec_rtdm_dev {
-    ec_master_t *master; /**< Master pointer. */
+typedef struct ec_rtdm_dev
+{
+    ec_master_t *master;     /**< Master pointer. */
     struct rtdm_device *dev; /**< RTDM device. */
 } ec_rtdm_dev_t;
 
