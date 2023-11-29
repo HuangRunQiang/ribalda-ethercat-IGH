@@ -69,15 +69,22 @@ void ec_fsm_slave_state_mbg_request(ec_fsm_slave_t *, ec_datagram_t *);
 
 /*****************************************************************************/
 
-/** Constructor.
+/**
+ * @brief 构造函数。
+ *
+ * @param fsm   从站状态机
+ * @param slave EtherCAT 从站
+ *
+ * @details 此函数用于初始化从站状态机。它将从站状态机的成员变量进行初始化，并将从站设置为指定的从站实例。
+ *          在使用从站状态机之前，必须先调用此函数进行初始化。
  */
 void ec_fsm_slave_init(
-    ec_fsm_slave_t *fsm, /**< Slave state machine. */
-    ec_slave_t *slave    /**< EtherCAT slave. */
+    ec_fsm_slave_t *fsm, /**< 从站状态机 */
+    ec_slave_t *slave    /**< EtherCAT 从站 */
 )
 {
     fsm->slave = slave;
-    INIT_LIST_HEAD(&fsm->list); // mark as unlisted
+    INIT_LIST_HEAD(&fsm->list); // 标记为未列出
 
     fsm->state = ec_fsm_slave_state_idle;
     fsm->datagram = NULL;
@@ -93,7 +100,7 @@ void ec_fsm_slave_init(
 
     ec_dict_request_init(&fsm->int_dict_request);
 
-    // Init sub-state-machines
+    // 初始化子状态机
     ec_fsm_coe_init(&fsm->fsm_coe);
     ec_fsm_foe_init(&fsm->fsm_foe);
     ec_fsm_soe_init(&fsm->fsm_soe);
@@ -111,18 +118,24 @@ void ec_fsm_slave_init(
 
 /*****************************************************************************/
 
-/** Destructor.
+/**
+ * @brief 析构函数。
+ *
+ * @param fsm 从站状态机
+ *
+ * @details 此函数用于清除从站状态机。它会释放从站状态机占用的资源，并将从站状态设置为停止状态。
+ *          在不再使用从站状态机时，应调用此函数进行清理。
  */
 void ec_fsm_slave_clear(
-    ec_fsm_slave_t *fsm /**< Master state machine. */
+    ec_fsm_slave_t *fsm /**< 从站状态机 */
 )
 {
     if (fsm->state != ec_fsm_slave_state_idle)
     {
-        EC_SLAVE_DBG(fsm->slave, 1, "Unready for requests.\n");
+        EC_SLAVE_DBG(fsm->slave, 1, "无法处理请求。\n");
     }
 
-    // signal requests that are currently in operation
+    // 处理当前正在进行的请求
 
     if (fsm->sdo_request)
     {
@@ -168,7 +181,7 @@ void ec_fsm_slave_clear(
         wake_up_all(&fsm->slave->master->request_queue);
     }
 
-    // clear sub-state machines
+    // 清除子状态机
     ec_fsm_slave_scan_clear(&fsm->fsm_slave_scan);
     ec_fsm_slave_config_clear(&fsm->fsm_slave_config);
     ec_fsm_change_clear(&fsm->fsm_change);
@@ -184,13 +197,19 @@ void ec_fsm_slave_clear(
 
 /*****************************************************************************/
 
-/** Executes the current state of the state machine.
+/**
+ * @brief 执行当前状态机的当前状态。
  *
- * \return 1 if \a datagram was used, else 0.
+ * @param fsm       从站状态机
+ * @param datagram  要使用的新数据报
+ * @return          如果使用了数据报则返回1，否则返回0
+ *
+ * @details 此函数用于执行从站状态机的当前状态。它会根据当前状态的不同执行相应的操作。
+ *          如果执行过程中使用了数据报，则返回1，否则返回0。
  */
 int ec_fsm_slave_exec(
-    ec_fsm_slave_t *fsm,    /**< Slave state machine. */
-    ec_datagram_t *datagram /**< New datagram to use. */
+    ec_fsm_slave_t *fsm,    /**< 从站状态机 */
+    ec_datagram_t *datagram /**< 要使用的新数据报 */
 )
 {
     int datagram_used;
@@ -215,28 +234,40 @@ int ec_fsm_slave_exec(
 
 /*****************************************************************************/
 
-/** Sets the current state of the state machine to READY
+/**
+ * @brief 将当前状态机的当前状态设置为 READY。
+ *
+ * @param fsm 从站状态机
+ *
+ * @details 此函数用于将从站状态机的当前状态设置为 READY。只有在当前状态为空闲状态时才能设置为 READY。
+ *          在调用此函数之后，从站状态机将准备好处理请求。
  */
 void ec_fsm_slave_set_ready(
-    ec_fsm_slave_t *fsm /**< Slave state machine. */
+    ec_fsm_slave_t *fsm /**< 从站状态机 */
 )
 {
     if (fsm->state == ec_fsm_slave_state_idle)
     {
-        EC_SLAVE_DBG(fsm->slave, 1, "Ready for requests.\n");
+        EC_SLAVE_DBG(fsm->slave, 1, "准备处理请求。\n");
         fsm->state = ec_fsm_slave_state_ready;
     }
 }
 
+
 /*****************************************************************************/
 
-/** Check for pending scan.
+/**
+ * @brief 检查是否有待处理的扫描。
  *
- * \return non-zero, if scan is started.
+ * @param fsm 从站状态机。
+ * @param datagram 要使用的数据报。
+ * @return 如果已开始扫描则返回非零值，否则返回0。
+ *
+ * @details 此函数用于检查是否有待处理的扫描。如果从站需要进行扫描，则返回非零值。
  */
 int ec_fsm_slave_action_scan(
-    ec_fsm_slave_t *fsm,    /**< Slave state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_slave_t *fsm,    /**< 从站状态机 */
+    ec_datagram_t *datagram /**< 要使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -246,21 +277,32 @@ int ec_fsm_slave_action_scan(
         return 0;
     }
 
-    EC_SLAVE_DBG(slave, 1, "Scanning slave %u on %s link.\n",
+    EC_SLAVE_DBG(slave, 1, "正在扫描从站 %u，使用 %s 链接。\n",
                  slave->ring_position, ec_device_names[slave->device_index != 0]);
     fsm->state = ec_fsm_slave_state_scan;
     ec_fsm_slave_scan_start(&fsm->fsm_slave_scan);
-    ec_fsm_slave_scan_exec(&fsm->fsm_slave_scan, datagram); // execute immediately
+    ec_fsm_slave_scan_exec(&fsm->fsm_slave_scan, datagram); // 立即执行
     return 1;
 }
+
 
 /*****************************************************************************/
 
 #ifdef EC_EOE
-/** try to reconnect to an existing EoE handler.
+/**
+ * @brief 尝试重新连接到现有的EoE处理程序。
+ *
+ * @param slave EtherCAT从站。
+ * @return 如果成功连接到EoE处理程序，则返回0；否则返回-1。
+ *
+ * @details 此函数用于尝试重新连接到现有的EoE（EtherCAT over Ethernet）处理程序。
+ * 它首先根据从站的别名或环位置生成EoE处理程序的名称。然后，它遍历主站中的EoE处理程序列表，
+ * 查找与生成的名称匹配且尚未与从站关联的处理程序。如果找到匹配的处理程序，
+ * 则将从站与处理程序关联，并返回0表示连接成功。如果没有找到匹配的处理程序，
+ * 则返回-1表示连接失败。
  */
 static int ec_slave_reconnect_to_eoe_handler(
-    ec_slave_t *slave /**< EtherCAT slave */
+    ec_slave_t *slave /**< EtherCAT从站 */
 )
 {
     ec_master_t *master = slave->master;
@@ -288,18 +330,34 @@ static int ec_slave_reconnect_to_eoe_handler(
         }
     }
 
-    // none found
+    // 未找到匹配的处理程序
     return -1;
 }
+
 #endif
 
 /*****************************************************************************/
 
-/** Slave state: SCAN.
+/**
+ * @brief 从站状态：扫描。
+ *
+ * @param fsm 从站状态机。
+ * @param datagram 要使用的数据报。
+ *
+ * @details 此函数用于执行从站状态机的扫描状态。它首先调用`ec_fsm_slave_scan_exec`函数执行从站扫描操作。
+ * 如果扫描成功完成，则函数返回。如果扫描被跳过或从站拒绝进入INIT状态，
+ * 则假设从站邮箱数据有效，并将`valid_mbox_data`字段设置为1。
+ * 
+ * 如果从站的SII映像存在且支持EOE（EtherCAT over Ethernet）协议，
+ * 则尝试重新连接到现有的EOE处理程序，如果成功则重新连接。
+ * 如果无法重新连接到现有的EOE处理程序，并且启用了自动创建EOE处理程序的选项，
+ * 则为该从站自动创建一个EOE处理程序，并将其添加到主站的EOE处理程序列表中。
+ * 
+ * 扫描完成后，禁用处理，等待主站状态机再次准备就绪，并将状态设置为闲置状态。
  */
 void ec_fsm_slave_state_scan(
-    ec_fsm_slave_t *fsm,    /**< Slave state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_slave_t *fsm,    /**< 从站状态机 */
+    ec_datagram_t *datagram /**< 要使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -309,22 +367,20 @@ void ec_fsm_slave_state_scan(
         return;
     }
 
-    // Assume that the slaves mailbox data is valid even if the slave scanning skipped
-    // the clear mailbox state, e.g. if the slave refused to enter state INIT.
+    // 假设即使从站扫描跳过了清除邮箱状态（例如从站拒绝进入INIT状态），从站邮箱数据仍然有效。
     slave->valid_mbox_data = 1;
 
 #ifdef EC_EOE
     if (slave->sii_image && (slave->sii_image->sii.mailbox_protocols & EC_MBOX_EOE))
     {
-        // try to connect to existing eoe handler,
-        // otherwise try to create a new one (if master not active)
+        // 尝试连接到现有的EOE处理程序，否则尝试创建新的处理程序（如果主站不活动）
         if (ec_slave_reconnect_to_eoe_handler(slave) == 0)
         {
-            // reconnected
+            // 重新连接成功
         }
         else if (eoe_autocreate)
         {
-            // auto create EoE handler for this slave
+            // 为该从站自动创建EOE处理程序
             ec_eoe_t *eoe;
 
             if (!(eoe = kmalloc(sizeof(ec_eoe_t), GFP_KERNEL)))
@@ -344,20 +400,28 @@ void ec_fsm_slave_state_scan(
     }
 #endif
 
-    // disable processing after scan, to wait for master FSM to be ready again
+    // 扫描完成后禁用处理，等待主站状态机再次准备就绪
     slave->scan_required = 0;
     fsm->state = ec_fsm_slave_state_idle;
 }
 
 /*****************************************************************************/
 
-/** Check for pending configuration.
+/**
+ * @brief 检查是否存在待处理的配置。
  *
- * \return non-zero, if configuration is started.
+ * @return 非零值，如果配置已开始。
+ *
+ * @details 此函数用于检查是否存在待处理的配置。首先检查从站的错误标志，
+ * 如果错误标志已设置，则返回0表示配置未开始。接下来，检查是否需要确认新的从站状态。
+ * 如果当前从站状态需要确认错误，则将状态机的状态设置为ACKNOWLEDGE，并执行状态机的处理函数。
+ * 返回1表示配置已开始。最后，检查从站是否需要进行配置。如果当前从站状态与请求的状态不同，
+ * 或者强制进行配置，则执行配置操作，并将状态机的状态设置为CONFIG，并执行状态机的处理函数。
+ * 返回1表示配置已开始。如果以上条件都不满足，则返回0表示配置未开始。
  */
 int ec_fsm_slave_action_config(
-    ec_fsm_slave_t *fsm,    /**< Slave state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_slave_t *fsm,    /**< 从站状态机 */
+    ec_datagram_t *datagram /**< 要使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -367,16 +431,16 @@ int ec_fsm_slave_action_config(
         return 0;
     }
 
-    // Check, if new slave state has to be acknowledged
+    // 检查是否需要确认新的从站状态
     if (slave->current_state & EC_SLAVE_STATE_ACK_ERR)
     {
         fsm->state = ec_fsm_slave_state_acknowledge;
         ec_fsm_change_ack(&fsm->fsm_change, slave);
-        fsm->state(fsm, datagram); // execute immediately
+        fsm->state(fsm, datagram); // 立即执行
         return 1;
     }
 
-    // Does the slave have to be configured?
+    // 从站是否需要进行配置？
     if (slave->current_state != slave->requested_state || slave->force_config)
     {
 
@@ -399,8 +463,7 @@ int ec_fsm_slave_action_config(
 #ifdef EC_QUICK_OP
         if (!slave->force_config && slave->current_state == EC_SLAVE_STATE_SAFEOP && slave->requested_state == EC_SLAVE_STATE_OP && slave->last_al_error == 0x001B)
         {
-            // last error was a sync watchdog timeout; assume a comms
-            // interruption and request a quick transition back to OP
+            // 上次错误是同步看门狗超时；假设通信中断，并请求快速切换回OP状态
             ec_fsm_slave_config_quick_start(&fsm->fsm_slave_config);
         }
         else
@@ -408,7 +471,7 @@ int ec_fsm_slave_action_config(
         {
             ec_fsm_slave_config_start(&fsm->fsm_slave_config);
         }
-        fsm->state(fsm, datagram); // execute immediately
+        fsm->state(fsm, datagram); // 立即执行
         return 1;
     }
     return 0;
@@ -416,11 +479,19 @@ int ec_fsm_slave_action_config(
 
 /*****************************************************************************/
 
-/** Slave state: ACKNOWLEDGE.
+/**
+ * @brief 从站状态：确认。
+ *
+ * @param fsm 从站状态机。
+ * @param datagram 要使用的数据报。
+ *
+ * @details 此函数用于处理从站状态机的确认状态。首先执行状态变更操作，
+ * 如果操作成功，则返回。如果操作失败，则设置从站的错误标志，并输出错误信息。
+ * 最后，将状态机的状态设置为READY。
  */
 void ec_fsm_slave_state_acknowledge(
-    ec_fsm_slave_t *fsm,    /**< Slave state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_slave_t *fsm,    /**< 从站状态机 */
+    ec_datagram_t *datagram /**< 要使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -441,11 +512,21 @@ void ec_fsm_slave_state_acknowledge(
 
 /*****************************************************************************/
 
-/** Slave state: CONFIG.
+/**
+ * @brief 从站状态：配置。
+ *
+ * @param fsm 从站状态机。
+ * @param datagram 要使用的数据报。
+ *
+ * @details 此函数用于处理从站状态机的配置状态。首先执行配置操作，
+ * 如果操作成功，则返回。如果操作失败，则标记从站配置为失败（TODO）。
+ * 然后，将从站的强制配置标志设置为0，并减少主站的配置繁忙计数。
+ * 如果主站的配置繁忙计数为0，则唤醒等待的配置队列。
+ * 最后，将状态机的状态设置为READY。
  */
 void ec_fsm_slave_state_config(
-    ec_fsm_slave_t *fsm,    /**< Slave state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_slave_t *fsm,    /**< 从站状态机 */
+    ec_datagram_t *datagram /**< 要使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -457,7 +538,7 @@ void ec_fsm_slave_state_config(
 
     if (!ec_fsm_slave_config_success(&fsm->fsm_slave_config))
     {
-        // TODO: mark slave_config as failed.
+        // TODO: 标记从站配置为失败
     }
 
     slave->force_config = 0;
@@ -477,28 +558,39 @@ void ec_fsm_slave_state_config(
 
 /*****************************************************************************/
 
-/** Check for pending SDO dictionary reads.
+/**
+ * @brief 检查是否存在待处理的SDO字典读取请求。
  *
- * \return non-zero, if an SDO dictionary read is started.
+ * @return 非零值，如果已开始SDO字典读取。
+ *
+ * @details 此函数用于检查是否存在待处理的SDO字典读取请求。首先检查是否存在显式的字典请求需要处理。
+ * 如果存在请求，则取出第一个请求进行处理。如果从站的SII映像尚未准备好，则返回0表示字典请求未开始。
+ * 如果从站不支持SDO Info或者SDO Info未使能，则返回0表示字典请求未开始。如果字典已经上传完成，
+ * 则返回0表示字典请求未开始。如果从站的当前状态需要确认错误，则返回0表示字典请求未开始。
+ * 如果从站的当前状态为INIT，则返回0表示字典请求未开始。如果以上条件都不满足，则将状态机的状态设置为字典请求状态，
+ * 并执行字典请求的处理函数。返回1表示字典请求已开始。如果没有显式的字典请求需要处理，则检查是否需要在启动时获取字典。
+ * 如果从站的SII映像不存在、字典已经上传完成、从站的当前状态为INIT或UNKNOWN、从站的当前状态需要确认错误、
+ * 从站不支持SDO Info或者SDO Info未使能，则返回0表示字典请求未开始。否则，将状态机的字典请求设置为内部字典请求，
+ * 并将状态机的状态设置为字典请求状态，并执行字典请求的处理函数。返回1表示字典请求已开始。
  */
 int ec_fsm_slave_action_process_dict(
-    ec_fsm_slave_t *fsm,    /**< Slave state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_slave_t *fsm,    /**< 从站状态机 */
+    ec_datagram_t *datagram /**< 要使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
     ec_dict_request_t *request;
 
-    // First check if there's an explicit dictionary request to process.
+    // 首先检查是否存在显式的字典请求需要处理
     if (!list_empty(&slave->dict_requests))
     {
-        // take the first request to be processed
+        // 取出第一个请求进行处理
         request = list_entry(slave->dict_requests.next, ec_dict_request_t, list);
-        list_del_init(&request->list); // dequeue
+        list_del_init(&request->list); // 出队
 
         if (!slave->sii_image)
         {
-            EC_SLAVE_ERR(slave, "Slave not ready to process dictionary request\n");
+            EC_SLAVE_ERR(slave, "从站尚未准备好以处理字典请求\n");
             request->state = EC_INT_REQUEST_FAILURE;
             wake_up_all(&slave->master->request_queue);
             fsm->state = ec_fsm_slave_state_idle;
@@ -507,8 +599,7 @@ int ec_fsm_slave_action_process_dict(
 
         if (!(slave->sii_image->sii.mailbox_protocols & EC_MBOX_COE) || (slave->sii_image->sii.has_general && !slave->sii_image->sii.coe_details.enable_sdo_info))
         {
-            EC_SLAVE_INFO(slave, "Aborting dictionary request,"
-                                 " slave does not support SDO Info.\n");
+            EC_SLAVE_INFO(slave, "中止字典请求，从站不支持SDO Info。\n");
             request->state = EC_INT_REQUEST_SUCCESS;
             wake_up_all(&slave->master->request_queue);
             fsm->dict_request = NULL;
@@ -518,8 +609,7 @@ int ec_fsm_slave_action_process_dict(
 
         if (slave->sdo_dictionary_fetched)
         {
-            EC_SLAVE_DBG(slave, 1, "Aborting dictionary request,"
-                                   " dictionary already uploaded.\n");
+            EC_SLAVE_DBG(slave, 1, "中止字典请求，字典已上传完成。\n");
             request->state = EC_INT_REQUEST_SUCCESS;
             wake_up_all(&slave->master->request_queue);
             fsm->dict_request = NULL;
@@ -529,8 +619,7 @@ int ec_fsm_slave_action_process_dict(
 
         if (slave->current_state & EC_SLAVE_STATE_ACK_ERR)
         {
-            EC_SLAVE_WARN(slave, "Aborting dictionary request,"
-                                 " slave has error flag set.\n");
+            EC_SLAVE_WARN(slave, "中止字典请求，从站错误标志已设置。\n");
             request->state = EC_INT_REQUEST_FAILURE;
             wake_up_all(&slave->master->request_queue);
             fsm->state = ec_fsm_slave_state_idle;
@@ -539,8 +628,7 @@ int ec_fsm_slave_action_process_dict(
 
         if (slave->current_state == EC_SLAVE_STATE_INIT)
         {
-            EC_SLAVE_WARN(slave, "Aborting dictionary request,"
-                                 " slave is in INIT.\n");
+            EC_SLAVE_WARN(slave, "中止字典请求，从站处于INIT状态。\n");
             request->state = EC_INT_REQUEST_FAILURE;
             wake_up_all(&slave->master->request_queue);
             fsm->state = ec_fsm_slave_state_idle;
@@ -550,17 +638,17 @@ int ec_fsm_slave_action_process_dict(
         fsm->dict_request = request;
         request->state = EC_INT_REQUEST_BUSY;
 
-        // Found pending dictionary request. Execute it!
-        EC_SLAVE_DBG(slave, 1, "Processing dictionary request...\n");
+        // 找到待处理的字典请求，执行它！
+        EC_SLAVE_DBG(slave, 1, "处理字典请求...\n");
 
-        // Start dictionary transfer
+        // 开始字典传输
         fsm->state = ec_fsm_slave_state_dict_request;
         ec_fsm_coe_dictionary(&fsm->fsm_coe, slave);
-        ec_fsm_coe_exec(&fsm->fsm_coe, datagram); // execute immediately
+        ec_fsm_coe_exec(&fsm->fsm_coe, datagram); // 立即执行
         return 1;
     }
 
-    // Otherwise check if it's time to fetch the dictionary on startup.
+    // 否则检查是否是在启动时获取字典的时机
 #if EC_SKIP_SDO_DICT
     return 0;
 #else
@@ -572,23 +660,24 @@ int ec_fsm_slave_action_process_dict(
     fsm->dict_request = &fsm->int_dict_request;
     fsm->int_dict_request.state = EC_INT_REQUEST_BUSY;
 
-    EC_SLAVE_DBG(slave, 1, "Fetching SDO dictionary.\n");
+    EC_SLAVE_DBG(slave, 1, "获取SDO字典。\n");
 
-    // Start dictionary transfer
+    // 开始字典传输
     fsm->state = ec_fsm_slave_state_dict_request;
     ec_fsm_coe_dictionary(&fsm->fsm_coe, slave);
-    ec_fsm_coe_exec(&fsm->fsm_coe, datagram); // execute immediately
+    ec_fsm_coe_exec(&fsm->fsm_coe, datagram); // 立即执行
     return 1;
 #endif
 }
 
 /*****************************************************************************/
 
-/** Slave state: DICT_REQUEST.
+/**
+ * @brief 从站状态：DICT_REQUEST。
  */
 void ec_fsm_slave_state_dict_request(
-    ec_fsm_slave_t *fsm,    /**< Slave state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_slave_t *fsm,    /**< 从站状态机 */
+    ec_datagram_t *datagram /**< 要使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -601,11 +690,11 @@ void ec_fsm_slave_state_dict_request(
 
     if (!ec_fsm_coe_success(&fsm->fsm_coe))
     {
-        EC_SLAVE_ERR(slave, "Failed to process dictionary request.\n");
+        EC_SLAVE_ERR(slave, "处理字典请求失败。\n");
 #if !EC_SKIP_SDO_DICT
         if (request == &fsm->int_dict_request)
         {
-            // mark as fetched anyway so we don't retry
+            // 标记为已获取，以免重试
             slave->sdo_dictionary_fetched = 1;
         }
 #endif
@@ -620,14 +709,14 @@ void ec_fsm_slave_state_dict_request(
     {
         unsigned int sdo_count, entry_count;
         ec_slave_sdo_dict_info(slave, &sdo_count, &entry_count);
-        EC_SLAVE_DBG(slave, 1, "Fetched %u SDOs and %u entries.\n",
+        EC_SLAVE_DBG(slave, 1, "获取到%u个SDO和%u个条目。\n",
                      sdo_count, entry_count);
     }
 
-    // Dictionary request finished
+    // 字典请求完成
     slave->sdo_dictionary_fetched = 1;
 
-    // attach pdo names from dictionary
+    // 附加PDO名称到字典
     ec_slave_attach_pdo_names(slave);
 
     request->state = EC_INT_REQUEST_SUCCESS;
@@ -638,13 +727,19 @@ void ec_fsm_slave_state_dict_request(
 
 /*****************************************************************************/
 
-/** Check for pending internal SDO requests and process one.
+/**
+ * @brief 检查是否存在待处理的内部SDO请求，并处理其中一个。
  *
- * \return non-zero, if an SDO request is processed.
+ * @return 非零值，如果已处理SDO请求。
+ *
+ * @details 此函数用于检查是否存在待处理的内部SDO请求，并处理其中一个。如果从站的配置不存在，则返回0表示未处理SDO请求。
+ * 遍历从站的SDO请求列表，找到状态为QUEUED的请求进行处理。如果请求超时，则将其状态设置为FAILURE，并输出错误信息。
+ * 如果从站的当前状态需要确认错误，则将请求状态设置为FAILURE。如果从站的当前状态为INIT，则将请求状态设置为FAILURE。
+ * 如果以上条件都不满足，则将请求状态设置为BUSY，并执行SDO请求的处理函数。返回1表示已处理SDO请求。
  */
 int ec_fsm_slave_action_process_config_sdo(
-    ec_fsm_slave_t *fsm,    /**< Slave state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_slave_t *fsm,    /**< 从站状态机 */
+    ec_datagram_t *datagram /**< 要使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -662,27 +757,26 @@ int ec_fsm_slave_action_process_config_sdo(
             if (ec_sdo_request_timed_out(request))
             {
                 request->state = EC_INT_REQUEST_FAILURE;
-                EC_SLAVE_DBG(slave, 1, "Internal SDO request timed out.\n");
+                EC_SLAVE_DBG(slave, 1, "内部SDO请求超时。\n");
                 continue;
             }
 
             if (slave->current_state & EC_SLAVE_STATE_ACK_ERR)
             {
-                EC_SLAVE_WARN(slave, "Aborting SDO request,"
-                                     " slave has error flag set.\n");
+                EC_SLAVE_WARN(slave, "中止SDO请求，从站错误标志已设置。\n");
                 request->state = EC_INT_REQUEST_FAILURE;
                 continue;
             }
 
             if (slave->current_state == EC_SLAVE_STATE_INIT)
             {
-                EC_SLAVE_WARN(slave, "Aborting SDO request, slave is in INIT.\n");
+                EC_SLAVE_WARN(slave, "中止SDO请求，从站处于INIT状态。\n");
                 request->state = EC_INT_REQUEST_FAILURE;
                 continue;
             }
 
             request->state = EC_INT_REQUEST_BUSY;
-            EC_SLAVE_DBG(slave, 1, "Processing internal SDO request...\n");
+            EC_SLAVE_DBG(slave, 1, "处理内部SDO请求...\n");
             fsm->sdo_request = request;
             fsm->state = ec_fsm_slave_state_sdo_request;
             ec_fsm_coe_transfer(&fsm->fsm_coe, slave, request);
@@ -695,12 +789,16 @@ int ec_fsm_slave_action_process_config_sdo(
 
 /*****************************************************************************/
 
-/** Sets the current state of the state machine to IDLE
+/**
+ * @brief 将状态机的当前状态设置为IDLE。
  *
- * \return Non-zero if successful; otherwise state machine is busy.
+ * @return 非零值，如果成功；否则状态机忙。
+ *
+ * @details 此函数用于将状态机的当前状态设置为IDLE。如果状态机的当前状态已经是IDLE，则返回1表示成功。
+ * 如果状态机的当前状态是READY，则将状态机的状态设置为IDLE，并返回1表示成功。否则返回0表示状态机忙。
  */
 int ec_fsm_slave_set_unready(
-    ec_fsm_slave_t *fsm /**< Slave state machine. */
+    ec_fsm_slave_t *fsm /**< 从站状态机 */
 )
 {
     if (fsm->state == ec_fsm_slave_state_idle)
@@ -709,7 +807,7 @@ int ec_fsm_slave_set_unready(
     }
     else if (fsm->state == ec_fsm_slave_state_ready)
     {
-        EC_SLAVE_DBG(fsm->slave, 1, "Unready for requests.\n");
+        EC_SLAVE_DBG(fsm->slave, 1, "不接受请求。\n");
         fsm->state = ec_fsm_slave_state_idle;
         return 1;
     }
@@ -718,12 +816,15 @@ int ec_fsm_slave_set_unready(
 
 /*****************************************************************************/
 
-/** Returns, if the FSM is currently not busy and ready to execute.
+/**
+ * @brief 返回状态机是否当前未忙并且准备执行。
  *
- * \return Non-zero if ready.
+ * @return 非零值，如果准备就绪。
+ *
+ * @details 此函数用于检查状态机是否当前未忙并且准备执行。如果状态机的当前状态是READY，则返回非零值表示准备就绪。
  */
 int ec_fsm_slave_is_ready(
-    const ec_fsm_slave_t *fsm /**< Slave state machine. */
+    const ec_fsm_slave_t *fsm /**< 从站状态机 */
 )
 {
     return fsm->state == ec_fsm_slave_state_ready;
@@ -733,82 +834,84 @@ int ec_fsm_slave_is_ready(
  * Slave state machine
  *****************************************************************************/
 
-/** Slave state: IDLE.
+/**
+ * @brief 从站状态：IDLE。
  */
 void ec_fsm_slave_state_idle(
-    ec_fsm_slave_t *fsm,    /**< Slave state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_slave_t *fsm,    /**< 从站状态机 */
+    ec_datagram_t *datagram /**< 要使用的数据报 */
 )
 {
-    // do nothing
+    // 什么都不做
 }
 
 /*****************************************************************************/
 
-/** Slave state: READY.
+/**
+ * @brief 从站状态：READY。
  */
 void ec_fsm_slave_state_ready(
-    ec_fsm_slave_t *fsm,    /**< Slave state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_slave_t *fsm,    /**< 从站状态机 */
+    ec_datagram_t *datagram /**< 要使用的数据报 */
 )
 {
-    // Check for pending scan requests
+    // 检查是否存在待处理的扫描请求
     if (ec_fsm_slave_action_scan(fsm, datagram))
     {
         return;
     }
 
-    // Check for pending configuration requests
+    // 检查是否存在待处理的配置请求
     if (ec_fsm_slave_action_config(fsm, datagram))
     {
         return;
     }
 
-    // Check for pending internal SDO requests
+    // 检查是否存在待处理的内部SDO请求
     if (ec_fsm_slave_action_process_config_sdo(fsm, datagram))
     {
         return;
     }
 
-    // Check if the slave needs to read the SDO dictionary
+    // 检查从站是否需要读取SDO字典
     if (ec_fsm_slave_action_process_dict(fsm, datagram))
     {
         return;
     }
 
-    // Check for pending external SDO requests
+    // 检查是否存在待处理的外部SDO请求
     if (ec_fsm_slave_action_process_sdo(fsm, datagram))
     {
         return;
     }
 
-    // Check for pending external register requests
+    // 检查是否存在待处理的外部寄存器请求
     if (ec_fsm_slave_action_process_reg(fsm, datagram))
     {
         return;
     }
 
-    // Check for pending FoE requests
+    // 检查是否存在待处理的FoE请求
     if (ec_fsm_slave_action_process_foe(fsm, datagram))
     {
         return;
     }
 
-    // Check for pending SoE requests
+    // 检查是否存在待处理的SoE请求
     if (ec_fsm_slave_action_process_soe(fsm, datagram))
     {
         return;
     }
 
 #ifdef EC_EOE
-    // Check for pending EoE IP parameter requests
+    // 检查是否存在待处理的EoE IP参数请求
     if (ec_fsm_slave_action_process_eoe(fsm, datagram))
     {
         return;
     }
 #endif
 
-    // Check for pending MBox Gateway requests
+    // 检查是否存在待处理的MBox Gateway请求
     if (ec_fsm_slave_action_process_mbg(fsm, datagram))
     {
         return;
@@ -817,66 +920,74 @@ void ec_fsm_slave_state_ready(
 
 /*****************************************************************************/
 
-/** Check for pending SDO requests and process one.
+/**
+ * @brief 检查是否存在待处理的SDO请求并处理其中一个。
  *
- * \return non-zero, if an SDO request is processed.
+ * @return 非零值，如果已处理SDO请求。
+ *
+ * @details 此函数用于检查是否存在待处理的SDO请求并处理其中一个。如果从站的配置不存在，则返回0表示未处理SDO请求。
+ * 遍历从站的SDO请求列表，找到状态为QUEUED的请求进行处理。如果请求超时，则将其状态设置为FAILURE，并输出错误信息。
+ * 如果从站的当前状态需要确认错误，则将请求状态设置为FAILURE。如果从站的当前状态为INIT，则将请求状态设置为FAILURE。
+ * 如果以上条件都不满足，则将请求状态设置为BUSY，并执行SDO请求的处理函数。返回1表示已处理SDO请求。
  */
 int ec_fsm_slave_action_process_sdo(
-    ec_fsm_slave_t *fsm,    /**< Slave state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_slave_t *fsm,    /**< 从站状态机 */
+    ec_datagram_t *datagram /**< 要使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
     ec_sdo_request_t *request;
 
-    if (list_empty(&slave->sdo_requests))
+    if (!slave->config)
     {
         return 0;
     }
 
-    // take the first request to be processed
-    request = list_entry(slave->sdo_requests.next, ec_sdo_request_t, list);
-    list_del_init(&request->list); // dequeue
-
-    if (slave->current_state & EC_SLAVE_STATE_ACK_ERR)
+    list_for_each_entry(request, &slave->config->sdo_requests, list)
     {
-        EC_SLAVE_WARN(slave, "Aborting SDO request,"
-                             " slave has error flag set.\n");
-        request->state = EC_INT_REQUEST_FAILURE;
-        wake_up_all(&slave->master->request_queue);
-        fsm->state = ec_fsm_slave_state_idle;
-        return 0;
+        if (request->state == EC_INT_REQUEST_QUEUED)
+        {
+            if (ec_sdo_request_timed_out(request))
+            {
+                request->state = EC_INT_REQUEST_FAILURE;
+                EC_SLAVE_DBG(slave, 1, "内部SDO请求超时。\n");
+                continue;
+            }
+
+            if (slave->current_state & EC_SLAVE_STATE_ACK_ERR)
+            {
+                EC_SLAVE_WARN(slave, "中止SDO请求，从站错误标志已设置。\n");
+                request->state = EC_INT_REQUEST_FAILURE;
+                continue;
+            }
+
+            if (slave->current_state == EC_SLAVE_STATE_INIT)
+            {
+                EC_SLAVE_WARN(slave, "中止SDO请求，从站处于INIT状态。\n");
+                request->state = EC_INT_REQUEST_FAILURE;
+                continue;
+            }
+
+            request->state = EC_INT_REQUEST_BUSY;
+            EC_SLAVE_DBG(slave, 1, "处理内部SDO请求...\n");
+            fsm->sdo_request = request;
+            fsm->state = ec_fsm_slave_state_sdo_request;
+            ec_fsm_coe_transfer(&fsm->fsm_coe, slave, request);
+            ec_fsm_coe_exec(&fsm->fsm_coe, datagram);
+            return 1;
+        }
     }
-
-    if (slave->current_state == EC_SLAVE_STATE_INIT)
-    {
-        EC_SLAVE_WARN(slave, "Aborting SDO request, slave is in INIT.\n");
-        request->state = EC_INT_REQUEST_FAILURE;
-        wake_up_all(&slave->master->request_queue);
-        fsm->state = ec_fsm_slave_state_idle;
-        return 0;
-    }
-
-    fsm->sdo_request = request;
-    request->state = EC_INT_REQUEST_BUSY;
-
-    // Found pending SDO request. Execute it!
-    EC_SLAVE_DBG(slave, 1, "Processing SDO request...\n");
-
-    // Start SDO transfer
-    fsm->state = ec_fsm_slave_state_sdo_request;
-    ec_fsm_coe_transfer(&fsm->fsm_coe, slave, request);
-    ec_fsm_coe_exec(&fsm->fsm_coe, datagram); // execute immediately
-    return 1;
+    return 0;
 }
 
 /*****************************************************************************/
 
-/** Slave state: SDO_REQUEST.
+/**
+ * @brief 从站状态：SDO_REQUEST。
  */
 void ec_fsm_slave_state_sdo_request(
-    ec_fsm_slave_t *fsm,    /**< Slave state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_slave_t *fsm,    /**< 从站状态机 */
+    ec_datagram_t *datagram /**< 要使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -889,7 +1000,7 @@ void ec_fsm_slave_state_sdo_request(
 
     if (!ec_fsm_coe_success(&fsm->fsm_coe))
     {
-        EC_SLAVE_ERR(slave, "Failed to process SDO request.\n");
+        EC_SLAVE_ERR(slave, "处理SDO请求失败。\n");
         request->state = EC_INT_REQUEST_FAILURE;
         wake_up_all(&slave->master->request_queue);
         fsm->sdo_request = NULL;
@@ -897,9 +1008,9 @@ void ec_fsm_slave_state_sdo_request(
         return;
     }
 
-    EC_SLAVE_DBG(slave, 1, "Finished SDO request.\n");
+    EC_SLAVE_DBG(slave, 1, "SDO请求处理完成。\n");
 
-    // SDO request finished
+    // SDO请求处理完成
     request->state = EC_INT_REQUEST_SUCCESS;
     wake_up_all(&slave->master->request_queue);
     fsm->sdo_request = NULL;
@@ -908,20 +1019,26 @@ void ec_fsm_slave_state_sdo_request(
 
 /*****************************************************************************/
 
-/** Check for pending register requests and process one.
+/**
+ * @brief 检查是否存在待处理的寄存器请求并处理其中一个。
  *
- * \return non-zero, if a register request is processed.
+ * @return 非零值，如果已处理寄存器请求。
+ *
+ * @details 此函数用于检查是否存在待处理的寄存器请求并处理其中一个。如果从站的配置不存在，则返回0表示未处理寄存器请求。
+ * 遍历从站的寄存器请求列表，找到状态为QUEUED的请求进行处理。如果请求超时，则将其状态设置为FAILURE，并输出错误信息。
+ * 如果从站的当前状态需要确认错误，则将请求状态设置为FAILURE。如果从站的当前状态为INIT，则将请求状态设置为FAILURE。
+ * 如果以上条件都不满足，则将请求状态设置为BUSY，并执行寄存器请求的处理函数。返回1表示已处理寄存器请求。
  */
 int ec_fsm_slave_action_process_reg(
-    ec_fsm_slave_t *fsm,    /**< Slave state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_slave_t *fsm,    /**< 从站状态机 */
+    ec_datagram_t *datagram /**< 要使用的数据报 */
 )
 {
     static const char *direction_names[] = {
-        "invalid",  // EC_DIR_INVALID
-        "download", // EC_DIR_OUTPUT
-        "upload",   // EC_DIR_INPUT
-        "down+up",  // EC_DIR_BOTH
+        "无效",     // EC_DIR_INVALID
+        "下载",     // EC_DIR_OUTPUT
+        "上传",     // EC_DIR_INPUT
+        "下载+上传", // EC_DIR_BOTH
     };
 
     ec_slave_t *slave = fsm->slave;
@@ -931,7 +1048,7 @@ int ec_fsm_slave_action_process_reg(
 
     if (slave->config)
     {
-        // search the first internal register request to be processed
+        // 找到第一个要处理的内部寄存器请求
         list_for_each_entry(reg, &slave->config->reg_requests, list)
         {
             if (reg->state == EC_INT_REQUEST_QUEUED)
@@ -944,21 +1061,20 @@ int ec_fsm_slave_action_process_reg(
 
     if (!fsm->reg_request && !list_empty(&slave->reg_requests))
     {
-        // take the first external request to be processed
+        // 取出第一个要处理的外部请求
         fsm->reg_request =
             list_entry(slave->reg_requests.next, ec_reg_request_t, list);
-        list_del_init(&fsm->reg_request->list); // dequeue
+        list_del_init(&fsm->reg_request->list); // 出队
     }
 
     if (!fsm->reg_request)
-    { // no register request to process
+    { // 没有要处理的寄存器请求
         return 0;
     }
 
     if (slave->current_state & EC_SLAVE_STATE_ACK_ERR)
     {
-        EC_SLAVE_WARN(slave, "Aborting register request,"
-                             " slave has error flag set.\n");
+        EC_SLAVE_WARN(slave, "中止寄存器请求，从站错误标志已设置。\n");
         fsm->reg_request->state = EC_INT_REQUEST_FAILURE;
         wake_up_all(&slave->master->request_queue);
         fsm->reg_request = NULL;
@@ -966,14 +1082,14 @@ int ec_fsm_slave_action_process_reg(
         return 0;
     }
 
-    // Found pending register request. Execute it!
-    EC_SLAVE_DBG(slave, 1, "Processing register request %s 0x%04X-0x%04X...\n",
+    // 找到待处理的寄存器请求，执行它！
+    EC_SLAVE_DBG(slave, 1, "处理寄存器请求 %s 0x%04X-0x%04X...\n",
                  direction_names[fsm->reg_request->dir % EC_DIR_COUNT], fsm->reg_request->address,
                  fsm->reg_request->address + (unsigned)fsm->reg_request->transfer_size - 1u);
 
     fsm->reg_request->state = EC_INT_REQUEST_BUSY;
 
-    // Start register access
+    // 开始寄存器访问
     switch (fsm->reg_request->dir)
     {
     case EC_DIR_INPUT:
@@ -994,7 +1110,7 @@ int ec_fsm_slave_action_process_reg(
                fsm->reg_request->transfer_size);
         break;
     default:
-        EC_SLAVE_WARN(slave, "Aborting register request, unknown direction.\n");
+        EC_SLAVE_WARN(slave, "中止寄存器请求，未知方向。\n");
         fsm->reg_request->state = EC_INT_REQUEST_FAILURE;
         wake_up_all(&slave->master->request_queue);
         fsm->reg_request = NULL;
@@ -1008,11 +1124,11 @@ int ec_fsm_slave_action_process_reg(
 
 /*****************************************************************************/
 
-/** Slave state: Register request.
+/** Slave state: 寄存器请求。
  */
 void ec_fsm_slave_state_reg_request(
-    ec_fsm_slave_t *fsm,    /**< Slave state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_slave_t *fsm,    /**< 从站状态机 */
+    ec_datagram_t *datagram /**< 要使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -1020,7 +1136,7 @@ void ec_fsm_slave_state_reg_request(
 
     if (!reg)
     {
-        // configuration was cleared in the meantime
+        // 配置在此期间被清除
         fsm->state = ec_fsm_slave_state_ready;
         fsm->reg_request = NULL;
         return;
@@ -1028,8 +1144,7 @@ void ec_fsm_slave_state_reg_request(
 
     if (fsm->datagram->state != EC_DATAGRAM_RECEIVED)
     {
-        EC_SLAVE_ERR(slave, "Failed to receive register"
-                            " request datagram: ");
+        EC_SLAVE_ERR(slave, "无法接收寄存器请求数据报：");
         ec_datagram_print_state(fsm->datagram);
         reg->state = EC_INT_REQUEST_FAILURE;
         wake_up_all(&slave->master->request_queue);
@@ -1041,19 +1156,18 @@ void ec_fsm_slave_state_reg_request(
     if (fsm->datagram->working_counter == ((reg->dir == EC_DIR_BOTH) ? 3 : 1))
     {
         if (reg->dir != EC_DIR_OUTPUT)
-        { // read/read-write request
+        { // 读取/读写请求
             memcpy(reg->data, fsm->datagram->data, reg->transfer_size);
         }
 
         reg->state = EC_INT_REQUEST_SUCCESS;
-        EC_SLAVE_DBG(slave, 1, "Register request successful.\n");
+        EC_SLAVE_DBG(slave, 1, "寄存器请求成功。\n");
     }
     else
     {
         reg->state = EC_INT_REQUEST_FAILURE;
         ec_datagram_print_state(fsm->datagram);
-        EC_SLAVE_ERR(slave, "Register request failed"
-                            " (working counter is %u).\n",
+        EC_SLAVE_ERR(slave, "寄存器请求失败（工作计数器为 %u）。\n",
                      fsm->datagram->working_counter);
     }
 
@@ -1064,72 +1178,66 @@ void ec_fsm_slave_state_reg_request(
 
 /*****************************************************************************/
 
-/** Check for pending FoE requests and process one.
+/**
+ * @brief 检查是否存在待处理的FoE请求并处理其中一个。
  *
- * \return non-zero, if an FoE request is processed.
+ * @return 非零值，如果已处理FoE请求。
+ *
+ * @details 此函数用于检查是否存在待处理的FoE请求并处理其中一个。如果从站的配置不存在，则返回0表示未处理FoE请求。
+ * 遍历从站的FoE请求列表，找到状态为QUEUED的请求进行处理。如果请求超时，则将其状态设置为FAILURE，并输出错误信息。
+ * 如果从站的当前状态需要确认错误，则将请求状态设置为FAILURE。如果以上条件都不满足，则将请求状态设置为BUSY，并执行FoE请求的处理函数。返回1表示已处理FoE请求。
  */
 int ec_fsm_slave_action_process_foe(
-    ec_fsm_slave_t *fsm,    /**< Slave state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_slave_t *fsm,    /**< 从站状态机 */
+    ec_datagram_t *datagram /**< 要使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
     ec_foe_request_t *request;
 
-    if (slave->config)
+    if (!slave->config)
     {
-        // search the first internal file request to be processed
-        list_for_each_entry(request, &slave->config->foe_requests, list)
+        return 0;
+    }
+
+    list_for_each_entry(request, &slave->config->foe_requests, list)
+    {
+        if (request->state == EC_INT_REQUEST_QUEUED)
         {
-            if (request->state == EC_INT_REQUEST_QUEUED)
+            if (ec_foe_request_timed_out(request))
             {
-                fsm->foe_request = request;
-                break;
+                request->state = EC_INT_REQUEST_FAILURE;
+                EC_SLAVE_DBG(slave, 1, "内部FoE请求超时。\n");
+                continue;
             }
+
+            if (slave->current_state & EC_SLAVE_STATE_ACK_ERR)
+            {
+                EC_SLAVE_WARN(slave, "中止FoE请求，从站错误标志已设置。\n");
+                request->state = EC_INT_REQUEST_FAILURE;
+                continue;
+            }
+
+            request->state = EC_INT_REQUEST_BUSY;
+            EC_SLAVE_DBG(slave, 1, "处理FoE请求...\n");
+            fsm->foe_request = request;
+            fsm->state = ec_fsm_slave_state_foe_request;
+            ec_fsm_foe_transfer(&fsm->fsm_foe, slave, request);
+            ec_fsm_foe_exec(&fsm->fsm_foe, datagram);
+            return 1;
         }
     }
-
-    if (!fsm->foe_request && !list_empty(&slave->foe_requests))
-    {
-        // take the first external request to be processed
-        fsm->foe_request =
-            list_entry(slave->foe_requests.next, ec_foe_request_t, list);
-        list_del_init(&fsm->foe_request->list); // dequeue
-    }
-
-    if (!fsm->foe_request)
-    {
-        return 0;
-    }
-
-    if (slave->current_state & EC_SLAVE_STATE_ACK_ERR)
-    {
-        EC_SLAVE_WARN(slave, "Aborting FoE request,"
-                             " slave has error flag set.\n");
-        fsm->foe_request->state = EC_INT_REQUEST_FAILURE;
-        wake_up_all(&slave->master->request_queue);
-        fsm->foe_request = NULL;
-        fsm->state = ec_fsm_slave_state_idle;
-        return 0;
-    }
-
-    fsm->foe_request->state = EC_INT_REQUEST_BUSY;
-
-    EC_SLAVE_DBG(slave, 1, "Processing FoE request.\n");
-
-    fsm->state = ec_fsm_slave_state_foe_request;
-    ec_fsm_foe_transfer(&fsm->fsm_foe, slave, fsm->foe_request);
-    ec_fsm_foe_exec(&fsm->fsm_foe, datagram);
-    return 1;
+    return 0;
 }
 
 /*****************************************************************************/
 
-/** Slave state: FOE REQUEST.
+/**
+ * @brief 从站状态：FOE REQUEST。
  */
 void ec_fsm_slave_state_foe_request(
-    ec_fsm_slave_t *fsm,    /**< Slave state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_slave_t *fsm,    /**< 从站状态机 */
+    ec_datagram_t *datagram /**< 要使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -1142,7 +1250,7 @@ void ec_fsm_slave_state_foe_request(
 
     if (!ec_fsm_foe_success(&fsm->fsm_foe))
     {
-        EC_SLAVE_ERR(slave, "Failed to handle FoE request.\n");
+        EC_SLAVE_ERR(slave, "处理FoE请求失败。\n");
         request->state = EC_INT_REQUEST_FAILURE;
         wake_up_all(&slave->master->request_queue);
         fsm->foe_request = NULL;
@@ -1150,9 +1258,8 @@ void ec_fsm_slave_state_foe_request(
         return;
     }
 
-    // finished transferring FoE
-    EC_SLAVE_DBG(slave, 1, "Successfully transferred %zu bytes of FoE"
-                           " data.\n",
+    // FoE传输完成
+    EC_SLAVE_DBG(slave, 1, "成功传输 %zu 字节的FoE数据。\n",
                  request->data_size);
 
     request->state = EC_INT_REQUEST_SUCCESS;
@@ -1163,13 +1270,18 @@ void ec_fsm_slave_state_foe_request(
 
 /*****************************************************************************/
 
-/** Check for pending SoE requests and process one.
+/**
+ * @brief 检查是否存在待处理的SoE请求并处理其中一个。
  *
- * \return non-zero, if a request is processed.
+ * @return 非零值，如果已处理请求。
+ *
+ * @details 此函数用于检查是否存在待处理的SoE请求并处理其中一个。如果从站的SoE请求列表为空，则返回0表示未处理请求。
+ * 取出第一个要处理的请求进行处理。如果从站的当前状态需要确认错误，则将请求状态设置为FAILURE。
+ * 如果从站的当前状态为INIT，则将请求状态设置为FAILURE。如果以上条件都不满足，则将请求状态设置为BUSY，并执行SoE请求的处理函数。返回1表示已处理请求。
  */
 int ec_fsm_slave_action_process_soe(
-    ec_fsm_slave_t *fsm,    /**< Slave state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_slave_t *fsm,    /**< 从站状态机 */
+    ec_datagram_t *datagram /**< 要使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -1180,14 +1292,13 @@ int ec_fsm_slave_action_process_soe(
         return 0;
     }
 
-    // take the first request to be processed
+    // 取出第一个要处理的请求
     req = list_entry(slave->soe_requests.next, ec_soe_request_t, list);
-    list_del_init(&req->list); // dequeue
+    list_del_init(&req->list); // 出队
 
     if (slave->current_state & EC_SLAVE_STATE_ACK_ERR)
     {
-        EC_SLAVE_WARN(slave, "Aborting SoE request,"
-                             " slave has error flag set.\n");
+        EC_SLAVE_WARN(slave, "中止SoE请求，从站错误标志已设置。\n");
         req->state = EC_INT_REQUEST_FAILURE;
         wake_up_all(&slave->master->request_queue);
         fsm->state = ec_fsm_slave_state_idle;
@@ -1196,7 +1307,7 @@ int ec_fsm_slave_action_process_soe(
 
     if (slave->current_state == EC_SLAVE_STATE_INIT)
     {
-        EC_SLAVE_WARN(slave, "Aborting SoE request, slave is in INIT.\n");
+        EC_SLAVE_WARN(slave, "中止SoE请求，从站处于INIT状态。\n");
         req->state = EC_INT_REQUEST_FAILURE;
         wake_up_all(&slave->master->request_queue);
         fsm->state = ec_fsm_slave_state_idle;
@@ -1206,25 +1317,30 @@ int ec_fsm_slave_action_process_soe(
     fsm->soe_request = req;
     req->state = EC_INT_REQUEST_BUSY;
 
-    // Found pending request. Execute it!
-    EC_SLAVE_DBG(slave, 1, "Processing SoE request...\n");
+    // 找到待处理的请求，执行它！
+    EC_SLAVE_DBG(slave, 1, "处理SoE请求...\n");
 
-    // Start SoE transfer
+    // 开始SoE传输
     fsm->state = ec_fsm_slave_state_soe_request;
     ec_fsm_soe_transfer(&fsm->fsm_soe, slave, req);
-    ec_fsm_soe_exec(&fsm->fsm_soe, datagram); // execute immediately
+    ec_fsm_soe_exec(&fsm->fsm_soe, datagram); // 立即执行
     return 1;
 }
 
 /*****************************************************************************/
 
-/** Check for pending MBox Gateway requests and process one.
+/**
+ * @brief 检查是否存在待处理的MBox Gateway请求并处理其中一个。
  *
- * \return non-zero, if a request is processed.
+ * @return 非零值，如果已处理请求。
+ *
+ * @details 此函数用于检查是否存在待处理的MBox Gateway请求并处理其中一个。如果从站的MBox Gateway请求列表为空，则返回0表示未处理请求。
+ * 取出第一个要处理的请求进行处理。如果从站的当前状态需要确认错误，则将请求状态设置为FAILURE。
+ * 如果从站的当前状态为INIT，则将请求状态设置为FAILURE。如果以上条件都不满足，则将请求状态设置为BUSY，并执行MBox Gateway请求的处理函数。返回1表示已处理请求。
  */
 int ec_fsm_slave_action_process_mbg(
-    ec_fsm_slave_t *fsm,    /**< Slave state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_slave_t *fsm,    /**< 从站状态机 */
+    ec_datagram_t *datagram /**< 要使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -1235,14 +1351,13 @@ int ec_fsm_slave_action_process_mbg(
         return 0;
     }
 
-    // take the first request to be processed
+    // 取出第一个要处理的请求
     req = list_entry(slave->mbg_requests.next, ec_mbg_request_t, list);
-    list_del_init(&req->list); // dequeue
+    list_del_init(&req->list); // 出队
 
     if (slave->current_state & EC_SLAVE_STATE_ACK_ERR)
     {
-        EC_SLAVE_WARN(slave, "Aborting MBox Gateway request,"
-                             " slave has error flag set.\n");
+        EC_SLAVE_WARN(slave, "中止MBox Gateway请求，从站错误标志已设置。\n");
         req->state = EC_INT_REQUEST_FAILURE;
         wake_up_all(&slave->master->request_queue);
         fsm->state = ec_fsm_slave_state_idle;
@@ -1251,8 +1366,7 @@ int ec_fsm_slave_action_process_mbg(
 
     if (slave->current_state == EC_SLAVE_STATE_INIT)
     {
-        EC_SLAVE_WARN(slave, "Aborting MBox Gateway request,"
-                             " slave is in INIT.\n");
+        EC_SLAVE_WARN(slave, "中止MBox Gateway请求，从站处于INIT状态。\n");
         req->state = EC_INT_REQUEST_FAILURE;
         wake_up_all(&slave->master->request_queue);
         fsm->state = ec_fsm_slave_state_idle;
@@ -1262,23 +1376,31 @@ int ec_fsm_slave_action_process_mbg(
     fsm->mbg_request = req;
     req->state = EC_INT_REQUEST_BUSY;
 
-    // Found pending request. Execute it!
-    EC_SLAVE_DBG(slave, 1, "Processing MBox Gateway request...\n");
+    // 找到待处理的请求，执行它！
+    EC_SLAVE_DBG(slave, 1, "处理MBox Gateway请求...\n");
 
-    // Start MBox Gateway transfer
+    // 开始MBox Gateway传输
     fsm->state = ec_fsm_slave_state_mbg_request;
     ec_fsm_mbg_transfer(&fsm->fsm_mbg, slave, req);
-    ec_fsm_mbg_exec(&fsm->fsm_mbg, datagram); // execute immediately
+    ec_fsm_mbg_exec(&fsm->fsm_mbg, datagram); // 立即执行
     return 1;
 }
 
 /*****************************************************************************/
-
-/** Slave state: MBG_REQUEST.
+/**
+ * @brief 从站状态: MBG_REQUEST（MBox Gateway请求）。
+ *
+ * @param fsm 从站状态机。
+ * @param datagram 要使用的数据报。
+ *
+ * @details 此函数用于处理从站处于MBG_REQUEST状态时的操作。它执行MBG请求的处理，
+ * 并根据处理结果更新请求状态。如果MBG执行失败，则将请求状态设置为EC_INT_REQUEST_FAILURE，
+ * 并唤醒主站的请求队列。如果MBG执行成功，则将请求状态设置为EC_INT_REQUEST_SUCCESS，
+ * 并唤醒主站的请求队列。最后，将MBG请求和从站状态设置为NULL，并将从站状态设置为准备就绪状态。
  */
 void ec_fsm_slave_state_mbg_request(
-    ec_fsm_slave_t *fsm,    /**< Slave state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_slave_t *fsm,    /**< 从站状态机 */
+    ec_datagram_t *datagram /**< 要使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -1291,7 +1413,7 @@ void ec_fsm_slave_state_mbg_request(
 
     if (!ec_fsm_mbg_success(&fsm->fsm_mbg))
     {
-        EC_SLAVE_ERR(slave, "Failed to process MBox Gateway request.\n");
+        EC_SLAVE_ERR(slave, "处理MBox Gateway请求失败。\n");
         request->state = EC_INT_REQUEST_FAILURE;
         wake_up_all(&slave->master->request_queue);
         fsm->mbg_request = NULL;
@@ -1299,9 +1421,9 @@ void ec_fsm_slave_state_mbg_request(
         return;
     }
 
-    EC_SLAVE_DBG(slave, 1, "Finished MBox Gateway request.\n");
+    EC_SLAVE_DBG(slave, 1, "MBox Gateway请求处理完成。\n");
 
-    // MBox Gateway request finished
+    // MBox Gateway请求处理完成
     request->state = EC_INT_REQUEST_SUCCESS;
     wake_up_all(&slave->master->request_queue);
     fsm->mbg_request = NULL;
@@ -1310,11 +1432,20 @@ void ec_fsm_slave_state_mbg_request(
 
 /*****************************************************************************/
 
-/** Slave state: SOE_REQUEST.
+/**
+ * @brief 从站状态: SOE_REQUEST（SoE请求）。
+ *
+ * @param fsm 从站状态机。
+ * @param datagram 要使用的数据报。
+ *
+ * @details 此函数用于处理从站处于SOE_REQUEST状态时的操作。它执行SoE请求的处理，
+ * 并根据处理结果更新请求状态。如果SoE执行失败，则将请求状态设置为EC_INT_REQUEST_FAILURE，
+ * 并唤醒主站的请求队列。如果SoE执行成功，则将请求状态设置为EC_INT_REQUEST_SUCCESS，
+ * 并唤醒主站的请求队列。最后，将SoE请求和从站状态设置为NULL，并将从站状态设置为准备就绪状态。
  */
 void ec_fsm_slave_state_soe_request(
-    ec_fsm_slave_t *fsm,    /**< Slave state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_slave_t *fsm,    /**< 从站状态机 */
+    ec_datagram_t *datagram /**< 要使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -1327,7 +1458,7 @@ void ec_fsm_slave_state_soe_request(
 
     if (!ec_fsm_soe_success(&fsm->fsm_soe))
     {
-        EC_SLAVE_ERR(slave, "Failed to process SoE request.\n");
+        EC_SLAVE_ERR(slave, "处理SoE请求失败。\n");
         request->state = EC_INT_REQUEST_FAILURE;
         wake_up_all(&slave->master->request_queue);
         fsm->soe_request = NULL;
@@ -1335,9 +1466,9 @@ void ec_fsm_slave_state_soe_request(
         return;
     }
 
-    EC_SLAVE_DBG(slave, 1, "Finished SoE request.\n");
+    EC_SLAVE_DBG(slave, 1, "SoE请求处理完成。\n");
 
-    // SoE request finished
+    // SoE请求处理完成
     request->state = EC_INT_REQUEST_SUCCESS;
     wake_up_all(&slave->master->request_queue);
     fsm->soe_request = NULL;
@@ -1346,13 +1477,14 @@ void ec_fsm_slave_state_soe_request(
 
 /*****************************************************************************/
 #ifdef EC_EOE
-/** Check for pending EoE IP parameter requests and process one.
+/**
+ * @brief 检查是否有待处理的EoE IP参数请求，并处理其中一个。
  *
- * \return non-zero, if a request is processed.
+ * @return 非零值，如果成功处理了一个请求。
  */
 int ec_fsm_slave_action_process_eoe(
-    ec_fsm_slave_t *fsm,    /**< Slave state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_slave_t *fsm,    /**< 从站状态机 */
+    ec_datagram_t *datagram /**< 要使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -1363,14 +1495,13 @@ int ec_fsm_slave_action_process_eoe(
         return 0;
     }
 
-    // take the first request to be processed
+    // 取出第一个待处理的请求
     request = list_entry(slave->eoe_requests.next, ec_eoe_request_t, list);
-    list_del_init(&request->list); // dequeue
+    list_del_init(&request->list); // 出队
 
     if (slave->current_state & EC_SLAVE_STATE_ACK_ERR)
     {
-        EC_SLAVE_WARN(slave, "Aborting EoE request,"
-                             " slave has error flag set.\n");
+        EC_SLAVE_WARN(slave, "放弃EoE请求，从站错误标志已设置。\n");
         request->state = EC_INT_REQUEST_FAILURE;
         wake_up_all(&slave->master->request_queue);
         fsm->state = ec_fsm_slave_state_idle;
@@ -1379,7 +1510,7 @@ int ec_fsm_slave_action_process_eoe(
 
     if (slave->current_state == EC_SLAVE_STATE_INIT)
     {
-        EC_SLAVE_WARN(slave, "Aborting EoE request, slave is in INIT.\n");
+        EC_SLAVE_WARN(slave, "放弃EoE请求，从站处于INIT状态。\n");
         request->state = EC_INT_REQUEST_FAILURE;
         wake_up_all(&slave->master->request_queue);
         fsm->state = ec_fsm_slave_state_idle;
@@ -1389,23 +1520,32 @@ int ec_fsm_slave_action_process_eoe(
     fsm->eoe_request = request;
     request->state = EC_INT_REQUEST_BUSY;
 
-    // Found pending request. Execute it!
-    EC_SLAVE_DBG(slave, 1, "Processing EoE request...\n");
+    // 找到待处理的请求，执行它！
+    EC_SLAVE_DBG(slave, 1, "处理EoE请求...\n");
 
-    // Start EoE command
+    // 开始EoE命令
     fsm->state = ec_fsm_slave_state_eoe_request;
     ec_fsm_eoe_set_ip_param(&fsm->fsm_eoe, slave, request);
-    ec_fsm_eoe_exec(&fsm->fsm_eoe, datagram); // execute immediately
+    ec_fsm_eoe_exec(&fsm->fsm_eoe, datagram); // 立即执行
     return 1;
 }
 
 /*****************************************************************************/
 
-/** Slave state: EOE_REQUEST.
+/**
+ * @brief 从站状态: EOE_REQUEST（EoE请求）。
+ *
+ * @param fsm 从站状态机。
+ * @param datagram 要使用的数据报。
+ *
+ * @details 此函数用于处理从站处于EOE_REQUEST状态时的操作。它执行EoE请求的处理，
+ * 并根据处理结果更新请求状态。如果EoE执行成功，则将请求状态设置为EC_INT_REQUEST_SUCCESS，
+ * 并唤醒主站的请求队列。如果EoE执行失败，则将请求状态设置为EC_INT_REQUEST_FAILURE，
+ * 并唤醒主站的请求队列。最后，将EoE请求和从站状态设置为NULL，并将从站状态设置为准备就绪状态。
  */
 void ec_fsm_slave_state_eoe_request(
-    ec_fsm_slave_t *fsm,    /**< Slave state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_slave_t *fsm,    /**< 从站状态机 */
+    ec_datagram_t *datagram /**< 要使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -1419,12 +1559,12 @@ void ec_fsm_slave_state_eoe_request(
     if (ec_fsm_eoe_success(&fsm->fsm_eoe))
     {
         req->state = EC_INT_REQUEST_SUCCESS;
-        EC_SLAVE_DBG(slave, 1, "Finished EoE request.\n");
+        EC_SLAVE_DBG(slave, 1, "EoE请求处理完成。\n");
     }
     else
     {
         req->state = EC_INT_REQUEST_FAILURE;
-        EC_SLAVE_ERR(slave, "Failed to process EoE request.\n");
+        EC_SLAVE_ERR(slave, "处理EoE请求失败。\n");
     }
 
     wake_up_all(&slave->master->request_queue);

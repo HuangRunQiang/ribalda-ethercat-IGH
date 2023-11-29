@@ -53,118 +53,126 @@ extern const ec_code_msg_t al_status_messages[];
 char *ec_slave_sii_string(ec_slave_t *, unsigned int);
 
 /*****************************************************************************/
-
 /**
-   Slave constructor.
-   \return 0 in case of success, else < 0
-*/
 
+@brief 从站构造函数。
+
+@param slave EtherCAT从站对象指针。
+
+@param master EtherCAT主站对象指针。
+
+@param dev_idx 设备索引。
+
+@param ring_position 环位置。
+
+@param station_address 配置的站地址。
+*/
 void ec_slave_init(
-    ec_slave_t *slave,         /**< EtherCAT slave */
-    ec_master_t *master,       /**< EtherCAT master */
-    ec_device_index_t dev_idx, /**< Device index. */
-    uint16_t ring_position,    /**< ring position */
-    uint16_t station_address   /**< station address to configure */
+ec_slave_t *slave, /< EtherCAT从站 */
+ec_master_t *master, /< EtherCAT主站 */
+ec_device_index_t dev_idx, /< 设备索引 */
+uint16_t ring_position, /< 环位置 */
+uint16_t station_address /**< 配置的站地址 */
 )
 {
-    unsigned int i;
+unsigned int i;
 
-    slave->master = master;
-    slave->device_index = dev_idx;
+slave->master = master;
+slave->device_index = dev_idx;
 
-    slave->ring_position = ring_position;
-    slave->station_address = station_address;
-    slave->effective_alias = 0x0000;
+slave->ring_position = ring_position;
+slave->station_address = station_address;
+slave->effective_alias = 0x0000;
 #ifdef EC_SII_CACHE
-    slave->effective_vendor_id = 0x00000000;
-    slave->effective_product_code = 0x00000000;
-    slave->effective_revision_number = 0x00000000;
-    slave->effective_serial_number = 0x00000000;
+slave->effective_vendor_id = 0x00000000;
+slave->effective_product_code = 0x00000000;
+slave->effective_revision_number = 0x00000000;
+slave->effective_serial_number = 0x00000000;
 #endif
-    slave->config = NULL;
-    slave->requested_state = EC_SLAVE_STATE_PREOP;
-    slave->current_state = EC_SLAVE_STATE_UNKNOWN;
-    slave->last_al_error = 0;
-    slave->error_flag = 0;
-    slave->force_config = 0;
-    slave->reboot = 0;
-    slave->configured_rx_mailbox_offset = 0x0000;
-    slave->configured_rx_mailbox_size = 0x0000;
-    slave->configured_tx_mailbox_offset = 0x0000;
-    slave->configured_tx_mailbox_size = 0x0000;
+slave->config = NULL;
+slave->requested_state = EC_SLAVE_STATE_PREOP;
+slave->current_state = EC_SLAVE_STATE_UNKNOWN;
+slave->last_al_error = 0;
+slave->error_flag = 0;
+slave->force_config = 0;
+slave->reboot = 0;
+slave->configured_rx_mailbox_offset = 0x0000;
+slave->configured_rx_mailbox_size = 0x0000;
+slave->configured_tx_mailbox_offset = 0x0000;
+slave->configured_tx_mailbox_size = 0x0000;
 
-    slave->base_type = 0;
-    slave->base_revision = 0;
-    slave->base_build = 0;
-    slave->base_fmmu_count = 0;
-    slave->base_sync_count = 0;
+slave->base_type = 0;
+slave->base_revision = 0;
+slave->base_build = 0;
+slave->base_fmmu_count = 0;
+slave->base_sync_count = 0;
 
-    for (i = 0; i < EC_MAX_PORTS; i++)
-    {
-        slave->ports[i].desc = EC_PORT_NOT_IMPLEMENTED;
+for (i = 0; i < EC_MAX_PORTS; i++)
+{
+slave->ports[i].desc = EC_PORT_NOT_IMPLEMENTED;
 
-        slave->ports[i].link.link_up = 0;
-        slave->ports[i].link.loop_closed = 1;
-        slave->ports[i].link.signal_detected = 0;
-        slave->ports[i].link.bypassed = 0;
+ slave->ports[i].link.link_up = 0;
+ slave->ports[i].link.loop_closed = 1;
+ slave->ports[i].link.signal_detected = 0;
+ slave->ports[i].link.bypassed = 0;
 
-        slave->ports[i].receive_time = 0U;
+ slave->ports[i].receive_time = 0U;
 
-        slave->ports[i].next_slave = NULL;
-        slave->ports[i].delay_to_next_dc = 0U;
-
+ slave->ports[i].next_slave = NULL;
+ slave->ports[i].delay_to_next_dc = 0U;
 #ifdef EC_LOOP_CONTROL
-        slave->ports[i].state = EC_SLAVE_PORT_DOWN;
-        slave->ports[i].link_detection_jiffies = 0;
+slave->ports[i].state = EC_SLAVE_PORT_DOWN;
+slave->ports[i].link_detection_jiffies = 0;
 #endif
-    }
-    slave->upstream_port = 0;
+}
+slave->upstream_port = 0;
 
-    slave->base_fmmu_bit_operation = 0;
-    slave->base_dc_supported = 0;
-    slave->base_dc_range = EC_DC_32;
-    slave->has_dc_system_time = 0;
-    slave->transmission_delay = 0U;
+slave->base_fmmu_bit_operation = 0;
+slave->base_dc_supported = 0;
+slave->base_dc_range = EC_DC_32;
+slave->has_dc_system_time = 0;
+slave->transmission_delay = 0U;
 
-    slave->vendor_words = NULL;
-    slave->sii_image = NULL;
+slave->vendor_words = NULL;
+slave->sii_image = NULL;
 
-    INIT_LIST_HEAD(&slave->sdo_dictionary);
+INIT_LIST_HEAD(&slave->sdo_dictionary);
 
-    slave->scan_required = 1;
-    slave->sdo_dictionary_fetched = 0;
-    slave->jiffies_preop = 0;
+slave->scan_required = 1;
+slave->sdo_dictionary_fetched = 0;
+slave->jiffies_preop = 0;
 
-    INIT_LIST_HEAD(&slave->sdo_requests);
-    INIT_LIST_HEAD(&slave->reg_requests);
-    INIT_LIST_HEAD(&slave->foe_requests);
-    INIT_LIST_HEAD(&slave->soe_requests);
-    INIT_LIST_HEAD(&slave->eoe_requests);
-    INIT_LIST_HEAD(&slave->mbg_requests);
-    INIT_LIST_HEAD(&slave->dict_requests);
+INIT_LIST_HEAD(&slave->sdo_requests);
+INIT_LIST_HEAD(&slave->reg_requests);
+INIT_LIST_HEAD(&slave->foe_requests);
+INIT_LIST_HEAD(&slave->soe_requests);
+INIT_LIST_HEAD(&slave->eoe_requests);
+INIT_LIST_HEAD(&slave->mbg_requests);
+INIT_LIST_HEAD(&slave->dict_requests);
 
-    // create state machine object
-    ec_fsm_slave_init(&slave->fsm, slave);
+// 创建状态机对象
+ec_fsm_slave_init(&slave->fsm, slave);
 
-    slave->read_mbox_busy = 0;
-    rt_mutex_init(&slave->mbox_sem);
-
+slave->read_mbox_busy = 0;
+rt_mutex_init(&slave->mbox_sem);
 #ifdef EC_EOE
-    ec_mbox_data_init(&slave->mbox_eoe_frag_data);
-    ec_mbox_data_init(&slave->mbox_eoe_init_data);
+ec_mbox_data_init(&slave->mbox_eoe_frag_data);
+ec_mbox_data_init(&slave->mbox_eoe_init_data);
 #endif
-    ec_mbox_data_init(&slave->mbox_coe_data);
-    ec_mbox_data_init(&slave->mbox_foe_data);
-    ec_mbox_data_init(&slave->mbox_soe_data);
-    ec_mbox_data_init(&slave->mbox_voe_data);
-    ec_mbox_data_init(&slave->mbox_mbg_data);
+ec_mbox_data_init(&slave->mbox_coe_data);
+ec_mbox_data_init(&slave->mbox_foe_data);
+ec_mbox_data_init(&slave->mbox_soe_data);
+ec_mbox_data_init(&slave->mbox_voe_data);
+ec_mbox_data_init(&slave->mbox_mbg_data);
 
-    slave->valid_mbox_data = 0;
+slave->valid_mbox_data = 0;
 }
 
-void ec_slave_sii_image_init(
-    ec_sii_image_t *sii_image /**< SII image */
-)
+/**
+ * @brief 初始化SII图像
+ * @param sii_image SII图像
+ */
+void ec_slave_sii_image_init(ec_sii_image_t *sii_image)
 {
     unsigned int i;
 
@@ -211,8 +219,9 @@ void ec_slave_sii_image_init(
 /*****************************************************************************/
 
 /**
-   Clears the mailbox lock.
-*/
+ * @brief 清除邮箱锁定状态
+ * @param slave EtherCAT从站
+ */
 void ec_read_mbox_lock_clear(ec_slave_t *slave)
 {
     rt_mutex_lock(&slave->mbox_sem);
@@ -223,8 +232,10 @@ void ec_read_mbox_lock_clear(ec_slave_t *slave)
 /*****************************************************************************/
 
 /**
-   Return the current mailbox lock status and lock it if not locked.
-*/
+ * @brief 返回当前邮箱锁定状态并在未锁定时锁定它
+ * @param slave EtherCAT从站
+ * @return 当前邮箱锁定状态
+ */
 int ec_read_mbox_locked(ec_slave_t *slave)
 {
     int rc;
@@ -239,26 +250,27 @@ int ec_read_mbox_locked(ec_slave_t *slave)
     return rc;
 }
 
+
 /*****************************************************************************/
 
 /**
-   Slave destructor.
-   Clears and frees a slave object.
-*/
-
-void ec_slave_clear(ec_slave_t *slave /**< EtherCAT slave */)
+ * @brief 从站析构函数
+ * 清除并释放从站对象。中止所有挂起的请求，并释放相关的资源，包括SDO、邮箱响应数据等。
+ *
+ * @param slave EtherCAT从站
+ */
+void ec_slave_clear(ec_slave_t *slave)
 {
     ec_sdo_t *sdo, *next_sdo;
 
-    // abort all pending requests
+    // 中止所有挂起的请求
 
     while (!list_empty(&slave->sdo_requests))
     {
         ec_sdo_request_t *request =
             list_entry(slave->sdo_requests.next, ec_sdo_request_t, list);
-        list_del_init(&request->list); // dequeue
-        EC_SLAVE_WARN(slave, "Discarding SDO request,"
-                             " slave about to be deleted.\n");
+        list_del_init(&request->list); // 出队
+        EC_SLAVE_WARN(slave, "丢弃SDO请求，从站即将被删除。\n");
         request->state = EC_INT_REQUEST_FAILURE;
     }
 
@@ -266,9 +278,8 @@ void ec_slave_clear(ec_slave_t *slave /**< EtherCAT slave */)
     {
         ec_reg_request_t *reg =
             list_entry(slave->reg_requests.next, ec_reg_request_t, list);
-        list_del_init(&reg->list); // dequeue
-        EC_SLAVE_WARN(slave, "Discarding register request,"
-                             " slave about to be deleted.\n");
+        list_del_init(&reg->list); // 出队
+        EC_SLAVE_WARN(slave, "丢弃寄存器请求，从站即将被删除。\n");
         reg->state = EC_INT_REQUEST_FAILURE;
     }
 
@@ -276,9 +287,8 @@ void ec_slave_clear(ec_slave_t *slave /**< EtherCAT slave */)
     {
         ec_foe_request_t *request =
             list_entry(slave->foe_requests.next, ec_foe_request_t, list);
-        list_del_init(&request->list); // dequeue
-        EC_SLAVE_WARN(slave, "Discarding FoE request,"
-                             " slave about to be deleted.\n");
+        list_del_init(&request->list); // 出队
+        EC_SLAVE_WARN(slave, "丢弃FoE请求，从站即将被删除。\n");
         request->state = EC_INT_REQUEST_FAILURE;
     }
 
@@ -286,9 +296,8 @@ void ec_slave_clear(ec_slave_t *slave /**< EtherCAT slave */)
     {
         ec_soe_request_t *request =
             list_entry(slave->soe_requests.next, ec_soe_request_t, list);
-        list_del_init(&request->list); // dequeue
-        EC_SLAVE_WARN(slave, "Discarding SoE request,"
-                             " slave about to be deleted.\n");
+        list_del_init(&request->list); // 出队
+        EC_SLAVE_WARN(slave, "丢弃SoE请求，从站即将被删除。\n");
         request->state = EC_INT_REQUEST_FAILURE;
     }
 
@@ -296,9 +305,8 @@ void ec_slave_clear(ec_slave_t *slave /**< EtherCAT slave */)
     {
         ec_eoe_request_t *request =
             list_entry(slave->eoe_requests.next, ec_eoe_request_t, list);
-        list_del_init(&request->list); // dequeue
-        EC_SLAVE_WARN(slave, "Discarding EoE request,"
-                             " slave about to be deleted.\n");
+        list_del_init(&request->list); // 出队
+        EC_SLAVE_WARN(slave, "丢弃EoE请求，从站即将被删除。\n");
         request->state = EC_INT_REQUEST_FAILURE;
     }
 
@@ -306,9 +314,8 @@ void ec_slave_clear(ec_slave_t *slave /**< EtherCAT slave */)
     {
         ec_mbg_request_t *request =
             list_entry(slave->mbg_requests.next, ec_mbg_request_t, list);
-        list_del_init(&request->list); // dequeue
-        EC_SLAVE_WARN(slave, "Discarding MBox Gateway request,"
-                             " slave about to be deleted.\n");
+        list_del_init(&request->list); // 出队
+        EC_SLAVE_WARN(slave, "丢弃MBox Gateway请求，从站即将被删除。\n");
         request->state = EC_INT_REQUEST_FAILURE;
     }
 
@@ -316,9 +323,8 @@ void ec_slave_clear(ec_slave_t *slave /**< EtherCAT slave */)
     {
         ec_dict_request_t *request =
             list_entry(slave->dict_requests.next, ec_dict_request_t, list);
-        list_del_init(&request->list); // dequeue
-        EC_SLAVE_WARN(slave, "Discarding dictionary request,"
-                             " slave about to be deleted.\n");
+        list_del_init(&request->list); // 出队
+        EC_SLAVE_WARN(slave, "丢弃字典请求，从站即将被删除。\n");
         request->state = EC_INT_REQUEST_FAILURE;
     }
 
@@ -329,7 +335,8 @@ void ec_slave_clear(ec_slave_t *slave /**< EtherCAT slave */)
         ec_slave_config_detach(slave->config);
     }
 
-    // free all SDOs
+    // 释放所有SDO
+
     list_for_each_entry_safe(sdo, next_sdo, &slave->sdo_dictionary, list)
     {
         list_del(&sdo->list);
@@ -343,7 +350,7 @@ void ec_slave_clear(ec_slave_t *slave /**< EtherCAT slave */)
         slave->vendor_words = NULL;
     }
 
-    // free mailbox response data
+    // 释放邮箱响应数据
 #ifdef EC_EOE
     ec_mbox_data_clear(&slave->mbox_eoe_frag_data);
     ec_mbox_data_clear(&slave->mbox_eoe_init_data);
@@ -357,11 +364,16 @@ void ec_slave_clear(ec_slave_t *slave /**< EtherCAT slave */)
     ec_fsm_slave_clear(&slave->fsm);
 }
 
+
 /*****************************************************************************/
 
-/** Clear the sync manager array.
+/**
+ * @brief 清除同步管理器数组。
+ * 清除同步管理器数组，释放相关资源。
+ *
+ * @param slave EtherCAT从站
  */
-void ec_slave_clear_sync_managers(ec_slave_t *slave /**< EtherCAT slave. */)
+void ec_slave_clear_sync_managers(ec_slave_t *slave)
 {
     unsigned int i;
 
@@ -379,66 +391,69 @@ void ec_slave_clear_sync_managers(ec_slave_t *slave /**< EtherCAT slave. */)
 /*****************************************************************************/
 
 /**
- * Sets the data-link state of a slave.
+ * @brief 设置从站的数据链路状态。
+ * 设置从站的数据链路状态，包括链接状态、回环状态和信号检测状态。
+ *
+ * @param slave      EtherCAT从站
+ * @param new_state  寄存器0x0110-0x0111的内容
  */
-
-void ec_slave_set_dl_status(ec_slave_t *slave, /**< EtherCAT slave */
-                            uint16_t new_state /**< content of registers 0x0110-0x0111. */
-)
+void ec_slave_set_dl_status(ec_slave_t *slave, uint16_t new_state)
 {
     unsigned int i;
     uint8_t state;
 
     for (i = 0; i < EC_MAX_PORTS; i++)
     {
-        // link status
+        // 链接状态
         state = new_state & (1 << (4 + i)) ? 1 : 0;
         if (slave->ports[i].link.link_up != state)
         {
-            EC_SLAVE_DBG(slave, 1, "Port %u link status changed to %s.\n",
-                         i, state ? "up" : "down");
+            EC_SLAVE_DBG(slave, 1, "端口 %u 链接状态改变为 %s。\n",
+                         i, state ? "上线" : "下线");
             slave->ports[i].link.link_up = state;
         }
 
-        // loop status
+        // 回环状态
         state = new_state & (1 << (8 + i * 2)) ? 1 : 0;
         if (slave->ports[i].link.loop_closed != state)
         {
-            EC_SLAVE_DBG(slave, 1, "Port %u loop status changed to %s.\n",
-                         i, state ? "closed" : "open");
+            EC_SLAVE_DBG(slave, 1, "端口 %u 回环状态改变为 %s。\n",
+                         i, state ? "闭合" : "打开");
             slave->ports[i].link.loop_closed = state;
         }
 
-        // signal detection
+        // 信号检测状态
         state = new_state & (1 << (9 + i * 2)) ? 1 : 0;
         if (slave->ports[i].link.signal_detected != state)
         {
-            EC_SLAVE_DBG(slave, 1, "Port %u signal status changed to %s.\n",
-                         i, state ? "yes" : "no");
+            EC_SLAVE_DBG(slave, 1, "端口 %u 信号状态改变为 %s。\n",
+                         i, state ? "有信号" : "无信号");
             slave->ports[i].link.signal_detected = state;
         }
     }
 }
 
+
 /*****************************************************************************/
 
 /**
- * Sets the application state of a slave.
+ * @brief 设置从站的应用状态。
+ * 设置从站的应用状态。
+ *
+ * @param slave      EtherCAT从站
+ * @param new_state  新的应用状态
  */
-
-void ec_slave_set_al_status(ec_slave_t *slave,         /**< EtherCAT slave */
-                            ec_slave_state_t new_state /**< new application state */
-)
+void ec_slave_set_al_status(ec_slave_t *slave, ec_slave_state_t new_state)
 {
     if (new_state != slave->current_state)
     {
         if (slave->master->debug_level)
         {
-            char old_state[EC_STATE_STRING_SIZE],
-                cur_state[EC_STATE_STRING_SIZE];
+            char old_state[EC_STATE_STRING_SIZE];
+            char cur_state[EC_STATE_STRING_SIZE];
             ec_state_string(slave->current_state, old_state, 0);
             ec_state_string(new_state, cur_state, 0);
-            EC_SLAVE_DBG(slave, 0, "%s -> %s.\n", old_state, cur_state);
+            EC_SLAVE_DBG(slave, 0, "%s -> %s。\n", old_state, cur_state);
         }
         slave->current_state = new_state;
     }
@@ -447,12 +462,13 @@ void ec_slave_set_al_status(ec_slave_t *slave,         /**< EtherCAT slave */
 /*****************************************************************************/
 
 /**
- * Request a slave state and resets the error flag.
+ * @brief 请求从站状态并重置错误标志。
+ * 请求从站状态并重置错误标志。
+ *
+ * @param slave  EtherCAT从站
+ * @param state  新的状态
  */
-
-void ec_slave_request_state(ec_slave_t *slave,     /**< EtherCAT slave */
-                            ec_slave_state_t state /**< new state */
-)
+void ec_slave_request_state(ec_slave_t *slave, ec_slave_state_t state)
 {
     slave->requested_state = state;
     slave->error_flag = 0;
@@ -461,11 +477,12 @@ void ec_slave_request_state(ec_slave_t *slave,     /**< EtherCAT slave */
 /*****************************************************************************/
 
 /**
- * Request a slave reboot (some slaves will ignore this).
+ * @brief 请求从站重启（某些从站可能会忽略该请求）。
+ * 请求从站重启（某些从站可能会忽略该请求）。
+ *
+ * @param slave  EtherCAT从站
  */
-
-void ec_slave_request_reboot(ec_slave_t *slave /**< EtherCAT slave */
-)
+void ec_slave_request_reboot(ec_slave_t *slave)
 {
     slave->reboot = 1;
 }
@@ -473,16 +490,16 @@ void ec_slave_request_reboot(ec_slave_t *slave /**< EtherCAT slave */
 /*****************************************************************************/
 
 /**
-   Fetches data from a STRING category.
-   \todo range checking
-   \return 0 in case of success, else < 0
-*/
-
-int ec_slave_fetch_sii_strings(
-    ec_slave_t *slave,   /**< EtherCAT slave */
-    const uint8_t *data, /**< category data */
-    size_t data_size     /**< number of bytes */
-)
+ * 从STRING类别中获取数据。
+ * \todo 范围检查
+ * 成功返回0，否则返回 < 0。
+ *
+ * @param slave      EtherCAT从站
+ * @param data       类别数据
+ * @param data_size  字节数
+ * @return           成功返回0，否则返回 < 0
+ */
+int ec_slave_fetch_sii_strings(ec_slave_t *slave, const uint8_t *data, size_t data_size)
 {
     int i, err;
     size_t size;
@@ -490,7 +507,7 @@ int ec_slave_fetch_sii_strings(
 
     if (!slave->sii_image)
     {
-        EC_SLAVE_ERR(slave, "SII data not attached!\n");
+        EC_SLAVE_ERR(slave, "SII数据未附加！\n");
         return -EINVAL;
     }
 
@@ -499,10 +516,9 @@ int ec_slave_fetch_sii_strings(
     if (slave->sii_image->sii.string_count)
     {
         if (!(slave->sii_image->sii.strings =
-                  kmalloc(sizeof(char *) * slave->sii_image->sii.string_count,
-                          GFP_KERNEL)))
+                  kmalloc(sizeof(char *) * slave->sii_image->sii.string_count, GFP_KERNEL)))
         {
-            EC_SLAVE_ERR(slave, "Failed to allocate string array memory.\n");
+            EC_SLAVE_ERR(slave, "无法分配字符串数组内存。\n");
             err = -ENOMEM;
             goto out_zero;
         }
@@ -511,16 +527,16 @@ int ec_slave_fetch_sii_strings(
         for (i = 0; i < slave->sii_image->sii.string_count; i++)
         {
             size = data[offset];
-            // allocate memory for string structure and data at a single blow
+            // 一次性分配字符串结构和数据的内存
             if (!(slave->sii_image->sii.strings[i] =
                       kmalloc(sizeof(char) * size + 1, GFP_KERNEL)))
             {
-                EC_SLAVE_ERR(slave, "Failed to allocate string memory.\n");
+                EC_SLAVE_ERR(slave, "无法分配字符串内存。\n");
                 err = -ENOMEM;
                 goto out_free;
             }
             memcpy(slave->sii_image->sii.strings[i], data + offset + 1, size);
-            slave->sii_image->sii.strings[i][size] = 0x00; // append binary zero
+            slave->sii_image->sii.strings[i][size] = 0x00; // 追加二进制零
             offset += 1 + size;
         }
     }
@@ -537,32 +553,32 @@ out_zero:
     return err;
 }
 
+
 /*****************************************************************************/
 
 /**
-   Fetches data from a GENERAL category.
-   \return 0 in case of success, else < 0
-*/
-
-int ec_slave_fetch_sii_general(
-    ec_slave_t *slave,   /**< EtherCAT slave */
-    const uint8_t *data, /**< category data */
-    size_t data_size     /**< size in bytes */
-)
+ * 从GENERAL类别中获取数据。
+ * 成功返回0，否则返回 < 0。
+ *
+ * @param slave      EtherCAT从站
+ * @param data       类别数据
+ * @param data_size  字节数
+ * @return           成功返回0，否则返回 < 0
+ */
+int ec_slave_fetch_sii_general(ec_slave_t *slave, const uint8_t *data, size_t data_size)
 {
     unsigned int i;
     uint8_t flags;
 
     if (data_size != 32)
     {
-        EC_SLAVE_ERR(slave, "Wrong size of general category (%zu/32).\n",
-                     data_size);
+        EC_SLAVE_ERR(slave, "GENERAL类别的大小错误（%zu/32）。\n", data_size);
         return -EINVAL;
     }
 
     if (!slave->sii_image)
     {
-        EC_SLAVE_ERR(slave, "SII data not attached!\n");
+        EC_SLAVE_ERR(slave, "SII数据未附加！\n");
         return -EINVAL;
     }
 
@@ -575,7 +591,7 @@ int ec_slave_fetch_sii_general(
         slave->sii_image->sii.physical_layer[i] =
             (data[4] & (0x03 << (i * 2))) >> (i * 2);
 
-    // read CoE details
+    // 读取CoE详细信息
     flags = EC_READ_U8(data + 5);
     slave->sii_image->sii.coe_details.enable_sdo = (flags >> 0) & 0x01;
     slave->sii_image->sii.coe_details.enable_sdo_info = (flags >> 1) & 0x01;
@@ -584,7 +600,7 @@ int ec_slave_fetch_sii_general(
     slave->sii_image->sii.coe_details.enable_upload_at_startup = (flags >> 4) & 0x01;
     slave->sii_image->sii.coe_details.enable_sdo_complete_access = (flags >> 5) & 0x01;
 
-    // read general flags
+    // 读取通用标志
     flags = EC_READ_U8(data + 0x000B);
     slave->sii_image->sii.general_flags.enable_safeop = (flags >> 0) & 0x01;
     slave->sii_image->sii.general_flags.enable_not_lrw = (flags >> 1) & 0x01;
@@ -596,17 +612,19 @@ int ec_slave_fetch_sii_general(
 
 /*****************************************************************************/
 
-/** Fetches data from a SYNC MANAGER category.
+/**
+ * 从SYNC MANAGER类别中获取数据。
  *
- * Appends the sync managers described in the category to the existing ones.
+ * 将类别中描述的同步管理器追加到现有的同步管理器中。
  *
- * \return 0 in case of success, else < 0
+ * 成功返回0，否则返回 < 0。
+ *
+ * @param slave      EtherCAT从站
+ * @param data       类别数据
+ * @param data_size  字节数
+ * @return           成功返回0，否则返回 < 0
  */
-int ec_slave_fetch_sii_syncs(
-    ec_slave_t *slave,   /**< EtherCAT slave. */
-    const uint8_t *data, /**< Category data. */
-    size_t data_size     /**< Number of bytes. */
-)
+int ec_slave_fetch_sii_syncs(ec_slave_t *slave, const uint8_t *data, size_t data_size)
 {
     unsigned int i, count, total_count;
     ec_sync_t *sync;
@@ -614,17 +632,16 @@ int ec_slave_fetch_sii_syncs(
     ec_sync_t *syncs;
     uint8_t index;
 
-    // one sync manager struct is 4 words long
+    // 一个同步管理器结构体长度为4个字
     if (data_size % 8)
     {
-        EC_SLAVE_ERR(slave, "Invalid SII sync manager category size %zu.\n",
-                     data_size);
+        EC_SLAVE_ERR(slave, "无效的SII同步管理器类别大小 %zu。\n", data_size);
         return -EINVAL;
     }
 
     if (!slave->sii_image)
     {
-        EC_SLAVE_ERR(slave, "SII data not attached!\n");
+        EC_SLAVE_ERR(slave, "SII数据未附加！\n");
         return -EINVAL;
     }
 
@@ -635,23 +652,20 @@ int ec_slave_fetch_sii_syncs(
         total_count = count + slave->sii_image->sii.sync_count;
         if (total_count > EC_MAX_SYNC_MANAGERS)
         {
-            EC_SLAVE_ERR(slave, "Exceeded maximum number of"
-                                " sync managers!\n");
+            EC_SLAVE_ERR(slave, "超过最大同步管理器数量！\n");
             return -EOVERFLOW;
         }
         memsize = sizeof(ec_sync_t) * total_count;
         if (!(syncs = kmalloc(memsize, GFP_KERNEL)))
         {
-            EC_SLAVE_ERR(slave, "Failed to allocate %zu bytes"
-                                " for sync managers.\n",
-                         memsize);
+            EC_SLAVE_ERR(slave, "无法为同步管理器分配 %zu 字节内存。\n", memsize);
             return -ENOMEM;
         }
 
         for (i = 0; i < slave->sii_image->sii.sync_count; i++)
             ec_sync_init_copy(syncs + i, slave->sii_image->sii.syncs + i);
 
-        // initialize new sync managers
+        // 初始化新的同步管理器
         for (i = 0; i < count; i++, data += 8)
         {
             index = i + slave->sii_image->sii.sync_count;
@@ -673,19 +687,20 @@ int ec_slave_fetch_sii_syncs(
     return 0;
 }
 
+
 /*****************************************************************************/
 
 /**
-   Fetches data from a [RT]xPDO category.
-   \return 0 in case of success, else < 0
-*/
-
-int ec_slave_fetch_sii_pdos(
-    ec_slave_t *slave,   /**< EtherCAT slave */
-    const uint8_t *data, /**< category data */
-    size_t data_size,    /**< number of bytes */
-    ec_direction_t dir   /**< PDO direction. */
-)
+ * 从[RT]xPDO类别中获取数据。
+ * 成功返回0，否则返回 < 0。
+ *
+ * @param slave      EtherCAT从站
+ * @param data       类别数据
+ * @param data_size  字节数
+ * @param dir        PDO方向
+ * @return           成功返回0，否则返回 < 0
+ */
+int ec_slave_fetch_sii_pdos(ec_slave_t *slave, const uint8_t *data, size_t data_size, ec_direction_t dir)
 {
     int ret;
     ec_pdo_t *pdo;
@@ -694,7 +709,7 @@ int ec_slave_fetch_sii_pdos(
 
     if (!slave->sii_image)
     {
-        EC_SLAVE_ERR(slave, "SII data not attached!\n");
+        EC_SLAVE_ERR(slave, "SII数据未附加！\n");
         return -EINVAL;
     }
 
@@ -702,7 +717,7 @@ int ec_slave_fetch_sii_pdos(
     {
         if (!(pdo = kmalloc(sizeof(ec_pdo_t), GFP_KERNEL)))
         {
-            EC_SLAVE_ERR(slave, "Failed to allocate PDO memory.\n");
+            EC_SLAVE_ERR(slave, "无法分配PDO内存。\n");
             return -ENOMEM;
         }
 
@@ -727,7 +742,7 @@ int ec_slave_fetch_sii_pdos(
         {
             if (!(entry = kmalloc(sizeof(ec_pdo_entry_t), GFP_KERNEL)))
             {
-                EC_SLAVE_ERR(slave, "Failed to allocate PDO entry memory.\n");
+                EC_SLAVE_ERR(slave, "无法分配PDO条目内存。\n");
                 return -ENOMEM;
             }
 
@@ -749,15 +764,15 @@ int ec_slave_fetch_sii_pdos(
             data += 8;
         }
 
-        // if sync manager index is positive, the PDO is mapped by default
+        // 如果同步管理器索引为正数，则默认映射PDO
         if (pdo->sync_index >= 0)
         {
             ec_sync_t *sync;
 
             if (!(sync = ec_slave_get_sync(slave, pdo->sync_index)))
             {
-                EC_SLAVE_ERR(slave, "Invalid SM index %i for PDO 0x%04X.",
-                             pdo->sync_index, pdo->index);
+                EC_SLAVE_ERR(slave, "PDO 0x%04X 的SM索引 %i 无效。",
+                             pdo->index, pdo->sync_index);
                 return -ENOENT;
             }
 
@@ -770,30 +785,31 @@ int ec_slave_fetch_sii_pdos(
     return 0;
 }
 
+
 /*****************************************************************************/
 
 /**
-   Searches the string list for an index.
-   \return 0 in case of success, else < 0
-*/
-
-char *ec_slave_sii_string(
-    ec_slave_t *slave, /**< EtherCAT slave */
-    unsigned int index /**< string index */
-)
+ * 在字符串列表中搜索索引。
+ * 成功返回0，否则返回 < 0。
+ *
+ * @param slave  EtherCAT从站
+ * @param index  字符串索引
+ * @return       成功返回字符串指针，否则返回NULL
+ */
+char *ec_slave_sii_string(ec_slave_t *slave, unsigned int index)
 {
     if (!index--)
         return NULL;
 
     if (!slave->sii_image)
     {
-        EC_SLAVE_ERR(slave, "SII data not attached!\n");
+        EC_SLAVE_ERR(slave, "SII数据未附加！\n");
         return NULL;
     }
 
     if (index >= slave->sii_image->sii.string_count)
     {
-        EC_SLAVE_DBG(slave, 1, "String %u not found.\n", index);
+        EC_SLAVE_DBG(slave, 1, "未找到字符串 %u。\n", index);
         return NULL;
     }
 
@@ -802,19 +818,18 @@ char *ec_slave_sii_string(
 
 /*****************************************************************************/
 
-/** Get the sync manager given an index.
+/**
+ * 根据索引获取同步管理器。
  *
- * \return pointer to sync manager, or NULL.
+ * @param slave       EtherCAT从站
+ * @param sync_index  同步管理器索引
+ * @return            同步管理器指针，如果不存在则返回NULL
  */
-ec_sync_t *ec_slave_get_sync(
-    ec_slave_t *slave, /**< EtherCAT slave. */
-    uint8_t sync_index /**< Sync manager index. */
-)
+ec_sync_t *ec_slave_get_sync(ec_slave_t *slave, uint8_t sync_index)
 {
-
     if (!slave->sii_image)
     {
-        EC_SLAVE_ERR(slave, "SII data not attached!\n");
+        EC_SLAVE_ERR(slave, "SII数据未附加！\n");
         return NULL;
     }
 
@@ -831,14 +846,13 @@ ec_sync_t *ec_slave_get_sync(
 /*****************************************************************************/
 
 /**
-   Counts the total number of SDOs and entries in the dictionary.
-*/
-
-void ec_slave_sdo_dict_info(const ec_slave_t *slave,  /**< EtherCAT slave */
-                            unsigned int *sdo_count,  /**< number of SDOs */
-                            unsigned int *entry_count /**< total number of
-                                                         entries */
-)
+ * 计算字典中的SDO和条目总数。
+ *
+ * @param slave         EtherCAT从站
+ * @param sdo_count     SDO数量
+ * @param entry_count   条目总数
+ */
+void ec_slave_sdo_dict_info(const ec_slave_t *slave, unsigned int *sdo_count, unsigned int *entry_count)
 {
     unsigned int sdos = 0, entries = 0;
     ec_sdo_t *sdo;
@@ -860,14 +874,14 @@ void ec_slave_sdo_dict_info(const ec_slave_t *slave,  /**< EtherCAT slave */
 /*****************************************************************************/
 
 /**
- * Get an SDO from the dictionary.
- * \returns The desired SDO, or NULL.
+ * 从字典中获取一个SDO。
+ * 返回所需的SDO，如果不存在则返回NULL。
+ *
+ * @param slave  EtherCAT从站
+ * @param index  SDO索引
+ * @return       SDO指针，如果不存在则返回NULL
  */
-
-ec_sdo_t *ec_slave_get_sdo(
-    ec_slave_t *slave, /**< EtherCAT slave */
-    uint16_t index     /**< SDO index */
-)
+ec_sdo_t *ec_slave_get_sdo(ec_slave_t *slave, uint16_t index)
 {
     ec_sdo_t *sdo;
 
@@ -881,20 +895,18 @@ ec_sdo_t *ec_slave_get_sdo(
     return NULL;
 }
 
+
 /*****************************************************************************/
-
 /**
- * Get an SDO from the dictionary.
+ * 从字典中获取一个SDO。
+ * 常量版本。
+ * 返回所需的SDO，如果不存在则返回NULL。
  *
- * const version.
- *
- * \returns The desired SDO, or NULL.
+ * @param slave  EtherCAT从站
+ * @param index  SDO索引
+ * @return       SDO指针，如果不存在则返回NULL
  */
-
-const ec_sdo_t *ec_slave_get_sdo_const(
-    const ec_slave_t *slave, /**< EtherCAT slave */
-    uint16_t index           /**< SDO index */
-)
+const ec_sdo_t *ec_slave_get_sdo_const(const ec_slave_t *slave, uint16_t index)
 {
     const ec_sdo_t *sdo;
 
@@ -910,14 +922,15 @@ const ec_sdo_t *ec_slave_get_sdo_const(
 
 /*****************************************************************************/
 
-/** Get an SDO from the dictionary, given its position in the list.
- * \returns The desired SDO, or NULL.
+/**
+ * 根据列表中的位置获取一个SDO。
+ * 返回所需的SDO，如果不存在则返回NULL。
+ *
+ * @param slave         EtherCAT从站
+ * @param sdo_position  SDO列表位置
+ * @return              SDO指针，如果不存在则返回NULL
  */
-
-const ec_sdo_t *ec_slave_get_sdo_by_pos_const(
-    const ec_slave_t *slave, /**< EtherCAT slave. */
-    uint16_t sdo_position    /**< SDO list position. */
-)
+const ec_sdo_t *ec_slave_get_sdo_by_pos_const(const ec_slave_t *slave, uint16_t sdo_position)
 {
     const ec_sdo_t *sdo;
 
@@ -933,13 +946,14 @@ const ec_sdo_t *ec_slave_get_sdo_by_pos_const(
 
 /*****************************************************************************/
 
-/** Get the number of SDOs in the dictionary.
- * \returns SDO count.
+/**
+ * 获取字典中的SDO数量。
+ * 返回SDO数量。
+ *
+ * @param slave  EtherCAT从站
+ * @return       SDO数量
  */
-
-uint16_t ec_slave_sdo_count(
-    const ec_slave_t *slave /**< EtherCAT slave. */
-)
+uint16_t ec_slave_sdo_count(const ec_slave_t *slave)
 {
     const ec_sdo_t *sdo;
     uint16_t count = 0;
@@ -954,13 +968,15 @@ uint16_t ec_slave_sdo_count(
 
 /*****************************************************************************/
 
-/** Finds a mapped PDO.
- * \returns The desired PDO object, or NULL.
+/**
+ * 查找映射的PDO。
+ * 返回所需的PDO对象，如果不存在则返回NULL。
+ *
+ * @param slave  从站
+ * @param index  要查找的PDO索引
+ * @return       PDO指针，如果不存在则返回NULL
  */
-const ec_pdo_t *ec_slave_find_pdo(
-    const ec_slave_t *slave, /**< Slave. */
-    uint16_t index           /**< PDO index to find. */
-)
+const ec_pdo_t *ec_slave_find_pdo(const ec_slave_t *slave, uint16_t index)
 {
     unsigned int i;
     const ec_sync_t *sync;
@@ -968,7 +984,7 @@ const ec_pdo_t *ec_slave_find_pdo(
 
     if (!slave->sii_image)
     {
-        EC_SLAVE_ERR(slave, "SII data not attached!\n");
+        EC_SLAVE_ERR(slave, "SII数据未附加！\n");
         return NULL;
     }
 
@@ -987,11 +1003,13 @@ const ec_pdo_t *ec_slave_find_pdo(
 
 /*****************************************************************************/
 
-/** Find name for a PDO and its entries.
+/**
+ * 查找PDO和其条目的名称。
+ *
+ * @param slave  从站
+ * @param pdo    PDO对象
  */
-void ec_slave_find_names_for_pdo(
-    ec_slave_t *slave,
-    ec_pdo_t *pdo)
+void ec_slave_find_names_for_pdo(ec_slave_t *slave, ec_pdo_t *pdo)
 {
     const ec_sdo_t *sdo;
     ec_pdo_entry_t *pdo_entry;
@@ -1009,12 +1027,10 @@ void ec_slave_find_names_for_pdo(
             {
                 if (sdo->index == pdo_entry->index)
                 {
-                    sdo_entry = ec_sdo_get_entry_const(
-                        sdo, pdo_entry->subindex);
+                    sdo_entry = ec_sdo_get_entry_const(sdo, pdo_entry->subindex);
                     if (sdo_entry)
                     {
-                        ec_pdo_entry_set_name(pdo_entry,
-                                              sdo_entry->description);
+                        ec_pdo_entry_set_name(pdo_entry, sdo_entry->description);
                     }
                 }
             }
@@ -1024,10 +1040,12 @@ void ec_slave_find_names_for_pdo(
 
 /*****************************************************************************/
 
-/** Attach PDO names.
+/**
+ * 附加PDO名称。
+ *
+ * @param slave  从站
  */
-void ec_slave_attach_pdo_names(
-    ec_slave_t *slave)
+void ec_slave_attach_pdo_names(ec_slave_t *slave)
 {
     unsigned int i;
     ec_sync_t *sync;
@@ -1035,7 +1053,7 @@ void ec_slave_attach_pdo_names(
 
     if (!slave->sii_image)
     {
-        EC_SLAVE_ERR(slave, "SII data not attached!\n");
+        EC_SLAVE_ERR(slave, "SII数据未附加！\n");
         return;
     }
 
@@ -1051,21 +1069,21 @@ void ec_slave_attach_pdo_names(
 
 /*****************************************************************************/
 
-/** Returns the previous connected port of a given port.
+/**
+ * 返回给定端口的前一个连接端口。
  *
- * \return Port index.
+ * @param slave       EtherCAT从站
+ * @param port_index  端口索引
+ * @return            端口索引
  */
-unsigned int ec_slave_get_previous_port(
-    ec_slave_t *slave,      /**< EtherCAT slave. */
-    unsigned int port_index /**< Port index. */
-)
+unsigned int ec_slave_get_previous_port(ec_slave_t *slave, unsigned int port_index)
 {
     static const unsigned int prev_table[EC_MAX_PORTS] = {
         2, 3, 1, 0};
 
     if (port_index >= EC_MAX_PORTS)
     {
-        EC_SLAVE_WARN(slave, "%s(port_index=%u): Invalid port index!\n",
+        EC_SLAVE_WARN(slave, "%s(port_index=%u): 无效的端口索引！\n",
                       __func__, port_index);
     }
 
@@ -1083,21 +1101,21 @@ unsigned int ec_slave_get_previous_port(
 
 /*****************************************************************************/
 
-/** Returns the previous connected & unbypassed port of a given port.
+/**
+ * 返回给定端口的前一个连接且未旁路的端口。
  *
- * \return Port index.
+ * @param slave       EtherCAT从站
+ * @param port_index  端口索引
+ * @return            端口索引
  */
-unsigned int ec_slave_get_previous_normal_port(
-    ec_slave_t *slave,      /**< EtherCAT slave. */
-    unsigned int port_index /**< Port index. */
-)
+unsigned int ec_slave_get_previous_normal_port(ec_slave_t *slave, unsigned int port_index)
 {
     static const unsigned int prev_table[EC_MAX_PORTS] = {
         2, 3, 1, 0};
 
     if (port_index >= EC_MAX_PORTS)
     {
-        EC_SLAVE_WARN(slave, "%s(port_index=%u): Invalid port index!\n",
+        EC_SLAVE_WARN(slave, "%s(port_index=%u): 无效的端口索引！\n",
                       __func__, port_index);
     }
 
@@ -1116,21 +1134,21 @@ unsigned int ec_slave_get_previous_normal_port(
 
 /*****************************************************************************/
 
-/** Returns the next connected port of a given port.
+/**
+ * 返回给定端口的下一个连接端口。
  *
- * \return Port index.
+ * @param slave       EtherCAT从站
+ * @param port_index  端口索引
+ * @return            端口索引
  */
-unsigned int ec_slave_get_next_port(
-    ec_slave_t *slave,      /**< EtherCAT slave. */
-    unsigned int port_index /**< Port index. */
-)
+unsigned int ec_slave_get_next_port(ec_slave_t *slave, unsigned int port_index)
 {
     static const unsigned int next_table[EC_MAX_PORTS] = {
         3, 2, 0, 1};
 
     if (port_index >= EC_MAX_PORTS)
     {
-        EC_SLAVE_WARN(slave, "%s(port_index=%u): Invalid port index!\n",
+        EC_SLAVE_WARN(slave, "%s(port_index=%u): 无效的端口索引！\n",
                       __func__, port_index);
     }
 
@@ -1148,27 +1166,27 @@ unsigned int ec_slave_get_next_port(
 
 /*****************************************************************************/
 
-/** Calculates which of ports 0-3 appears to be the upstream one.
+/**
+ * 计算0-3号端口中哪个端口似乎是上游端口。
+ *
+ * @param slave  EtherCAT从站
  */
-void ec_slave_calc_upstream_port(
-    ec_slave_t *slave /**< EtherCAT slave. */
-)
+void ec_slave_calc_upstream_port(ec_slave_t *slave)
 {
     int i, replace;
 
-    // initially assume it's port 0 (normal connection order)
+    // 最初假设为端口0（正常连接顺序）
     slave->upstream_port = 0;
     replace = slave->ports[0].link.loop_closed || slave->ports[0].link.bypassed;
 
     if (!slave->base_dc_supported)
     {
-        // we can't tell any better for non-DC slaves; assume we're right
-        EC_SLAVE_DBG(slave, 1, "DC not supported; assuming upstream port 0.\n");
+        // 对于非DC从站，我们无法做出更好的判断；假设我们是正确的
+        EC_SLAVE_DBG(slave, 1, "不支持DC；假设上游端口为0。\n");
         return;
     }
 
-    // any open & non-bypassed port with a lower receive time
-    // is a better candidate for the upstream port
+    // 任何开放且未旁路的端口，如果它的接收时间较低，则是上游端口的更好候选项
     for (i = 1; i < EC_MAX_PORTS; ++i)
     {
         if (!slave->ports[i].link.loop_closed &&
@@ -1183,31 +1201,29 @@ void ec_slave_calc_upstream_port(
             }
         }
     }
-    EC_SLAVE_DBG(slave, 1, "upstream port = %u\n", slave->upstream_port);
+    EC_SLAVE_DBG(slave, 1, "上游端口 = %u\n", slave->upstream_port);
 }
 
-/*****************************************************************************/
 
-/** Calculates the sum of round-trip-times of connected ports 1-3.
+/*****************************************************************************/
+/**
+ * 计算连接的1-3号端口的往返时间总和。
  *
- * \return Round-trip-time in ns.
+ * @param slave  EtherCAT从站
+ * @return       往返时间总和（单位：ns）
  */
-uint32_t ec_slave_calc_rtt_sum(
-    ec_slave_t *slave /**< EtherCAT slave. */
-)
+uint32_t ec_slave_calc_rtt_sum(ec_slave_t *slave)
 {
     uint32_t rtt_sum = 0, rtt;
     unsigned int port_index = ec_slave_get_next_port(slave, slave->upstream_port);
 
     while (port_index != slave->upstream_port)
     {
-        unsigned int prev_index =
-            ec_slave_get_previous_normal_port(slave, port_index);
+        unsigned int prev_index = ec_slave_get_previous_normal_port(slave, port_index);
 
         if (!slave->ports[port_index].link.bypassed)
         {
-            rtt = slave->ports[port_index].receive_time -
-                  slave->ports[prev_index].receive_time;
+            rtt = slave->ports[port_index].receive_time - slave->ports[prev_index].receive_time;
             rtt_sum += rtt;
         }
         port_index = ec_slave_get_next_port(slave, port_index);
@@ -1218,13 +1234,13 @@ uint32_t ec_slave_calc_rtt_sum(
 
 /*****************************************************************************/
 
-/** Finds the next slave supporting DC delay measurement.
+/**
+ * 查找下一个支持DC延迟测量的从站。
  *
- * \return Next DC slave, or NULL.
+ * @param slave  EtherCAT从站
+ * @return       下一个支持DC的从站，如果不存在则返回NULL
  */
-ec_slave_t *ec_slave_find_next_dc_slave(
-    ec_slave_t *slave /**< EtherCAT slave. */
-)
+ec_slave_t *ec_slave_find_next_dc_slave(ec_slave_t *slave)
 {
     unsigned int port_index;
     ec_slave_t *dc_slave = NULL;
@@ -1259,11 +1275,12 @@ ec_slave_t *ec_slave_find_next_dc_slave(
 
 /*****************************************************************************/
 
-/** Calculates the port transmission delays.
+/**
+ * 计算端口传输延迟。
+ *
+ * @param slave  EtherCAT从站
  */
-void ec_slave_calc_port_delays(
-    ec_slave_t *slave /**< EtherCAT slave. */
-)
+void ec_slave_calc_port_delays(ec_slave_t *slave)
 {
     unsigned int port_index;
     ec_slave_t *next_slave, *next_dc;
@@ -1281,13 +1298,11 @@ void ec_slave_calc_port_delays(
 
         if (next_dc)
         {
-            unsigned int prev_port =
-                ec_slave_get_previous_normal_port(slave, port_index);
+            unsigned int prev_port = ec_slave_get_previous_normal_port(slave, port_index);
 
             if (!slave->ports[port_index].link.bypassed)
             {
-                rtt = slave->ports[port_index].receive_time -
-                      slave->ports[prev_port].receive_time;
+                rtt = slave->ports[port_index].receive_time - slave->ports[prev_port].receive_time;
             }
             else
             {
@@ -1295,10 +1310,8 @@ void ec_slave_calc_port_delays(
             }
             next_rtt_sum = ec_slave_calc_rtt_sum(next_dc);
 
-            slave->ports[port_index].delay_to_next_dc =
-                (rtt - next_rtt_sum) / 2; // FIXME
-            next_dc->ports[next_dc->upstream_port].delay_to_next_dc =
-                (rtt - next_rtt_sum) / 2;
+            slave->ports[port_index].delay_to_next_dc = (rtt - next_rtt_sum) / 2; // FIXME
+            next_dc->ports[next_dc->upstream_port].delay_to_next_dc = (rtt - next_rtt_sum) / 2;
 
 #if 0
             EC_SLAVE_DBG(slave, 1, "delay %u:%u rtt=%u"
@@ -1314,12 +1327,13 @@ void ec_slave_calc_port_delays(
 
 /*****************************************************************************/
 
-/** Recursively calculates transmission delays.
+/**
+ * 递归计算传输延迟。
+ *
+ * @param slave  当前从站
+ * @param delay  延迟总和
  */
-void ec_slave_calc_transmission_delays_rec(
-    ec_slave_t *slave, /**< Current slave. */
-    uint32_t *delay    /**< Sum of delays. */
-)
+void ec_slave_calc_transmission_delays_rec(ec_slave_t *slave, uint32_t *delay)
 {
     unsigned int i;
     ec_slave_t *next_dc;

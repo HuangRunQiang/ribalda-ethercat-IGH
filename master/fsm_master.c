@@ -78,12 +78,18 @@ void ec_fsm_master_enter_write_system_times(ec_fsm_master_t *);
 
 /*****************************************************************************/
 
-/** Constructor.
+/**
+ * @brief     构造函数。
+ * @details   这是一个构造函数，用于初始化EtherCAT主站状态机。
+ * @param     fsm 主站状态机指针。
+ * @param     master EtherCAT主站指针。
+ * @param     datagram 用于通信的数据报对象。
+ * @retval    无返回值。
  */
 void ec_fsm_master_init(
-    ec_fsm_master_t *fsm,   /**< Master state machine. */
-    ec_master_t *master,    /**< EtherCAT master. */
-    ec_datagram_t *datagram /**< Datagram object to use. */
+    ec_fsm_master_t *fsm,   /**< 主站状态机指针。 */
+    ec_master_t *master,    /**< EtherCAT主站指针。 */
+    ec_datagram_t *datagram /**< 用于通信的数据报对象。 */
 )
 {
     fsm->master = master;
@@ -91,30 +97,41 @@ void ec_fsm_master_init(
 
     ec_fsm_master_reset(fsm);
 
-    // init sub-state-machines
+    // 初始化子状态机
     ec_fsm_reboot_init(&fsm->fsm_reboot, fsm->datagram);
     ec_fsm_sii_init(&fsm->fsm_sii);
 }
 
+
 /*****************************************************************************/
 
-/** Destructor.
+/**
+ * @brief     析构函数。
+ * @details   这是一个析构函数，用于清理EtherCAT主站状态机。
+ * @param     fsm 主站状态机指针。
+ * @retval    无返回值。
  */
 void ec_fsm_master_clear(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机指针。 */
 )
 {
-    // clear sub-state machines
+    // 清理子状态机
     ec_fsm_reboot_clear(&fsm->fsm_reboot);
     ec_fsm_sii_clear(&fsm->fsm_sii);
 }
 
+
 /*****************************************************************************/
 
-/** Reset state machine.
+/**
+ * @brief     重置状态机。
+ * @details   这是一个重置状态机的函数，用于将状态机恢复到初始状态。
+ * @param     fsm 主站状态机指针。
+ * @retval    无返回值。
+ * @作用      将状态机的各个变量重置为初始值。
  */
 void ec_fsm_master_reset(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机指针。 */
 )
 {
     ec_device_index_t dev_idx;
@@ -136,20 +153,20 @@ void ec_fsm_master_reset(
 
 /*****************************************************************************/
 
-/** Executes the current state of the state machine.
- *
- * If the state machine's datagram is not sent or received yet, the execution
- * of the state machine is delayed to the next cycle.
- *
- * \return true, if the state machine was executed
+/**
+ * @brief     执行当前状态机的状态。
+ * @details   如果状态机的数据报尚未发送或接收，状态机的执行将延迟到下一个周期。
+ * @param     fsm 主站状态机指针。
+ * @retval    返回值为1，表示状态机已执行；返回值为0，表示状态机未执行。
+ * @作用      执行当前状态机的状态，并检查数据报的发送和接收状态。
  */
 int ec_fsm_master_exec(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机指针。 */
 )
 {
     if (fsm->datagram->state == EC_DATAGRAM_SENT || fsm->datagram->state == EC_DATAGRAM_QUEUED)
     {
-        // datagram was not sent or received yet.
+        // 数据报尚未发送或接收。
         return 0;
     }
 
@@ -160,10 +177,13 @@ int ec_fsm_master_exec(
 /*****************************************************************************/
 
 /**
- * \return true, if the state machine is in an idle phase
+ * @brief     判断状态机是否处于空闲阶段。
+ * @param     fsm 主站状态机指针。
+ * @retval    返回值为1，表示状态机处于空闲阶段；返回值为0，表示状态机不处于空闲阶段。
+ * @作用      判断状态机是否处于空闲阶段。
  */
 int ec_fsm_master_idle(
-    const ec_fsm_master_t *fsm /**< Master state machine. */
+    const ec_fsm_master_t *fsm /**< 主站状态机指针。 */
 )
 {
     return fsm->idle;
@@ -171,64 +191,69 @@ int ec_fsm_master_idle(
 
 /*****************************************************************************/
 
-/** Restarts the master state machine.
+/**
+ * @brief     重启主站状态机。
+ * @param     fsm 主站状态机指针。
+ * @retval    无返回值。
+ * @作用      重启主站状态机，并将状态设置为起始状态。
  */
 void ec_fsm_master_restart(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机指针。 */
 )
 {
     fsm->dev_idx = EC_DEVICE_MAIN;
     fsm->state = ec_fsm_master_state_start;
-    fsm->state(fsm); // execute immediately
+    fsm->state(fsm); // 立即执行
 }
-
 /******************************************************************************
  * Master state machine
  *****************************************************************************/
 
-/** Master state: START.
- *
- * Starts with getting slave count and slave states.
+/**
+ * @brief     主站状态：开始。
+ * @功能      开始时获取从站数量和从站状态。
+ * @param     fsm 主站状态机指针。
+ * @retval    无返回值。
+ * @作用      主站状态机的起始状态，用于获取从站数量和从站状态。
  */
 void ec_fsm_master_state_start(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机指针。 */
 )
 {
     ec_master_t *master = fsm->master;
 
     fsm->idle = 1;
 
-    // check for emergency requests
+    // 检查紧急请求
     if (!list_empty(&master->emerg_reg_requests))
     {
         ec_reg_request_t *request;
 
-        // get first request
+        // 获取第一个请求
         request = list_entry(master->emerg_reg_requests.next,
                              ec_reg_request_t, list);
-        list_del_init(&request->list); // dequeue
+        list_del_init(&request->list); // 出队
         request->state = EC_INT_REQUEST_BUSY;
 
         if (request->transfer_size > fsm->datagram->mem_size)
         {
-            EC_MASTER_ERR(master, "Emergency request data too large!\n");
+            EC_MASTER_ERR(master, "紧急请求数据太大！\n");
             request->state = EC_INT_REQUEST_FAILURE;
             wake_up_all(&master->request_queue);
-            fsm->state(fsm); // continue
+            fsm->state(fsm); // 继续执行
             return;
         }
 
         if (request->dir != EC_DIR_OUTPUT)
         {
-            EC_MASTER_ERR(master, "Emergency requests must be"
-                                  " write requests!\n");
+            EC_MASTER_ERR(master, "紧急请求必须是写请求！\n");
             request->state = EC_INT_REQUEST_FAILURE;
             wake_up_all(&master->request_queue);
-            fsm->state(fsm); // continue
+            fsm->state(fsm); // 继续执行
             return;
         }
 
-        EC_MASTER_DBG(master, 1, "Writing emergency register request...\n");
+        EC_MASTER_DBG(master, 1, "写入紧急寄存器请求...\n");
         ec_datagram_apwr(fsm->datagram, request->ring_position,
                          request->address, request->transfer_size);
         memcpy(fsm->datagram->data, request->data, request->transfer_size);
@@ -238,18 +263,18 @@ void ec_fsm_master_state_start(
         return;
     }
 
-    // check for detached config requests
+    // 检查已分离的配置请求
     ec_master_expire_slave_config_requests(fsm->master);
 
     if (master->reboot)
     {
-        // A reboot of all slaves was requested
+        // 请求重启所有从站
         master->reboot = 0;
         fsm->idle = 0;
         fsm->state = ec_fsm_master_state_reboot_slave;
         fsm->slave = NULL;
         ec_fsm_reboot_all(&fsm->fsm_reboot, master);
-        fsm->state(fsm); // execute immediately
+        fsm->state(fsm); // 立即执行
         return;
     }
 
@@ -261,12 +286,15 @@ void ec_fsm_master_state_start(
 
 /*****************************************************************************/
 
-/** Master state: BROADCAST.
- *
- * Processes the broadcast read slave count and slaves states.
+/**
+ * @brief     主站状态：广播。
+ * @功能      处理广播读取从站数量和从站状态。
+ * @param     fsm 主站状态机指针。
+ * @retval    无返回值。
+ * @作用      主站状态机的广播状态，用于处理广播读取从站数量和从站状态。
  */
 void ec_fsm_master_state_broadcast(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机指针。 */
 )
 {
     ec_datagram_t *datagram = fsm->datagram;
@@ -274,12 +302,12 @@ void ec_fsm_master_state_broadcast(
     ec_slave_t *slave;
     ec_master_t *master = fsm->master;
 
-    // bus topology change?
+    // 总线拓扑变化？
     if (datagram->working_counter != fsm->slaves_responding[fsm->dev_idx])
     {
         fsm->rescan_required = 1;
         fsm->slaves_responding[fsm->dev_idx] = datagram->working_counter;
-        EC_MASTER_INFO(master, "%u slave(s) responding on %s device.\n",
+        EC_MASTER_INFO(master, "%u个从站响应在%s设备上。\n",
                        fsm->slaves_responding[fsm->dev_idx],
                        ec_device_names[fsm->dev_idx != 0]);
     }
@@ -289,8 +317,7 @@ void ec_fsm_master_state_broadcast(
     {
         ec_device_index_t dev_idx;
 
-        EC_MASTER_DBG(master, 1, "Master state machine detected "
-                                 "link down on %s device. Clearing slave list.\n",
+        EC_MASTER_DBG(master, 1, "主站状态机检测到%s设备链路断开。清除从站列表。\n",
                       ec_device_names[fsm->dev_idx != 0]);
 
         ec_master_slaves_not_available(master);
@@ -309,8 +336,7 @@ void ec_fsm_master_state_broadcast(
              dev_idx < ec_master_num_devices(master); dev_idx++)
         {
             fsm->slave_states[dev_idx] = 0x00;
-            fsm->slaves_responding[dev_idx] = 0; /* Reset to trigger rescan on
-                                                    next link up. */
+            fsm->slaves_responding[dev_idx] = 0; /* 重置以在下次链路恢复时触发重新扫描。 */
         }
     }
     fsm->link_state[fsm->dev_idx] = master->devices[fsm->dev_idx].link_state;
@@ -321,11 +347,11 @@ void ec_fsm_master_state_broadcast(
         uint8_t states = EC_READ_U8(datagram->data);
         if (states != fsm->slave_states[fsm->dev_idx])
         {
-            // slave states changed
+            // 从站状态发生变化
             char state_str[EC_STATE_STRING_SIZE];
             fsm->slave_states[fsm->dev_idx] = states;
             ec_state_string(states, state_str, 1);
-            EC_MASTER_INFO(master, "Slave states on %s device: %s.\n",
+            EC_MASTER_INFO(master, "%s设备上的从站状态：%s。\n",
                            ec_device_names[fsm->dev_idx != 0], state_str);
         }
     }
@@ -337,9 +363,9 @@ void ec_fsm_master_state_broadcast(
     fsm->dev_idx++;
     if (fsm->dev_idx < ec_master_num_devices(master))
     {
-        // check number of responding slaves on next device
+        // 检查下一个设备上响应的从站数量
         fsm->state = ec_fsm_master_state_start;
-        fsm->state(fsm); // execute immediately
+        fsm->state(fsm); // 立即执行
         return;
     }
 
@@ -358,7 +384,7 @@ void ec_fsm_master_state_broadcast(
             master->scan_busy = 1;
             ec_lock_up(&master->scan_sem);
 
-            // clear all slaves and scan the bus
+            // 清除所有从站并扫描总线
             fsm->rescan_required = 0;
             fsm->idle = 0;
             fsm->scan_jiffies = jiffies;
@@ -383,7 +409,7 @@ void ec_fsm_master_state_broadcast(
 
             if (!count)
             {
-                // no slaves present -> finish state machine.
+                // 没有从站存在 -> 结束状态机。
                 master->scan_busy = 0;
                 wake_up_interruptible(&master->scan_queue);
                 ec_fsm_master_restart(fsm);
@@ -394,8 +420,7 @@ void ec_fsm_master_state_broadcast(
             if (!(master->slaves =
                       (ec_slave_t *)kmalloc(size, GFP_KERNEL)))
             {
-                EC_MASTER_ERR(master, "Failed to allocate %u bytes"
-                                      " of slave memory!\n",
+                EC_MASTER_ERR(master, "分配%u字节的从站内存失败！\n",
                               size);
                 master->scan_busy = 0;
                 wake_up_interruptible(&master->scan_queue);
@@ -403,7 +428,7 @@ void ec_fsm_master_state_broadcast(
                 return;
             }
 
-            // init slaves
+            // 初始化从站
             dev_idx = EC_DEVICE_MAIN;
             next_dev_slave = fsm->slaves_responding[dev_idx];
             ring_position = 0;
@@ -419,8 +444,7 @@ void ec_fsm_master_state_broadcast(
 
                 ec_slave_init(slave, master, dev_idx, ring_position, i + 1);
 
-                // do not force reconfiguration in operation phase to avoid
-                // unnecesssary process data interruptions
+                // 在操作阶段不要强制重新配置以避免不必要的过程数据中断
                 if (master->phase != EC_OPERATION)
                 {
                     slave->force_config = 1;
@@ -438,20 +462,20 @@ void ec_fsm_master_state_broadcast(
     if (master->slave_count)
     {
 
-        // application applied configurations
+        // 应用配置
         if (master->config_changed)
         {
             master->config_changed = 0;
             master->dc_offset_valid = 0;
 
-            EC_MASTER_DBG(master, 1, "Configuration changed.\n");
+            EC_MASTER_DBG(master, 1, "配置已更改。\n");
 
-            fsm->slave = master->slaves; // begin with first slave
+            fsm->slave = master->slaves; // 从第一个从站开始
             ec_fsm_master_enter_write_system_times(fsm);
         }
         else
         {
-            // fetch state from first slave
+            // 从第一个从站获取状态
             fsm->slave = master->slaves;
             ec_datagram_fprd(fsm->datagram, fsm->slave->station_address,
                              0x0130, 2);
@@ -469,37 +493,40 @@ void ec_fsm_master_state_broadcast(
 
 /*****************************************************************************/
 
-/** Check for pending SII write requests and process one.
- *
- * \return non-zero, if an SII write request is processed.
+/**
+ * @brief     检查是否有待处理的SII写请求并处理其中一个。
+ * @功能      该函数用于检查是否存在待处理的SII写请求，并处理其中一个请求。
+ * @details   这是一个用于检查是否有待处理的SII写请求，并处理其中一个请求的函数。
+ * @param     fsm 主站状态机指针。
+ * @retval    非零值，如果处理了一个SII写请求。
  */
 int ec_fsm_master_action_process_sii(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机。 */
 )
 {
     ec_master_t *master = fsm->master;
     ec_sii_write_request_t *request;
 
-    // search the first request to be processed
+    // 搜索要处理的第一个请求
     while (1)
     {
         if (list_empty(&master->sii_requests))
             break;
 
-        // get first request
+        // 获取第一个请求
         request = list_entry(master->sii_requests.next,
                              ec_sii_write_request_t, list);
-        list_del_init(&request->list); // dequeue
+        list_del_init(&request->list); // 出队
         request->state = EC_INT_REQUEST_BUSY;
 
-        // found pending SII write operation. execute it!
-        EC_SLAVE_DBG(request->slave, 1, "Writing SII data...\n");
+        // 找到待处理的SII写操作。执行它！
+        EC_SLAVE_DBG(request->slave, 1, "正在写入SII数据...\n");
         fsm->sii_request = request;
         fsm->sii_index = 0;
         ec_fsm_sii_write(&fsm->fsm_sii, request->slave, request->offset,
                          request->words, EC_FSM_SII_USE_CONFIGURED_ADDRESS);
         fsm->state = ec_fsm_master_state_write_sii;
-        fsm->state(fsm); // execute immediately
+        fsm->state(fsm); // 立即执行
         return 1;
     }
 
@@ -508,18 +535,21 @@ int ec_fsm_master_action_process_sii(
 
 /*****************************************************************************/
 
-/** Master action: IDLE.
- *
- * Does secondary work.
+/**
+ * @brief     主站动作：空闲状态。
+ * @功能      执行次要工作。
+ * @details   这是一个执行次要工作的函数。
+ * @param     fsm 主站状态机指针。
+ * @retval    无返回值。
  */
 void ec_fsm_master_action_idle(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机。 */
 )
 {
-    // check for pending SII write operations.
+    // 检查是否有待处理的SII写操作。
     if (ec_fsm_master_action_process_sii(fsm))
     {
-        return; // SII write request found
+        return; // 发现SII写请求
     }
 
     ec_fsm_master_restart(fsm);
@@ -527,19 +557,24 @@ void ec_fsm_master_action_idle(
 
 /*****************************************************************************/
 
-/** Master action: Get state of next slave.
+/**
+ * @brief     主站动作：获取下一个从站的状态。
+ * @功能      获取下一个从站的状态。
+ * @details   这是一个用于获取下一个从站状态的函数。
+ * @param     fsm 主站状态机指针。
+ * @retval    无返回值。
  */
 void ec_fsm_master_action_next_slave_state(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机。 */
 )
 {
     ec_master_t *master = fsm->master;
 
-    // is there another slave to query?
+    // 是否还有其他从站需要查询？
     fsm->slave++;
     if (fsm->slave < master->slaves + master->slave_count)
     {
-        // fetch state from next slave
+        // 从下一个从站获取状态
         fsm->idle = 1;
         ec_datagram_fprd(fsm->datagram,
                          fsm->slave->station_address, 0x0130, 2);
@@ -550,18 +585,22 @@ void ec_fsm_master_action_next_slave_state(
         return;
     }
 
-    // all slaves processed
+    // 所有从站已处理完毕
     ec_fsm_master_action_idle(fsm);
 }
-
 /*****************************************************************************/
 
 #ifdef EC_LOOP_CONTROL
 
-/** Master action: Read DL status of current slave.
+/**
+ * @brief     主站动作：读取当前从站的DL状态。
+ * @功能      读取当前从站的DL状态。
+ * @details   这是一个用于读取当前从站DL状态的函数。
+ * @param     fsm 主站状态机指针。
+ * @retval    无返回值。
  */
 void ec_fsm_master_action_read_dl_status(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机。 */
 )
 {
     ec_datagram_fprd(fsm->datagram, fsm->slave->station_address, 0x0110, 2);
@@ -573,16 +612,21 @@ void ec_fsm_master_action_read_dl_status(
 
 /*****************************************************************************/
 
-/** Master action: Open slave port.
+/**
+ * @brief     主站动作：打开从站端口。
+ * @功能      打开从站端口。
+ * @details   这是一个用于打开从站端口的函数。
+ * @param     fsm 主站状态机指针。
+ * @retval    无返回值。
  */
 void ec_fsm_master_action_open_port(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机。 */
 )
 {
-    EC_SLAVE_INFO(fsm->slave, "Opening ports.\n");
+    EC_SLAVE_INFO(fsm->slave, "正在打开端口。\n");
 
     ec_datagram_fpwr(fsm->datagram, fsm->slave->station_address, 0x0101, 1);
-    EC_WRITE_U8(fsm->datagram->data, 0x54); // port 0 auto, 1-3 auto-close
+    EC_WRITE_U8(fsm->datagram->data, 0x54); // 端口0自动，1-3自动关闭
     fsm->datagram->device_index = fsm->slave->device_index;
     fsm->retries = EC_FSM_RETRIES;
     fsm->state = ec_fsm_master_state_open_port;
@@ -590,12 +634,15 @@ void ec_fsm_master_action_open_port(
 
 /*****************************************************************************/
 
-/** Master state: READ DL STATUS.
- *
- * Fetches the DL state of a slave.
+/**
+ * @brief     主站状态：读取DL状态。
+ * @功能      获取从站的DL状态。
+ * @details   这是一个用于获取从站DL状态的函数。
+ * @param     fsm 主站状态机指针。
+ * @retval    无返回值。
  */
 void ec_fsm_master_state_read_dl_status(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -609,23 +656,23 @@ void ec_fsm_master_state_read_dl_status(
 
     if (datagram->state != EC_DATAGRAM_RECEIVED)
     {
-        EC_SLAVE_ERR(slave, "Failed to receive AL state datagram: ");
+        EC_SLAVE_ERR(slave, "无法接收到AL状态数据报文：");
         ec_datagram_print_state(datagram);
         ec_fsm_master_restart(fsm);
         return;
     }
 
-    // did the slave not respond to its station address?
+    // 从站是否未响应其站地址？
     if (datagram->working_counter != 1)
     {
-        // try again next time
+        // 下次再试
         ec_fsm_master_action_next_slave_state(fsm);
         return;
     }
 
     ec_slave_set_dl_status(slave, EC_READ_U16(datagram->data));
 
-    // process port state machines
+    // 处理端口状态机
     for (i = 0; i < EC_MAX_PORTS; i++)
     {
         ec_slave_port_t *port = &slave->ports[i];
@@ -642,7 +689,7 @@ void ec_fsm_master_state_read_dl_status(
                 }
             }
             else
-            { // loop open
+            { // 环路打开
                 port->state = EC_SLAVE_PORT_UP;
             }
             break;
@@ -658,7 +705,7 @@ void ec_fsm_master_state_read_dl_status(
                 }
             }
             else
-            { // link down
+            { // 链路断开
                 port->state = EC_SLAVE_PORT_DOWN;
             }
             break;
@@ -671,18 +718,21 @@ void ec_fsm_master_state_read_dl_status(
         }
     }
 
-    // process next slave
+    // 处理下一个从站
     ec_fsm_master_action_next_slave_state(fsm);
 }
 
 /*****************************************************************************/
 
-/** Master state: OPEN_PORT.
- *
- * Opens slave ports.
+/**
+ * @brief     主站状态：打开端口。
+ * @功能      打开从站端口。
+ * @details   这是一个用于打开从站端口的函数。
+ * @param     fsm 主站状态机指针。
+ * @retval    无返回值。
  */
 void ec_fsm_master_state_open_port(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -695,20 +745,20 @@ void ec_fsm_master_state_open_port(
 
     if (datagram->state != EC_DATAGRAM_RECEIVED)
     {
-        EC_SLAVE_ERR(slave, "Failed to receive port open datagram: ");
+        EC_SLAVE_ERR(slave, "无法接收到打开端口数据报文：");
         ec_datagram_print_state(datagram);
         ec_fsm_master_restart(fsm);
         return;
     }
 
-    // did the slave not respond to its station address?
+    // 从站是否未响应其站地址？
     if (datagram->working_counter != 1)
     {
-        EC_SLAVE_ERR(slave, "Did not respond to port open command!\n");
+        EC_SLAVE_ERR(slave, "未响应打开端口命令！\n");
         return;
     }
 
-    // process next slave
+    // 处理下一个从站
     ec_fsm_master_action_next_slave_state(fsm);
 }
 
@@ -716,10 +766,15 @@ void ec_fsm_master_state_open_port(
 
 /*****************************************************************************/
 
-/** Master action: Configure.
+/**
+ * @brief     主站动作：配置。
+ * @功能      配置主站。
+ * @details   这是一个用于配置主站的函数。
+ * @param     fsm 主站状态机指针。
+ * @retval    无返回值。
  */
 void ec_fsm_master_action_configure(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机。 */
 )
 {
     ec_master_t *master = fsm->master;
@@ -729,37 +784,39 @@ void ec_fsm_master_action_configure(
         master->config_changed = 0;
         master->dc_offset_valid = 0;
 
-        // abort iterating through slaves,
-        // first compensate DC system time offsets,
-        // then begin configuring at slave 0
-        EC_MASTER_DBG(master, 1, "Configuration changed"
-                                 " (aborting state check).\n");
+        // 中止遍历从站，
+        // 首先补偿DC系统时间偏移，
+        // 然后从从站0开始配置
+        EC_MASTER_DBG(master, 1, "配置已更改（中止状态检查）。\n");
 
-        fsm->slave = master->slaves; // begin with first slave
+        fsm->slave = master->slaves; // 从第一个从站开始
         ec_fsm_master_enter_write_system_times(fsm);
         return;
     }
 
-    // allow slave to start config (if not already done).
+    // 允许从站开始配置（如果尚未完成）。
     ec_fsm_slave_set_ready(&fsm->slave->fsm);
 
 #ifdef EC_LOOP_CONTROL
-    // read DL status
+    // 读取DL状态
     ec_fsm_master_action_read_dl_status(fsm);
 #else
-    // process next slave
+    // 处理下一个从站
     ec_fsm_master_action_next_slave_state(fsm);
 #endif
 }
 
 /*****************************************************************************/
 
-/** Master state: READ AL STATUS.
- *
- * Fetches the AL state of a slave.
+/**
+ * @brief     主站状态：读取AL状态。
+ * @功能      获取从站的AL状态。
+ * @details   这是一个用于读取从站AL状态的函数。
+ * @param     fsm 主站状态机指针。
+ * @retval    无返回值。
  */
 void ec_fsm_master_state_read_al_status(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -772,61 +829,66 @@ void ec_fsm_master_state_read_al_status(
 
     if (datagram->state != EC_DATAGRAM_RECEIVED)
     {
-        EC_SLAVE_ERR(slave, "Failed to receive AL state datagram: ");
+        EC_SLAVE_ERR(slave, "无法接收AL状态数据报：");
         ec_datagram_print_state(datagram);
         ec_fsm_master_restart(fsm);
         return;
     }
 
-    // did the slave not respond to its station address?
+    // 从站是否未响应其站地址？
     if (datagram->working_counter != 1)
     {
         if (!slave->error_flag)
         {
             slave->error_flag = 1;
-            EC_SLAVE_DBG(slave, 1, "Slave did not respond to state query.\n");
+            EC_SLAVE_DBG(slave, 1, "从站未响应状态查询。\n");
         }
         fsm->rescan_required = 1;
         ec_fsm_master_restart(fsm);
         return;
     }
 
-    // A single slave responded
+    // 单个从站响应
     ec_slave_set_al_status(slave, EC_READ_U8(datagram->data));
 
     if (slave->reboot)
     {
-        // A reboot of this slave was requested
+        // 请求重新启动该从站
         slave->reboot = 0;
         fsm->idle = 0;
         fsm->state = ec_fsm_master_state_reboot_slave;
         ec_fsm_reboot_single(&fsm->fsm_reboot, slave);
-        fsm->state(fsm); // execute immediately
+        fsm->state(fsm); // 立即执行
         return;
     }
 
     if (!slave->error_flag)
     {
-        // Check for configuration
+        // 检查配置
         ec_fsm_master_action_configure(fsm);
         return;
     }
 
 #ifdef EC_LOOP_CONTROL
-    // read DL status
+    // 读取DL状态
     ec_fsm_master_action_read_dl_status(fsm);
 #else
-    // process next slave
+    // 处理下一个从站
     ec_fsm_master_action_next_slave_state(fsm);
 #endif
 }
 
 /*****************************************************************************/
 
-/** Master state: REBOOT SLAVE.
+/**
+ * @brief     主站状态：重新启动从站。
+ * @功能      重新启动从站。
+ * @details   这是一个用于重新启动从站的函数。
+ * @param     fsm 主站状态机指针。
+ * @retval    无返回值。
  */
 void ec_fsm_master_state_reboot_slave(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -840,11 +902,11 @@ void ec_fsm_master_state_reboot_slave(
     {
         if (slave)
         {
-            EC_SLAVE_ERR(slave, "Failed to reboot.\n");
+            EC_SLAVE_ERR(slave, "重新启动失败。\n");
         }
         else
         {
-            EC_MASTER_ERR(fsm->master, "Failed to reboot.\n");
+            EC_MASTER_ERR(fsm->master, "重新启动失败。\n");
         }
     }
 
@@ -853,16 +915,21 @@ void ec_fsm_master_state_reboot_slave(
 
 /*****************************************************************************/
 
-/** Start reading old timestamps from slaves.
+/**
+ * @brief     主站状态：开始读取从站的旧时间戳。
+ * @功能      开始读取从站的旧时间戳。
+ * @details   这是一个用于开始读取从站旧时间戳的函数。
+ * @param     fsm 主站状态机指针。
+ * @retval    无返回值。
  */
 void ec_fsm_master_enter_dc_read_old_times(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机。 */
 )
 {
-    EC_MASTER_DBG(fsm->master, 1, "Reading old port receive times...\n");
+    EC_MASTER_DBG(fsm->master, 1, "正在读取旧端口接收时间...\n");
 
-    // read DC port receive times
-    // (station addresses not assigned yet, so must APRD.)
+    // 读取DC端口接收时间
+    // （站地址尚未分配，因此必须APRD。）
     fsm->slave = fsm->master->slaves;
     ec_datagram_aprd(fsm->datagram, fsm->slave->ring_position, 0x0900, 16);
     ec_datagram_zero(fsm->datagram);
@@ -873,10 +940,15 @@ void ec_fsm_master_enter_dc_read_old_times(
 
 /*****************************************************************************/
 
-/** Master state: DC READ OLD TIMES.
+/**
+ * @brief     主站状态：读取旧时间戳。
+ * @功能      读取旧时间戳。
+ * @details   这是一个用于读取旧时间戳的主站状态函数。
+ * @param     fsm 主站状态机指针。
+ * @retval    无返回值。
  */
 void ec_fsm_master_state_dc_read_old_times(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机。 */
 )
 {
     ec_master_t *master = fsm->master;
@@ -889,16 +961,15 @@ void ec_fsm_master_state_dc_read_old_times(
 
     if (datagram->state != EC_DATAGRAM_RECEIVED)
     {
-        EC_SLAVE_ERR(slave, "Failed to receive DC receive times datagram: ");
+        EC_SLAVE_ERR(slave, "无法接收到DC接收时间数据报文：");
         ec_datagram_print_state(datagram);
-        // continue even on error
+        // 即使出现错误也继续执行
     }
     else if (datagram->working_counter != 1)
     {
-        EC_SLAVE_WARN(slave, "Failed to get DC receive times: ");
+        EC_SLAVE_WARN(slave, "无法获取DC接收时间：");
         ec_datagram_print_wc_error(datagram);
-        // continue; this is just a warning because at this point we
-        // don't know if the slave supports these registers or not
+        // 继续执行；这只是一个警告，因为在这一点上我们不知道从站是否支持这些寄存器
     }
 
     for (i = 0; i < EC_MAX_PORTS; i++)
@@ -909,7 +980,7 @@ void ec_fsm_master_state_dc_read_old_times(
     ++fsm->slave;
     if (fsm->slave < master->slaves + master->slave_count)
     {
-        // read DC port receive times
+        // 读取DC端口接收时间
         ec_datagram_aprd(datagram, fsm->slave->ring_position, 0x0900, 16);
         ec_datagram_zero(datagram);
         datagram->device_index = fsm->slave->device_index;
@@ -917,8 +988,7 @@ void ec_fsm_master_state_dc_read_old_times(
     }
     else
     {
-        /* start with first device with slaves responding; at least one
-         * has responding slaves, otherwise count would be zero. */
+        /* 从第一个有响应的从站开始；至少有一个从站有响应，否则计数将为零。 */
         fsm->dev_idx = EC_DEVICE_MAIN;
         while (!fsm->slaves_responding[fsm->dev_idx])
         {
@@ -932,30 +1002,38 @@ void ec_fsm_master_state_dc_read_old_times(
 
 /*****************************************************************************/
 
-/** Start clearing slave addresses.
+/**
+ * @brief     主站状态：开始清除从站地址。
+ * @功能      开始清除从站地址。
+ * @details   这是一个用于开始清除从站地址的函数。
+ * @param     fsm 主站状态机指针。
+ * @retval    无返回值。
  */
 void ec_fsm_master_enter_clear_addresses(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机。 */
 )
 {
-    // broadcast clear all station addresses
+    // 广播清除所有站地址
     ec_datagram_bwr(fsm->datagram, 0x0010, 2);
     EC_WRITE_U16(fsm->datagram->data, 0x0000);
     fsm->datagram->device_index = fsm->dev_idx;
     fsm->retries = EC_FSM_RETRIES;
     fsm->state = ec_fsm_master_state_clear_addresses;
 }
-
 /*****************************************************************************/
 
-/** Start measuring DC delays.
+/**
+ * @brief     主站状态：开始测量DC延迟。
+ * @功能      启动测量DC延迟。
+ * @details   这是一个用于开始测量DC延迟的函数。
+ * @param     fsm 主站状态机指针。
+ * @retval    无返回值。
  */
 void ec_fsm_master_enter_dc_measure_delays(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机。 */
 )
 {
-    EC_MASTER_DBG(fsm->master, 1, "Sending broadcast-write"
-                                  " to measure transmission delays on %s link.\n",
+    EC_MASTER_DBG(fsm->master, 1, "发送广播写入以测量%s链路上的传输延迟。\n",
                   ec_device_names[fsm->dev_idx != 0]);
 
     ec_datagram_bwr(fsm->datagram, 0x0900, 1);
@@ -969,29 +1047,37 @@ void ec_fsm_master_enter_dc_measure_delays(
 
 #ifdef EC_LOOP_CONTROL
 
-/** Start writing loop control registers.
+/**
+ * @brief     主站状态：开始写入环路控制寄存器。
+ * @功能      启动写入环路控制寄存器。
+ * @details   这是一个用于开始写入环路控制寄存器的函数。
+ * @param     fsm 主站状态机指针。
+ * @retval    无返回值。
  */
 void ec_fsm_master_enter_loop_control(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机。 */
 )
 {
-    EC_MASTER_DBG(fsm->master, 1, "Broadcast-writing"
-                                  " loop control registers on %s link.\n",
+    EC_MASTER_DBG(fsm->master, 1, "在%s链路上广播写入环路控制寄存器。\n",
                   ec_device_names[fsm->dev_idx != 0]);
 
     ec_datagram_bwr(fsm->datagram, 0x0101, 1);
-    EC_WRITE_U8(fsm->datagram->data, 0x54); // port 0 auto, 1-3 auto-close
+    EC_WRITE_U8(fsm->datagram->data, 0x54); // 端口0自动，1-3自动关闭
     fsm->datagram->device_index = fsm->dev_idx;
     fsm->retries = EC_FSM_RETRIES;
     fsm->state = ec_fsm_master_state_loop_control;
 }
-
 /*****************************************************************************/
 
-/** Master state: LOOP CONTROL.
+/**
+ * @brief     主站状态：环路控制。
+ * @功能      执行环路控制状态。
+ * @details   这是一个执行环路控制状态的函数。
+ * @param     fsm 主站状态机指针。
+ * @retval    无返回值。
  */
 void ec_fsm_master_state_loop_control(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机。 */
 )
 {
     ec_master_t *master = fsm->master;
@@ -1004,8 +1090,7 @@ void ec_fsm_master_state_loop_control(
 
     if (datagram->state != EC_DATAGRAM_RECEIVED)
     {
-        EC_MASTER_ERR(master, "Failed to receive loop control"
-                              " datagram on %s link: ",
+        EC_MASTER_ERR(master, "在%s链路上接收环路控制数据报失败：",
                       ec_device_names[fsm->dev_idx != 0]);
         ec_datagram_print_state(datagram);
     }
@@ -1017,10 +1102,15 @@ void ec_fsm_master_state_loop_control(
 
 /*****************************************************************************/
 
-/** Master state: CLEAR ADDRESSES.
+/**
+ * @brief     主站状态：清除地址。
+ * @功能      执行清除地址状态。
+ * @details   这是一个执行清除地址状态的函数。
+ * @param     fsm 主站状态机指针。
+ * @retval    无返回值。
  */
 void ec_fsm_master_state_clear_addresses(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机。 */
 )
 {
     ec_master_t *master = fsm->master;
@@ -1033,8 +1123,7 @@ void ec_fsm_master_state_clear_addresses(
 
     if (datagram->state != EC_DATAGRAM_RECEIVED)
     {
-        EC_MASTER_ERR(master, "Failed to receive address"
-                              " clearing datagram on %s link: ",
+        EC_MASTER_ERR(master, "在%s链路上接收地址清除数据报失败：",
                       ec_device_names[fsm->dev_idx != 0]);
         ec_datagram_print_state(datagram);
         master->scan_busy = 0;
@@ -1045,8 +1134,7 @@ void ec_fsm_master_state_clear_addresses(
 
     if (datagram->working_counter != fsm->slaves_responding[fsm->dev_idx])
     {
-        EC_MASTER_WARN(master, "Failed to clear station addresses on %s link:"
-                               " Cleared %u of %u",
+        EC_MASTER_WARN(master, "在%s链路上清除站点地址失败：已清除 %u 个站点中的 %u 个",
                        ec_device_names[fsm->dev_idx != 0], datagram->working_counter,
                        fsm->slaves_responding[fsm->dev_idx]);
     }
@@ -1060,10 +1148,15 @@ void ec_fsm_master_state_clear_addresses(
 
 /*****************************************************************************/
 
-/** Master state: DC MEASURE DELAYS.
+/**
+ * @brief     主站状态：测量延迟。
+ * @功能      执行测量延迟状态。
+ * @details   这是一个执行测量延迟状态的函数。
+ * @param     fsm 主站状态机指针。
+ * @retval    无返回值。
  */
 void ec_fsm_master_state_dc_measure_delays(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机。 */
 )
 {
     ec_master_t *master = fsm->master;
@@ -1077,8 +1170,7 @@ void ec_fsm_master_state_dc_measure_delays(
 
     if (datagram->state != EC_DATAGRAM_RECEIVED)
     {
-        EC_MASTER_ERR(master, "Failed to receive delay measuring datagram"
-                              " on %s link: ",
+        EC_MASTER_ERR(master, "在%s链路上接收延迟测量数据报失败：",
                       ec_device_names[fsm->dev_idx != 0]);
         ec_datagram_print_state(datagram);
         master->scan_busy = 0;
@@ -1087,8 +1179,7 @@ void ec_fsm_master_state_dc_measure_delays(
         return;
     }
 
-    EC_MASTER_DBG(master, 1, "%u slaves responded to delay measuring"
-                             " on %s link.\n",
+    EC_MASTER_DBG(master, 1, "%u 个站点响应了在%s链路上的延迟测量。\n",
                   datagram->working_counter, ec_device_names[fsm->dev_idx != 0]);
 
     do
@@ -1102,9 +1193,9 @@ void ec_fsm_master_state_dc_measure_delays(
         return;
     }
 
-    EC_MASTER_INFO(master, "Scanning bus.\n");
+    EC_MASTER_INFO(master, "正在扫描总线。\n");
 
-    // set slaves ready for requests (begins scan).
+    // 设置站点准备好接收请求（开始扫描）。
     for (slave = master->slaves;
          slave < master->slaves + master->slave_count;
          slave++)
@@ -1113,18 +1204,21 @@ void ec_fsm_master_state_dc_measure_delays(
     }
 
     fsm->state = ec_fsm_master_state_scan_slave;
-    fsm->datagram->state = EC_DATAGRAM_INVALID; // nothing to send
-    fsm->state(fsm);                            // execute immediately
+    fsm->datagram->state = EC_DATAGRAM_INVALID; // 没有要发送的数据报
+    fsm->state(fsm);                            // 立即执行
 }
 
 /*****************************************************************************/
 
-/** Master state: SCAN SLAVE.
- *
- * Waits until slave scanning is completed.
+/**
+ * @brief     主站状态：扫描从站。
+ * @功能      等待从站扫描完成。
+ * @details   这是一个等待从站扫描完成的函数。
+ * @param     fsm 主站状态机指针。
+ * @retval    无返回值。
  */
 void ec_fsm_master_state_scan_slave(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机。 */
 )
 {
     ec_master_t *master = fsm->master;
@@ -1136,27 +1230,26 @@ void ec_fsm_master_state_scan_slave(
     {
         if (slave->scan_required && !slave->error_flag)
         {
-            // still in progress
+            // 仍在进行中
             return;
         }
     }
 
-    EC_MASTER_INFO(master, "Bus scanning completed in %lu ms.\n",
+    EC_MASTER_INFO(master, "总线扫描完成，耗时 %lu 毫秒。\n",
                    (jiffies - fsm->scan_jiffies) * 1000 / HZ);
 
     master->scan_busy = 0;
     wake_up_interruptible(&master->scan_queue);
 
-    // Attach slave configurations
+    // 附加从站配置
     ec_master_attach_slave_configs(master);
 
-    // Set DC ref slave and calc topology and transmission delays
-    // Note: must come after attach_slave_configs for application
-    //       selected dc_ref_config to return its slave
+    // 设置DC参考从站并计算拓扑和传输延迟
+    // 注意：必须在attach_slave_configs之后进行，以便应用程序选择的dc_ref_config返回其从站
     ec_master_calc_dc(master);
 
 #ifdef EC_EOE
-    // check if EoE processing has to be started
+    // 检查是否需要启动EoE处理
     ec_master_eoe_start(master);
 #endif
 
@@ -1165,7 +1258,7 @@ void ec_fsm_master_state_scan_slave(
         master->config_changed = 0;
         master->dc_offset_valid = 0;
 
-        fsm->slave = master->slaves; // begin with first slave
+        fsm->slave = master->slaves; // 从第一个从站开始
         ec_fsm_master_enter_write_system_times(fsm);
     }
     else
@@ -1176,10 +1269,15 @@ void ec_fsm_master_state_scan_slave(
 
 /*****************************************************************************/
 
-/** Start writing DC system times.
+/**
+ * @brief     开始写入DC系统时间。
+ * @功能      详细描述该函数的功能，完成了什么任务。
+ * @details   这是开始写入DC系统时间的函数。
+ * @param     fsm 主站状态机指针。
+ * @retval    无返回值。
  */
 void ec_fsm_master_enter_write_system_times(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机。 */
 )
 {
     ec_master_t *master = fsm->master;
@@ -1195,12 +1293,12 @@ void ec_fsm_master_enter_write_system_times(
                 continue;
             }
 
-            EC_SLAVE_DBG(fsm->slave, 1, "Checking system time offset.\n");
+            EC_SLAVE_DBG(fsm->slave, 1, "检查系统时间偏移。\n");
 
-            // read DC system time (0x0910, 64 bit)
-            //                         gap (64 bit)
-            //     and time offset (0x0920, 64 bit)
-            //   and receive delay (0x0928, 32 bit)
+            // 读取DC系统时间（0x0910，64位）
+            //                     间隔（64位）
+            //     和时间偏移（0x0920，64位）
+            //   和接收延迟（0x0928，32位）
             ec_datagram_fprd(fsm->datagram, fsm->slave->station_address,
                              0x0910, 28);
             ec_datagram_zero(fsm->datagram);
@@ -1213,25 +1311,31 @@ void ec_fsm_master_enter_write_system_times(
     }
     else
     {
-        EC_MASTER_DBG(master, 1, "No app_time received up to now.\n");
+        EC_MASTER_DBG(master, 1, "到目前为止没有收到app_time。\n");
     }
 
-    // scanning and setting system times complete
+    // 扫描和设置系统时间完成
     ec_master_request_op(master);
     ec_fsm_master_restart(fsm);
 }
 
 /*****************************************************************************/
 
-/** Configure 32 bit time offset.
- *
- * \return New offset.
+/**
+ * @brief     配置32位时间偏移量。
+ * @功能      详细描述该函数的功能，完成了什么任务。
+ * @details   这是配置32位时间偏移量的函数。
+ * @param     fsm 主站状态机指针。
+ * @param     system_time 系统时间寄存器。
+ * @param     old_offset 时间偏移寄存器。
+ * @param     app_time_sent 通过读取得到的主站应用时间。
+ * @retval    新的偏移量。
  */
 u64 ec_fsm_master_dc_offset32(
-    ec_fsm_master_t *fsm, /**< Master state machine. */
-    u64 system_time,      /**< System time register. */
-    u64 old_offset,       /**< Time offset register. */
-    u64 app_time_sent     /**< Master app time by reading. */
+    ec_fsm_master_t *fsm, /**< 主站状态机。 */
+    u64 system_time,      /**< 系统时间寄存器。 */
+    u64 old_offset,       /**< 时间偏移寄存器。 */
+    u64 app_time_sent     /**< 通过读取得到的主站应用时间。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -1243,35 +1347,41 @@ u64 ec_fsm_master_dc_offset32(
 
     time_diff = (u32)app_time_sent - system_time32;
 
-    EC_SLAVE_DBG(slave, 1, "DC 32 bit system time offset calculation:"
-                           " system_time=%u, app_time=%llu, diff=%i\n",
+    EC_SLAVE_DBG(slave, 1, "DC 32位系统时间偏移计算："
+                           "system_time=%u, app_time=%llu, diff=%i\n",
                  system_time32, app_time_sent, time_diff);
 
     if (EC_ABS(time_diff) > EC_SYSTEM_TIME_TOLERANCE_NS)
     {
         new_offset = time_diff + old_offset32;
-        EC_SLAVE_DBG(slave, 1, "Setting time offset to %u (was %u)\n",
+        EC_SLAVE_DBG(slave, 1, "将时间偏移设置为 %u（之前为 %u）\n",
                      new_offset, old_offset32);
         return (u64)new_offset;
     }
     else
     {
-        EC_SLAVE_DBG(slave, 1, "Not touching time offset.\n");
+        EC_SLAVE_DBG(slave, 1, "不修改时间偏移。\n");
         return old_offset;
     }
 }
 
 /*****************************************************************************/
 
-/** Configure 64 bit time offset.
- *
- * \return New offset.
+/**
+ * @brief     配置64位时间偏移量。
+ * @功能      详细描述该函数的功能，完成了什么任务。
+ * @details   这是配置64位时间偏移量的函数。
+ * @param     fsm 主站状态机指针。
+ * @param     system_time 系统时间寄存器。
+ * @param     old_offset 时间偏移寄存器。
+ * @param     app_time_sent 通过读取得到的主站应用时间。
+ * @retval    新的偏移量。
  */
 u64 ec_fsm_master_dc_offset64(
-    ec_fsm_master_t *fsm, /**< Master state machine. */
-    u64 system_time,      /**< System time register. */
-    u64 old_offset,       /**< Time offset register. */
-    u64 app_time_sent     /**< Master app time by reading. */
+    ec_fsm_master_t *fsm, /**< 主站状态机。 */
+    u64 system_time,      /**< 系统时间寄存器。 */
+    u64 old_offset,       /**< 时间偏移寄存器。 */
+    u64 app_time_sent     /**< 通过读取得到的主站应用时间。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -1280,20 +1390,20 @@ u64 ec_fsm_master_dc_offset64(
 
     time_diff = app_time_sent - system_time;
 
-    EC_SLAVE_DBG(slave, 1, "DC 64 bit system time offset calculation:"
-                           " system_time=%llu, app_time=%llu, diff=%lli\n",
+    EC_SLAVE_DBG(slave, 1, "DC 64位系统时间偏移计算："
+                           "system_time=%llu, app_time=%llu, diff=%lli\n",
                  system_time, app_time_sent, time_diff);
 
     if (EC_ABS(time_diff) > EC_SYSTEM_TIME_TOLERANCE_NS)
     {
         new_offset = time_diff + old_offset;
-        EC_SLAVE_DBG(slave, 1, "Setting time offset to %llu (was %llu)\n",
+        EC_SLAVE_DBG(slave, 1, "将时间偏移设置为 %llu（之前为 %llu）\n",
                      new_offset, old_offset);
     }
     else
     {
         new_offset = old_offset;
-        EC_SLAVE_DBG(slave, 1, "Not touching time offset.\n");
+        EC_SLAVE_DBG(slave, 1, "不修改时间偏移。\n");
     }
 
     return new_offset;
@@ -1301,10 +1411,14 @@ u64 ec_fsm_master_dc_offset64(
 
 /*****************************************************************************/
 
-/** Master state: DC READ OFFSET.
+/**
+ * @brief	主状态：DC读取偏移量。
+ * @作用	该函数用于读取并设置从站的DC时间偏移量和传输延迟。
+ * @param	fsm 主状态机指针。
+ * @retval	无。
  */
 void ec_fsm_master_state_dc_read_offset(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主状态机指针。 */
 )
 {
     ec_datagram_t *datagram = fsm->datagram;
@@ -1318,7 +1432,7 @@ void ec_fsm_master_state_dc_read_offset(
 
     if (datagram->state != EC_DATAGRAM_RECEIVED)
     {
-        EC_SLAVE_ERR(slave, "Failed to receive DC times datagram: ");
+        EC_SLAVE_ERR(slave, "无法接收到DC时间数据报文：");
         ec_datagram_print_state(datagram);
         fsm->slave++;
         ec_fsm_master_enter_write_system_times(fsm);
@@ -1327,7 +1441,7 @@ void ec_fsm_master_state_dc_read_offset(
 
     if (datagram->working_counter != 1)
     {
-        EC_SLAVE_WARN(slave, "Failed to get DC times: ");
+        EC_SLAVE_WARN(slave, "无法获取DC时间：");
         ec_datagram_print_wc_error(datagram);
         fsm->slave++;
         ec_fsm_master_enter_write_system_times(fsm);
@@ -1336,9 +1450,8 @@ void ec_fsm_master_state_dc_read_offset(
 
     if (unlikely(!master->dc_ref_time))
     {
-        EC_MASTER_WARN(master, "No app_time received up to now,"
-                               " abort DC time offset calculation.\n");
-        // scanning and setting system times complete
+        EC_MASTER_WARN(master, "未收到应用时间，中止DC时间偏移计算。\n");
+        // 扫描和设置系统时间完成
         ec_master_request_op(master);
         ec_fsm_master_restart(fsm);
         return;
@@ -1361,23 +1474,21 @@ void ec_fsm_master_state_dc_read_offset(
 
     if (new_offset != old_offset && slave->current_state >= EC_SLAVE_STATE_SAFEOP)
     {
-        // Slave is already active; changing the system time offset could
-        // cause problems.  Leave the offset alone in this case and just
-        // let the normal cyclic sync process gradually adjust it to the
-        // correct time.
-        EC_SLAVE_DBG(slave, 1, "Slave is running; ignoring DC offset change.\n");
+        // 从站已经处于激活状态；改变系统时间偏移量可能会导致问题。
+        // 在这种情况下保持偏移量不变，让正常的周期同步过程逐渐调整到正确的时间。
+        EC_SLAVE_DBG(slave, 1, "从站正在运行；忽略DC偏移量的更改。\n");
         new_offset = old_offset;
     }
 
     if (new_offset == old_offset && slave->transmission_delay == old_delay)
     {
-        // offsets have not changed; skip write to avoid possible trouble
+        // 偏移量未改变；跳过写操作以避免可能的问题
         fsm->slave++;
         ec_fsm_master_enter_write_system_times(fsm);
         return;
     }
 
-    // set DC system time offset and transmission delay
+    // 设置DC系统时间偏移量和传输延迟
     ec_datagram_fpwr(datagram, slave->station_address, 0x0920, 12);
     EC_WRITE_U64(datagram->data, new_offset);
     EC_WRITE_U32(datagram->data + 8, slave->transmission_delay);
@@ -1388,10 +1499,14 @@ void ec_fsm_master_state_dc_read_offset(
 
 /*****************************************************************************/
 
-/** Master state: DC WRITE OFFSET.
+/**
+ * @brief	主站状态：DC写入偏移量。
+ * @作用	该函数用于设置从站的DC系统时间偏移量。
+ * @param	fsm 主站状态机指针。
+ * @retval	无。
  */
 void ec_fsm_master_state_dc_write_offset(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机指针。 */
 )
 {
     ec_datagram_t *datagram = fsm->datagram;
@@ -1403,7 +1518,7 @@ void ec_fsm_master_state_dc_write_offset(
     if (datagram->state != EC_DATAGRAM_RECEIVED)
     {
         EC_SLAVE_ERR(slave,
-                     "Failed to receive DC system time offset datagram: ");
+                     "无法接收到DC系统时间偏移量数据报文：");
         ec_datagram_print_state(datagram);
         fsm->slave++;
         ec_fsm_master_enter_write_system_times(fsm);
@@ -1412,17 +1527,17 @@ void ec_fsm_master_state_dc_write_offset(
 
     if (datagram->working_counter != 1)
     {
-        EC_SLAVE_ERR(slave, "Failed to set DC system time offset: ");
+        EC_SLAVE_ERR(slave, "无法设置DC系统时间偏移量：");
         ec_datagram_print_wc_error(datagram);
         fsm->slave++;
         ec_fsm_master_enter_write_system_times(fsm);
         return;
     }
 
-    // reset DC filter after changing offsets
+    // 在更改偏移量后重置DC滤波器
     if (slave->current_state >= EC_SLAVE_STATE_SAFEOP)
     {
-        EC_SLAVE_DBG(slave, 1, "Slave is running; not resetting DC filter.\n");
+        EC_SLAVE_DBG(slave, 1, "从站正在运行；不重置DC滤波器。\n");
         fsm->slave++;
         ec_fsm_master_enter_write_system_times(fsm);
     }
@@ -1436,12 +1551,17 @@ void ec_fsm_master_state_dc_write_offset(
     }
 }
 
+
 /*****************************************************************************/
 
-/** Master state: DC RESET FILTER.
+/**
+ * @brief	主站状态：DC时钟重置滤波器。
+ * @作用	执行主站状态机的DC时钟重置滤波器操作。
+ * @param	fsm 主站状态机。
+ * @retval	无
  */
 void ec_fsm_master_state_dc_reset_filter(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机。 */
 )
 {
     ec_datagram_t *datagram = fsm->datagram;
@@ -1453,7 +1573,7 @@ void ec_fsm_master_state_dc_reset_filter(
     if (datagram->state != EC_DATAGRAM_RECEIVED)
     {
         EC_SLAVE_ERR(slave,
-                     "Failed to receive DC reset filter datagram: ");
+                     "无法接收到DC时钟重置滤波器数据报文：");
         ec_datagram_print_state(datagram);
         fsm->slave++;
         ec_fsm_master_enter_write_system_times(fsm);
@@ -1462,7 +1582,7 @@ void ec_fsm_master_state_dc_reset_filter(
 
     if (datagram->working_counter != 1)
     {
-        EC_SLAVE_ERR(slave, "Failed to reset DC filter: ");
+        EC_SLAVE_ERR(slave, "无法重置DC滤波器：");
         ec_datagram_print_wc_error(datagram);
         fsm->slave++;
         ec_fsm_master_enter_write_system_times(fsm);
@@ -1475,10 +1595,14 @@ void ec_fsm_master_state_dc_reset_filter(
 
 /*****************************************************************************/
 
-/** Master state: WRITE SII.
+/**
+ * @brief	主站状态：写入SII（Slave Information Interface）。
+ * @作用	执行主站状态机的写入SII操作。
+ * @param	fsm 主站状态机。
+ * @retval	无
  */
 void ec_fsm_master_state_write_sii(
-    ec_fsm_master_t *fsm /**< Master state machine. */
+    ec_fsm_master_t *fsm /**< 主站状态机。 */
 )
 {
     ec_master_t *master = fsm->master;
@@ -1490,7 +1614,7 @@ void ec_fsm_master_state_write_sii(
 
     if (!ec_fsm_sii_success(&fsm->fsm_sii))
     {
-        EC_SLAVE_ERR(slave, "Failed to write SII data.\n");
+        EC_SLAVE_ERR(slave, "无法写入SII数据。\n");
         request->state = EC_INT_REQUEST_FAILURE;
         wake_up_all(&master->request_queue);
         ec_fsm_master_restart(fsm);
@@ -1504,37 +1628,36 @@ void ec_fsm_master_state_write_sii(
                          request->offset + fsm->sii_index,
                          request->words + fsm->sii_index,
                          EC_FSM_SII_USE_CONFIGURED_ADDRESS);
-        ec_fsm_sii_exec(&fsm->fsm_sii, fsm->datagram); // execute immediately
+        ec_fsm_sii_exec(&fsm->fsm_sii, fsm->datagram); // 立即执行
         return;
     }
 
-    // finished writing SII
-    EC_SLAVE_DBG(slave, 1, "Finished writing %zu words of SII data.\n",
+    // SII写入完成
+    EC_SLAVE_DBG(slave, 1, "已成功写入 %zu 个SII数据字。\n",
                  request->nwords);
 
     if (request->offset <= 4 && request->offset + request->nwords > 4)
     {
-        // alias was written
+        // 写入了别名
         if (slave->sii_image)
         {
             slave->sii_image->sii.alias = EC_READ_U16(request->words + 4);
-            // TODO: read alias from register 0x0012
+            // TODO: 从寄存器0x0012读取别名
             slave->effective_alias = slave->sii_image->sii.alias;
         }
         else
         {
-            EC_SLAVE_WARN(slave, "Slave could not update effective alias."
-                                 " SII data not available.\n");
+            EC_SLAVE_WARN(slave, "无法更新有效别名。SII数据不可用。\n");
         }
     }
-    // TODO: Evaluate other SII contents!
+    // TODO: 评估其他SII内容！
 
     request->state = EC_INT_REQUEST_SUCCESS;
     wake_up_all(&master->request_queue);
 
-    // check for another SII write request
+    // 检查是否有另一个SII写入请求
     if (ec_fsm_master_action_process_sii(fsm))
-        return; // processing another request
+        return; // 处理另一个请求
 
     ec_fsm_master_restart(fsm);
 }

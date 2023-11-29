@@ -58,49 +58,51 @@
 
 typedef struct ec_fsm_slave ec_fsm_slave_t; /**< \see ec_fsm_slave */
 
-/** Finite state machine of an EtherCAT slave.
+/** EtherCAT从站的有限状态机。
  */
 struct ec_fsm_slave
 {
-    ec_slave_t *slave;                  /**< slave the FSM runs on */
-    struct list_head list;              /**< Used for execution list. */
-    ec_dict_request_t int_dict_request; /**< Internal dictionary request. */
+    ec_slave_t *slave;                  /**< 运行FSM的从站 */
+    struct list_head list;              /**< 用于执行列表。 */
+    ec_dict_request_t int_dict_request; /**< 内部字典请求。 */
 
-    void (*state)(ec_fsm_slave_t *, ec_datagram_t *); /**< State function. */
-    ec_datagram_t *datagram;                          /**< Previous state datagram. */
-    ec_sdo_request_t *sdo_request;                    /**< SDO request to process. */
-    ec_reg_request_t *reg_request;                    /**< Register request to process. */
-    ec_foe_request_t *foe_request;                    /**< FoE request to process. */
-    off_t foe_index;                                  /**< Index to FoE write request data. */
-    ec_soe_request_t *soe_request;                    /**< SoE request to process. */
+    void (*state)(ec_fsm_slave_t *, ec_datagram_t *); /**< 状态函数。 */
+    ec_datagram_t *datagram;                          /**< 之前状态的数据报。 */
+    ec_sdo_request_t *sdo_request;                    /**< 要处理的SDO请求。 */
+    ec_reg_request_t *reg_request;                    /**< 要处理的寄存器请求。 */
+    ec_foe_request_t *foe_request;                    /**< 要处理的FoE请求。 */
+    off_t foe_index;                                  /**< FoE写请求数据的索引。 */
+    ec_soe_request_t *soe_request;                    /**< 要处理的SoE请求。 */
 #ifdef EC_EOE
-    ec_eoe_request_t *eoe_request; /**< EoE request to process. */
+    ec_eoe_request_t *eoe_request; /**< 要处理的EoE请求。 */
 #endif
-    ec_mbg_request_t *mbg_request;   /**< MBox Gateway request to process. */
-    ec_dict_request_t *dict_request; /**< Dictionary request to process. */
+    ec_mbg_request_t *mbg_request;   /**< 要处理的MBox Gateway请求。 */
+    ec_dict_request_t *dict_request; /**< 要处理的字典请求。 */
 
-    ec_fsm_coe_t fsm_coe; /**< CoE state machine. */
-    ec_fsm_foe_t fsm_foe; /**< FoE state machine. */
-    ec_fsm_soe_t fsm_soe; /**< SoE state machine. */
+    ec_fsm_coe_t fsm_coe; /**< CoE状态机。 */
+    ec_fsm_foe_t fsm_foe; /**< FoE状态机。 */
+    ec_fsm_soe_t fsm_soe; /**< SoE状态机。 */
 #ifdef EC_EOE
-    ec_fsm_eoe_t fsm_eoe; /**< EoE state machine. */
+    ec_fsm_eoe_t fsm_eoe; /**< EoE状态机。 */
 #endif
-    ec_fsm_mbg_t fsm_mbg;                   /**< MBox Gateway state machine. */
-    ec_fsm_pdo_t fsm_pdo;                   /**< PDO configuration state machine. */
-    ec_fsm_change_t fsm_change;             /**< State change state machine */
-    ec_fsm_slave_scan_t fsm_slave_scan;     /**< slave scan state machine */
-    ec_fsm_slave_config_t fsm_slave_config; /**< slave config state machine. */
+    ec_fsm_mbg_t fsm_mbg;                   /**< MBox Gateway状态机。 */
+    ec_fsm_pdo_t fsm_pdo;                   /**< PDO配置状态机。 */
+    ec_fsm_change_t fsm_change;             /**< 状态改变状态机 */
+    ec_fsm_slave_scan_t fsm_slave_scan;     /**< 从站扫描状态机 */
+    ec_fsm_slave_config_t fsm_slave_config; /**< 从站配置状态机。 */
 };
 
 /*****************************************************************************/
 
-void ec_fsm_slave_init(ec_fsm_slave_t *, ec_slave_t *);
-void ec_fsm_slave_clear(ec_fsm_slave_t *);
+void ec_fsm_slave_init(ec_fsm_slave_t *, ec_slave_t *); // 初始化从站的有限状态机
+void ec_fsm_slave_clear(ec_fsm_slave_t *); // 清除从站的有限状态机
 
-int ec_fsm_slave_exec(ec_fsm_slave_t *, ec_datagram_t *);
-void ec_fsm_slave_set_ready(ec_fsm_slave_t *);
-int ec_fsm_slave_set_unready(ec_fsm_slave_t *);
-int ec_fsm_slave_is_ready(const ec_fsm_slave_t *);
+int ec_fsm_slave_exec(ec_fsm_slave_t *, ec_datagram_t *); // 执行从站的有限状态机
+void ec_fsm_slave_set_ready(ec_fsm_slave_t *); // 设置从站的有限状态机为准备就绪状态
+int ec_fsm_slave_set_unready(ec_fsm_slave_t *); // 设置从站的有限状态机为未准备就绪状态
+int ec_fsm_slave_is_ready(const ec_fsm_slave_t *); // 检查从站的有限状态机是否准备就绪
+#endif
+
 
 /*****************************************************************************/
 

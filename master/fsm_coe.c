@@ -105,55 +105,54 @@ void ec_fsm_coe_error(ec_fsm_coe_t *, ec_datagram_t *);
 
 /*****************************************************************************/
 
-/** SDO abort messages.
+/** SDO 中止消息。
  *
- * The "abort SDO transfer request" supplies an abort code, which can be
- * translated to clear text. This table does the mapping of the codes and
- * messages.
+ * "中止 SDO 传输请求" 提供了一个中止代码，可以将其转换为明文。该表完成了代码和消息的映射。
  */
 const ec_code_msg_t sdo_abort_messages[] = {
-    {0x05030000, "Toggle bit not changed"},
-    {0x05040000, "SDO protocol timeout"},
-    {0x05040001, "Client/Server command specifier not valid or unknown"},
-    {0x05040005, "Out of memory"},
-    {0x06010000, "Unsupported access to an object"},
-    {0x06010001, "Attempt to read a write-only object"},
-    {0x06010002, "Attempt to write a read-only object"},
-    {0x06020000, "This object does not exist in the object directory"},
-    {0x06040041, "The object cannot be mapped into the PDO"},
-    {0x06040042, "The number and length of the objects to be mapped would"
-                 " exceed the PDO length"},
-    {0x06040043, "General parameter incompatibility reason"},
-    {0x06040047, "Gerneral internal incompatibility in device"},
-    {0x06060000, "Access failure due to a hardware error"},
-    {0x06070010, "Data type does not match, length of service parameter does"
-                 " not match"},
-    {0x06070012, "Data type does not match, length of service parameter too"
-                 " high"},
-    {0x06070013, "Data type does not match, length of service parameter too"
-                 " low"},
-    {0x06090011, "Subindex does not exist"},
-    {0x06090030, "Value range of parameter exceeded"},
-    {0x06090031, "Value of parameter written too high"},
-    {0x06090032, "Value of parameter written too low"},
-    {0x06090036, "Maximum value is less than minimum value"},
-    {0x08000000, "General error"},
-    {0x08000020, "Data cannot be transferred or stored to the application"},
-    {0x08000021, "Data cannot be transferred or stored to the application"
-                 " because of local control"},
-    {0x08000022, "Data cannot be transferred or stored to the application"
-                 " because of the present device state"},
-    {0x08000023, "Object dictionary dynamic generation fails or no object"
-                 " dictionary is present"},
+    {0x05030000, "切换位未改变"},
+    {0x05040000, "SDO 协议超时"},
+    {0x05040001, "客户端/服务器命令规范无效或未知"},
+    {0x05040005, "内存不足"},
+    {0x06010000, "不支持对对象进行访问"},
+    {0x06010001, "尝试读取只写对象"},
+    {0x06010002, "尝试写入只读对象"},
+    {0x06020000, "该对象在对象目录中不存在"},
+    {0x06040041, "无法映射对象到 PDO"},
+    {0x06040042, "要映射的对象数量和长度将超过 PDO 长度"},
+    {0x06040043, "一般参数不兼容的原因"},
+    {0x06040047, "设备内部一般不兼容"},
+    {0x06060000, "由于硬件错误而导致访问失败"},
+    {0x06070010, "数据类型不匹配，服务参数的长度不匹配"},
+    {0x06070012, "数据类型不匹配，服务参数的长度过高"},
+    {0x06070013, "数据类型不匹配，服务参数的长度过低"},
+    {0x06090011, "子索引不存在"},
+    {0x06090030, "参数值超出范围"},
+    {0x06090031, "参数值过高"},
+    {0x06090032, "参数值过低"},
+    {0x06090036, "最大值小于最小值"},
+    {0x08000000, "一般错误"},
+    {0x08000020, "无法将数据传输或存储到应用程序"},
+    {0x08000021, "由于本地控制，无法将数据传输或存储到应用程序"},
+    {0x08000022, "由于当前设备状态，无法将数据传输或存储到应用程序"},
+    {0x08000023, "对象字典动态生成失败或不存在对象字典"},
     {}};
 
 /*****************************************************************************/
-
-/** Outputs an SDO abort message.
+/**
+ * @brief 输出一个SDO中止消息。
+ *
+ * @param slave 从站。
+ * @param abort_code 要查找的中止代码。
+ *
+ * @details 此函数用于输出一个SDO中止消息。
+ * 首先，它会遍历SDO中止消息列表，查找与给定中止代码匹配的消息。
+ * 如果找到匹配的消息，将打印相应的中止消息并返回。
+ * 如果未找到匹配的消息，将打印未知的SDO中止代码并返回。
  */
 void ec_canopen_abort_msg(
-    const ec_slave_t *slave, /**< Slave. */
-    uint32_t abort_code      /**< Abort code to search for. */
+    const ec_slave_t *slave, /**< 从站。 */
+    uint32_t abort_code      /**< 要查找的中止代码。 */
 )
 {
     const ec_code_msg_t *abort_msg;
@@ -162,21 +161,28 @@ void ec_canopen_abort_msg(
     {
         if (abort_msg->code == abort_code)
         {
-            EC_SLAVE_ERR(slave, "SDO abort message 0x%08X: \"%s\".\n",
+            EC_SLAVE_ERR(slave, "SDO中止消息0x%08X: \"%s\"。\n",
                          abort_msg->code, abort_msg->message);
             return;
         }
     }
 
-    EC_SLAVE_ERR(slave, "Unknown SDO abort code 0x%08X.\n", abort_code);
+    EC_SLAVE_ERR(slave, "未知的SDO中止代码0x%08X。\n", abort_code);
 }
+
 
 /*****************************************************************************/
 
-/** Constructor.
+/**
+ * @brief 构造函数。
+ *
+ * @param fsm 有限状态机。
+ *
+ * @details 此函数用于初始化有限状态机对象。
+ * 将状态和数据报设置为NULL。
  */
 void ec_fsm_coe_init(
-    ec_fsm_coe_t *fsm /**< Finite state machine */
+    ec_fsm_coe_t *fsm /**< 有限状态机 */ 
 )
 {
     fsm->state = NULL;
@@ -185,35 +191,58 @@ void ec_fsm_coe_init(
 
 /*****************************************************************************/
 
-/** Destructor.
+/**
+ * @brief 析构函数。
+ *
+ * @param fsm 有限状态机。
+ *
+ * @details 此函数用于清除有限状态机对象。
  */
 void ec_fsm_coe_clear(
-    ec_fsm_coe_t *fsm /**< Finite state machine */
+    ec_fsm_coe_t *fsm /**< 有限状态机 */
 )
 {
 }
 
 /*****************************************************************************/
 
-/** Starts reading a slaves' SDO dictionary.
+/**
+ * @brief 开始读取从站的SDO字典。
+ *
+ * @param fsm 有限状态机。
+ * @param slave EtherCAT从站。
+ *
+ * @details 此函数用于开始读取从站的SDO字典。
+ * 将从站和状态设置为相应的值。
  */
 void ec_fsm_coe_dictionary(
-    ec_fsm_coe_t *fsm, /**< Finite state machine */
-    ec_slave_t *slave  /**< EtherCAT slave */
+    ec_fsm_coe_t *fsm, /**< 有限状态机 */
+    ec_slave_t *slave  /**< EtherCAT从站 */
 )
 {
     fsm->slave = slave;
     fsm->state = ec_fsm_coe_dict_start;
 }
 
+
 /*****************************************************************************/
 
-/** Starts to transfer an SDO to/from a slave.
+/**
+ * @brief 开始传输与从站的SDO相关的数据。
+ *
+ * @param fsm 有限状态机。
+ * @param slave EtherCAT从站。
+ * @param request SDO请求。
+ *
+ * @details 此函数用于开始传输与从站的SDO相关的数据。
+ * 将从站和请求设置为相应的值。
+ * 如果请求的方向是输出，将状态设置为向下开始。
+ * 否则，将状态设置为向上开始。
  */
 void ec_fsm_coe_transfer(
-    ec_fsm_coe_t *fsm,        /**< State machine. */
-    ec_slave_t *slave,        /**< EtherCAT slave. */
-    ec_sdo_request_t *request /**< SDO request. */
+    ec_fsm_coe_t *fsm,        /**< 有限状态机。 */
+    ec_slave_t *slave,        /**< EtherCAT从站。 */
+    ec_sdo_request_t *request /**< SDO请求。 */
 )
 {
     fsm->slave = slave;
@@ -231,13 +260,21 @@ void ec_fsm_coe_transfer(
 
 /*****************************************************************************/
 
-/** Executes the current state of the state machine.
+/**
+ * @brief 执行当前状态的有限状态机。
  *
- * \return 1 if the state machine is still in progress, else 0.
+ * @param fsm 有限状态机。
+ * @param datagram 要使用的数据报。
+ *
+ * @return 如果有限状态机仍在进行中，则返回1，否则返回0。
+ *
+ * @details 此函数用于执行有限状态机的当前状态。
+ * 如果有限状态机的状态为结束或错误，将返回0。
+ * 否则，将调用相应的状态函数并返回1。
  */
 int ec_fsm_coe_exec(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 要使用的数据报。 */
 )
 {
     if (fsm->state == ec_fsm_coe_end || fsm->state == ec_fsm_coe_error)
@@ -257,11 +294,18 @@ int ec_fsm_coe_exec(
 
 /*****************************************************************************/
 
-/** Returns, if the state machine terminated with success.
- * \return non-zero if successful.
+/**
+ * @brief 返回有限状态机是否成功终止。
+ *
+ * @param fsm 有限状态机。
+ *
+ * @return 如果成功终止，则返回非零值。
+ *
+ * @details 此函数用于检查有限状态机是否成功终止。
+ * 如果有限状态机的状态为结束，则返回非零值，否则返回0。
  */
 int ec_fsm_coe_success(
-    const ec_fsm_coe_t *fsm /**< Finite state machine */
+    const ec_fsm_coe_t *fsm /**< 有限状态机 */
 )
 {
     return fsm->state == ec_fsm_coe_end;
@@ -269,16 +313,25 @@ int ec_fsm_coe_success(
 
 /*****************************************************************************/
 
-/** Check if the received data are a CoE emergency request.
+/**
+ * @brief 检查接收到的数据是否为CoE紧急请求。
  *
- * If the check is positive, the emergency request is output.
+ * @param fsm 有限状态机。
+ * @param data CoE邮箱数据。
+ * @param size CoE邮箱数据大小。
  *
- * \return The data were an emergency request.
+ * @return 数据是否为紧急请求。
+ *
+ * @details 此函数用于检查接收到的数据是否为CoE紧急请求。
+ * 如果检查结果为真，将输出紧急请求。
+ * 如果数据大小小于2或((EC_READ_U16(data) >> 12) & 0x0F)不等于0x01，则返回0。
+ * 如果数据大小小于10，则输出接收到不完整的CoE紧急请求。
+ * 否则，将将紧急请求数据推入紧急请求环形缓冲区中，并输出紧急请求的详细信息。
  */
 int ec_fsm_coe_check_emergency(
-    ec_fsm_coe_t *fsm,   /**< Finite state machine */
-    const uint8_t *data, /**< CoE mailbox data. */
-    size_t size          /**< CoE mailbox data size. */
+    ec_fsm_coe_t *fsm,   /**< 有限状态机 */
+    const uint8_t *data, /**< CoE邮箱数据 */
+    size_t size          /**< CoE邮箱数据大小 */
 )
 {
     if (size < 2 || ((EC_READ_U16(data) >> 12) & 0x0F) != 0x01)
@@ -286,8 +339,7 @@ int ec_fsm_coe_check_emergency(
 
     if (size < 10)
     {
-        EC_SLAVE_WARN(fsm->slave, "Received incomplete CoE Emergency"
-                                  " request:\n");
+        EC_SLAVE_WARN(fsm->slave, "接收到不完整的CoE紧急请求：\n");
         ec_print_data(data, size);
         return 1;
     }
@@ -300,24 +352,34 @@ int ec_fsm_coe_check_emergency(
         }
     }
 
-    EC_SLAVE_WARN(fsm->slave, "CoE Emergency Request received:\n"
-                              "Error code 0x%04X, Error register 0x%02X, data:\n",
+    EC_SLAVE_WARN(fsm->slave, "接收到CoE紧急请求：\n"
+                              "错误代码0x%04X，错误寄存器0x%02X，数据：\n",
                   EC_READ_U16(data + 2), EC_READ_U8(data + 4));
     ec_print_data(data + 5, 5);
     return 1;
 }
 
 /******************************************************************************
- *  CoE dictionary state machine
+ *  CoE字典状态机
  *****************************************************************************/
 
-/** Prepare a dictionary request.
+/**
+ * @brief 准备字典请求。
  *
- * \return Zero on success, otherwise a negative error code.
+ * @param fsm 有限状态机。
+ * @param datagram 要使用的数据报。
+ *
+ * @return 如果成功，则返回0，否则返回负错误代码。
+ *
+ * @details 此函数用于准备字典请求。
+ * 首先，它会调用ec_slave_mbox_prepare_send函数准备发送数据。
+ * 如果准备失败，将返回相应的错误代码。
+ * 然后，将SDO信息和Get OD List请求写入数据中。
+ * 最后，将状态设置为字典请求。
  */
 int ec_fsm_coe_prepare_dict(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 要使用的数据报。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -328,11 +390,11 @@ int ec_fsm_coe_prepare_dict(
         return PTR_ERR(data);
     }
 
-    EC_WRITE_U16(data, 0x8 << 12); // SDO information
-    EC_WRITE_U8(data + 2, 0x01);   // Get OD List Request
+    EC_WRITE_U16(data, 0x8 << 12); // SDO信息
+    EC_WRITE_U8(data + 2, 0x01);   // 获取OD列表请求
     EC_WRITE_U8(data + 3, 0x00);
     EC_WRITE_U16(data + 4, 0x0000);
-    EC_WRITE_U16(data + 6, 0x0001); // deliver all SDOs!
+    EC_WRITE_U16(data + 6, 0x0001); // 传递所有SDO！
 
     fsm->state = ec_fsm_coe_dict_request;
     return 0;
@@ -340,34 +402,45 @@ int ec_fsm_coe_prepare_dict(
 
 /*****************************************************************************/
 
-/** CoE state: DICT START.
+/**
+ * @brief CoE状态：字典开始。
+ *
+ * @param fsm 有限状态机。
+ * @param datagram 要使用的数据报。
+ *
+ * @details 此函数用于CoE字典状态机的字典开始状态。
+ * 首先，它会检查从站是否支持CoE字典请求。
+ * 如果从站不支持，将设置状态为错误并返回。
+ * 接下来，它会检查从站是否支持SDO信息服务。
+ * 如果从站不支持，将设置状态为错误并返回。
+ * 然后，将重试次数设置为默认值。
+ * 最后，调用ec_fsm_coe_prepare_dict函数准备字典请求。
+ * 如果准备失败，将设置状态为错误。
  */
 void ec_fsm_coe_dict_start(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 要使用的数据报。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
 
     if (!slave->sii_image)
     {
-        EC_SLAVE_ERR(slave, "Slave cannot process CoE dictionary request."
-                            " SII data not available.\n");
+        EC_SLAVE_ERR(slave, "从站无法处理CoE字典请求，SII数据不可用。\n");
         fsm->state = ec_fsm_coe_error;
         return;
     }
 
     if (!(slave->sii_image->sii.mailbox_protocols & EC_MBOX_COE))
     {
-        EC_SLAVE_ERR(slave, "Slave does not support CoE!\n");
+        EC_SLAVE_ERR(slave, "从站不支持CoE！\n");
         fsm->state = ec_fsm_coe_error;
         return;
     }
 
     if (slave->sii_image->sii.has_general && !slave->sii_image->sii.coe_details.enable_sdo_info)
     {
-        EC_SLAVE_ERR(slave, "Slave does not support"
-                            " SDO information service!\n");
+        EC_SLAVE_ERR(slave, "从站不支持SDO信息服务！\n");
         fsm->state = ec_fsm_coe_error;
         return;
     }
@@ -380,14 +453,25 @@ void ec_fsm_coe_dict_start(
     }
 }
 
+
 /*****************************************************************************/
 
-/** CoE state: DICT REQUEST.
- * \todo Timeout behavior
+/**
+ * @brief CoE状态：字典请求。
+ *
+ * @param fsm 有限状态机。
+ * @param datagram 要使用的数据报。
+ *
+ * @details 此函数用于处理CoE状态机的字典请求状态。
+ * 如果数据报的状态为超时且重试次数大于零，则重新准备字典请求并返回。
+ * 如果数据报的状态不是接收到，将设置状态为错误并返回。
+ * 如果数据报的工作计数器不等于1，将设置状态为错误并返回。
+ * 如果邮箱读取请求已经在进行中，将设置状态为字典响应数据，并将数据报状态设置为无效。
+ * 否则，将准备邮箱检查请求，并将重试次数设置为默认值，并将状态设置为字典检查。
  */
 void ec_fsm_coe_dict_request(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 要使用的数据报。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -404,8 +488,7 @@ void ec_fsm_coe_dict_request(
     if (fsm->datagram->state != EC_DATAGRAM_RECEIVED)
     {
         fsm->state = ec_fsm_coe_error;
-        EC_SLAVE_ERR(slave, "Failed to receive CoE dictionary"
-                            " request datagram: ");
+        EC_SLAVE_ERR(slave, "无法接收到CoE字典请求数据报：");
         ec_datagram_print_state(fsm->datagram);
         return;
     }
@@ -413,69 +496,92 @@ void ec_fsm_coe_dict_request(
     if (fsm->datagram->working_counter != 1)
     {
         fsm->state = ec_fsm_coe_error;
-        EC_SLAVE_ERR(slave, "Reception of CoE dictionary request failed: ");
+        EC_SLAVE_ERR(slave, "接收CoE字典请求失败：");
         ec_datagram_print_wc_error(fsm->datagram);
         return;
     }
 
     fsm->jiffies_start = fsm->datagram->jiffies_sent;
 
-    // mailbox read check is skipped if a read request is already ongoing
+    // 如果已经有邮箱读取请求在进行中，则跳过邮箱读取检查
     if (ec_read_mbox_locked(slave))
     {
         fsm->state = ec_fsm_coe_dict_response_data;
-        // the datagram is not used and marked as invalid
+        // 数据报不会被使用，标记为无效
         datagram->state = EC_DATAGRAM_INVALID;
     }
     else
     {
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
         fsm->retries = EC_FSM_RETRIES;
         fsm->state = ec_fsm_coe_dict_check;
     }
 }
 
+
 /*****************************************************************************/
 
-/** CoE state: DICT CHECK.
+/**
+ * CoE状态: 字典检查。
+ *
+ * @param fsm 有限状态机。
+ * @param datagram 要使用的数据报。
+ *
+ * @details 检查CoE字典是否正常。如果字典检查失败或超时，将更新状态机的状态并执行相应操作。
+ *
+ * 如果数据报状态为超时并且重试次数不为零，则准备CoE邮箱的检查操作，并返回。
+ * 如果数据报状态不是已接收，则将状态机的状态设置为ec_fsm_coe_error，清除邮箱的读锁，并打印错误信息。
+ * 如果工作计数器不为1，则将状态机的状态设置为ec_fsm_coe_error，清除邮箱的读锁，并打印错误信息。
+ * 如果检查CoE邮箱失败，则进行以下操作：
+ *     - 检查数据是否已被其他读取请求接收，如果是，则清除邮箱的读锁，将状态机的状态设置为ec_fsm_coe_dict_response_data，并调用相应的状态处理函数。
+ *     - 计算接收到数据报的时间差，如果超过字典列表响应的超时时间，则将状态机的状态设置为ec_fsm_coe_error，清除邮箱的读锁，并打印超时错误信息。
+ *     - 否则，准备CoE邮箱的检查操作，并更新重试次数。
+ * 如果检查CoE邮箱成功，则准备CoE邮箱的数据提取操作，并更新重试次数和状态机的状态。
+ *
+ * 这个函数的目的是在CoE通信中确保字典的正确性，并根据不同的情况进行相应的处理。
+ *
+ * @return 无。
  */
 void ec_fsm_coe_dict_check(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 要使用的数据报。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
 
+    // 如果数据报状态为超时并且重试次数不为零
     if (fsm->datagram->state == EC_DATAGRAM_TIMED_OUT && fsm->retries--)
     {
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_check(slave, datagram); // 不能失败。
         return;
     }
 
+    // 如果数据报状态不是已接收
     if (fsm->datagram->state != EC_DATAGRAM_RECEIVED)
     {
         fsm->state = ec_fsm_coe_error;
         ec_read_mbox_lock_clear(slave);
-        EC_SLAVE_ERR(slave, "Failed to receive CoE mailbox check datagram: ");
+        EC_SLAVE_ERR(slave, "接收CoE邮箱检查数据报失败：");
         ec_datagram_print_state(fsm->datagram);
         return;
     }
 
+    // 如果工作计数器不为1
     if (fsm->datagram->working_counter != 1)
     {
         fsm->state = ec_fsm_coe_error;
         ec_read_mbox_lock_clear(slave);
-        EC_SLAVE_ERR(slave, "Reception of CoE mailbox check"
-                            " datagram failed: ");
+        EC_SLAVE_ERR(slave, "接收CoE邮箱检查数据报失败：");
         ec_datagram_print_wc_error(fsm->datagram);
         return;
     }
 
+    // 如果检查CoE邮箱失败
     if (!ec_slave_mbox_check(fsm->datagram))
     {
         unsigned long diff_ms = 0;
 
-        // check that data is not already received by another read request
+        // 检查数据是否已被其他读取请求接收
         if (slave->mbox_coe_data.payload_size > 0)
         {
             ec_read_mbox_lock_clear(slave);
@@ -487,50 +593,62 @@ void ec_fsm_coe_dict_check(
         diff_ms = (fsm->datagram->jiffies_received - fsm->jiffies_start) *
                   1000 / HZ;
 
+        // 如果超过字典列表响应的超时时间
         if (diff_ms >= EC_FSM_COE_DICT_TIMEOUT)
         {
             fsm->state = ec_fsm_coe_error;
             ec_read_mbox_lock_clear(slave);
-            EC_SLAVE_ERR(slave, "Timeout while waiting for"
-                                " SDO dictionary list response.\n");
+            EC_SLAVE_ERR(slave, "等待SDO字典列表响应超时。\n");
             return;
         }
 
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_check(slave, datagram); // 不能失败。
         fsm->retries = EC_FSM_RETRIES;
         return;
     }
 
-    // Fetch response
-    ec_slave_mbox_prepare_fetch(slave, datagram); // can not fail.
+    // 获取响应
+    ec_slave_mbox_prepare_fetch(slave, datagram); // 不能失败。
     fsm->retries = EC_FSM_RETRIES;
     fsm->state = ec_fsm_coe_dict_response;
 }
 
+
 /*****************************************************************************/
 
-/** Prepare an object description request.
+/** 
+ * 准备对象描述请求。
  *
- * \return Zero on success, otherwise a negative error code.
+ * \return 成功时返回零，否则返回负错误代码。
+ *
+ * @param fsm 有限状态机。
+ * @param datagram 要使用的数据报。
+ *
+ * @details
+ * 该函数用于准备一个对象描述请求。它将在给定的有限状态机和数据报上执行必要的操作，以发送对象描述请求。
+ * 首先，它从有限状态机中获取从站对象(ec_slave_t)。
+ * 然后，它调用ec_slave_mbox_prepare_send函数，为发送对象描述请求准备邮箱数据。
+ * 如果该函数返回错误指针(IS_ERR(data))，则将返回相应的错误代码(PTR_ERR(data))。
+ * 否则，它将在邮箱数据中写入特定的字节序列，以表示对象描述请求的类型和参数。
+ * 最后，它将有限状态机的状态设置为ec_fsm_coe_dict_desc_request，并返回零表示成功。
  */
 int ec_fsm_coe_dict_prepare_desc(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 要使用的数据报。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
-    u8 *data = ec_slave_mbox_prepare_send(slave, datagram, EC_MBOX_TYPE_COE,
-                                          8);
+    u8 *data = ec_slave_mbox_prepare_send(slave, datagram, EC_MBOX_TYPE_COE, 8);
     if (IS_ERR(data))
     {
         return PTR_ERR(data);
     }
 
-    EC_WRITE_U16(data, 0x8 << 12); // SDO information
-    EC_WRITE_U8(data + 2, 0x03);   // Get object description request
+    EC_WRITE_U16(data, 0x8 << 12); // SDO信息
+    EC_WRITE_U8(data + 2, 0x03);   // 获取对象描述请求
     EC_WRITE_U8(data + 3, 0x00);
     EC_WRITE_U16(data + 4, 0x0000);
-    EC_WRITE_U16(data + 6, fsm->sdo->index); // SDO index
+    EC_WRITE_U16(data + 6, fsm->sdo->index); // SDO索引
 
     fsm->state = ec_fsm_coe_dict_desc_request;
     return 0;
@@ -539,20 +657,30 @@ int ec_fsm_coe_dict_prepare_desc(
 /*****************************************************************************/
 
 /**
-   CoE state: DICT RESPONSE.
-   \todo Timeout behavior
-*/
-
+ * CoE状态：DICT RESPONSE。
+ * \todo 超时行为
+ *
+ * @param fsm 有限状态机。
+ * @param datagram 要使用的数据报。
+ *
+ * @details
+ * 该函数用于处理CoE字典响应状态。根据不同的情况，它执行相应的操作。
+ * 如果数据报状态为超时并且重试次数不为零，它将准备数据报的提取操作，并返回。
+ * 如果数据报状态不是已接收，它将更新状态机的状态为ec_fsm_coe_error，清除邮箱的读锁，并打印错误信息。
+ * 如果工作计数器不为1，它将检查数据是否已被其他读取请求读取，如果是，则清除邮箱的读锁，将状态机的状态设置为ec_fsm_coe_dict_response_data，并调用相应的状态处理函数。
+ * 如果数据尚未被其他读取请求读取，它将将状态机的状态设置为ec_fsm_coe_error，清除邮箱的读锁，并打印错误信息。
+ * 最后，它清除邮箱的读锁，将状态机的状态设置为ec_fsm_coe_dict_response_data，并调用相应的状态处理函数。
+ */
 void ec_fsm_coe_dict_response(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 要使用的数据报。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
 
     if (fsm->datagram->state == EC_DATAGRAM_TIMED_OUT && fsm->retries--)
     {
-        ec_slave_mbox_prepare_fetch(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_fetch(slave, datagram); // 不能失败。
         return;
     }
 
@@ -560,20 +688,19 @@ void ec_fsm_coe_dict_response(
     {
         fsm->state = ec_fsm_coe_error;
         ec_read_mbox_lock_clear(slave);
-        EC_SLAVE_ERR(slave, "Failed to receive CoE dictionary"
-                            " response datagram: ");
+        EC_SLAVE_ERR(slave, "接收CoE字典响应数据报失败：");
         ec_datagram_print_state(fsm->datagram);
         return;
     }
 
     if (fsm->datagram->working_counter != 1)
     {
-        // only an error if data has not already been read by another read request
+        // 仅当数据尚未被其他读取请求读取时才报错
         if (slave->mbox_coe_data.payload_size == 0)
         {
             fsm->state = ec_fsm_coe_error;
             ec_read_mbox_lock_clear(slave);
-            EC_SLAVE_ERR(slave, "Reception of CoE dictionary response failed: ");
+            EC_SLAVE_ERR(slave, "接收CoE字典响应失败：");
             ec_datagram_print_wc_error(fsm->datagram);
             return;
         }
@@ -582,17 +709,39 @@ void ec_fsm_coe_dict_response(
     fsm->state = ec_fsm_coe_dict_response_data;
     fsm->state(fsm, datagram);
 }
-
 /*****************************************************************************/
 
-/**
-   CoE state: DICT RESPONSE DATA.
-
-*/
-
+/** 
+ * CoE状态: DICT RESPONSE DATA.
+ *
+ * @param fsm 有限状态机。
+ * @param datagram 要使用的数据报。
+ *
+ * @details
+ * 该函数用于处理CoE字典响应数据状态。根据不同的情况，它执行相应的操作。
+ * 如果邮箱数据的有效载荷大小大于零，则将其大小设置为零。
+ * 否则，如果邮箱数据不可用，则初始化一个新的邮箱读取检查。
+ * 如果邮箱读取锁定，则等待当前读取请求，并将数据报状态设置为EC_DATAGRAM_INVALID。
+ * 否则，准备邮箱检查操作，并将状态机的状态设置为ec_fsm_coe_dict_check。
+ * 
+ * 如果成功获取邮箱数据，并且邮箱协议为EC_MBOX_TYPE_COE，则进行进一步处理。
+ * 首先，检查是否接收到紧急消息，如果是，则再次检查CoE响应。
+ * 如果接收到的数据大小小于3个字节，则打印错误信息并将状态机的状态设置为ec_fsm_coe_error。
+ * 如果接收到的数据不是SDO信息或Get OD List响应，则打印错误信息并将状态机的状态设置为ec_fsm_coe_dict_check。
+ * 
+ * 如果是第一个段的数据，则设置索引列表偏移量为8，否则设置为6。
+ * 如果接收到的数据大小小于索引列表偏移量或数据大小为奇数，则打印错误信息并将状态机的状态设置为ec_fsm_coe_error。
+ * 
+ * 根据接收到的索引列表，创建SDO对象并添加到从站的SDO字典中。
+ * 如果还有未接收的SDO列表片段，则打印调试信息。
+ * 如果接收到的数据中标志位指示还有更多的消息等待，则再次进行邮箱检查。
+ * 
+ * 如果SDO字典为空，则表示没有SDO对象，将状态机的状态设置为ec_fsm_coe_end表示成功。
+ * 否则，将状态机的状态设置为ec_fsm_coe_dict_desc_request，并继续处理SDO描述请求。
+ */
 void ec_fsm_coe_dict_response_data(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 要使用的数据报。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -604,22 +753,22 @@ void ec_fsm_coe_dict_response_data(
     bool first_segment;
     size_t index_list_offset;
 
-    // process the data available or initiate a new mailbox read check
+    // 处理可用的数据或启动新的邮箱读取检查
     if (slave->mbox_coe_data.payload_size > 0)
     {
         slave->mbox_coe_data.payload_size = 0;
     }
     else
     {
-        // initiate a new mailbox read check if required data is not available
+        // 如果所需的数据不可用，则启动新的邮箱读取检查
         if (ec_read_mbox_locked(slave))
         {
-            // await current read request and mark the datagram as invalid
+            // 等待当前读取请求并将数据报标记为无效
             datagram->state = EC_DATAGRAM_INVALID;
         }
         else
         {
-            ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+            ec_slave_mbox_prepare_check(slave, datagram); // 不能失败。
             fsm->state = ec_fsm_coe_dict_check;
         }
         return;
@@ -634,7 +783,7 @@ void ec_fsm_coe_dict_response_data(
 
     if (mbox_prot != EC_MBOX_TYPE_COE)
     {
-        EC_SLAVE_ERR(slave, "Received mailbox protocol 0x%02X as response.\n",
+        EC_SLAVE_ERR(slave, "接收到协议为 0x%02X 的邮箱响应。\n",
                      mbox_prot);
         fsm->state = ec_fsm_coe_error;
         return;
@@ -642,8 +791,8 @@ void ec_fsm_coe_dict_response_data(
 
     if (ec_fsm_coe_check_emergency(fsm, data, rec_size))
     {
-        // check for CoE response again
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        // 再次检查CoE响应
+        ec_slave_mbox_prepare_check(slave, datagram); // 不能失败。
         fsm->retries = EC_FSM_RETRIES;
         fsm->state = ec_fsm_coe_dict_check;
         return;
@@ -651,21 +800,19 @@ void ec_fsm_coe_dict_response_data(
 
     if (rec_size < 3)
     {
-        EC_SLAVE_ERR(slave, "Received corrupted SDO dictionary response"
-                            " (size %zu).\n",
+        EC_SLAVE_ERR(slave, "接收到损坏的SDO字典响应 (大小 %zu)。\n",
                      rec_size);
         fsm->state = ec_fsm_coe_error;
         return;
     }
 
-    if (EC_READ_U16(data) >> 12 == 0x8 && // SDO information
+    if (EC_READ_U16(data) >> 12 == 0x8 && // SDO信息
         (EC_READ_U8(data + 2) & 0x7F) == 0x07)
-    { // error response
-        EC_SLAVE_ERR(slave, "SDO information error response!\n");
+    { // 错误响应
+        EC_SLAVE_ERR(slave, "SDO信息错误响应！\n");
         if (rec_size < 10)
         {
-            EC_SLAVE_ERR(slave, "Incomplete SDO information"
-                                " error response:\n");
+            EC_SLAVE_ERR(slave, "不完整的SDO信息错误响应：\n");
             ec_print_data(data, rec_size);
         }
         else
@@ -676,16 +823,15 @@ void ec_fsm_coe_dict_response_data(
         return;
     }
 
-    if (EC_READ_U16(data) >> 12 != 0x8 || // SDO information
+    if (EC_READ_U16(data) >> 12 != 0x8 || // SDO信息
         (EC_READ_U8(data + 2) & 0x7F) != 0x02)
-    { // Get OD List response
+    { // 获取OD列表响应
         if (fsm->slave->master->debug_level)
         {
-            EC_SLAVE_DBG(slave, 1, "Invalid SDO list response!"
-                                   " Retrying...\n");
+            EC_SLAVE_DBG(slave, 1, "无效的SDO列表响应！正在重试...\n");
             ec_print_data(data, rec_size);
         }
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_check(slave, datagram); // 不能失败。
         fsm->retries = EC_FSM_RETRIES;
         fsm->state = ec_fsm_coe_dict_check;
         return;
@@ -696,7 +842,7 @@ void ec_fsm_coe_dict_response_data(
 
     if (rec_size < index_list_offset || rec_size % 2)
     {
-        EC_SLAVE_ERR(slave, "Invalid data size %zu!\n", rec_size);
+        EC_SLAVE_ERR(slave, "无效的数据大小 %zu！\n", rec_size);
         ec_print_data(data, rec_size);
         fsm->state = ec_fsm_coe_error;
         return;
@@ -709,13 +855,13 @@ void ec_fsm_coe_dict_response_data(
         sdo_index = EC_READ_U16(data + index_list_offset + i * 2);
         if (!sdo_index)
         {
-            EC_SLAVE_DBG(slave, 1, "SDO dictionary contains index 0x0000.\n");
+            EC_SLAVE_DBG(slave, 1, "SDO字典包含索引 0x0000。\n");
             continue;
         }
 
         if (!(sdo = (ec_sdo_t *)kmalloc(sizeof(ec_sdo_t), GFP_KERNEL)))
         {
-            EC_SLAVE_ERR(slave, "Failed to allocate memory for SDO!\n");
+            EC_SLAVE_ERR(slave, "为SDO分配内存失败！\n");
             fsm->state = ec_fsm_coe_error;
             return;
         }
@@ -727,15 +873,15 @@ void ec_fsm_coe_dict_response_data(
     fragments_left = EC_READ_U16(data + 4);
     if (fragments_left)
     {
-        EC_SLAVE_DBG(slave, 1, "SDO list fragments left: %u\n",
+        EC_SLAVE_DBG(slave, 1, "SDO列表剩余片段：%u\n",
                      fragments_left);
     }
 
     if (EC_READ_U8(data + 2) & 0x80 || fragments_left)
     {
-        // more messages waiting. check again.
+        // 还有更多的消息等待，再次进行邮箱检查
         fsm->jiffies_start = fsm->datagram->jiffies_sent;
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_check(slave, datagram); // 不能失败。
         fsm->retries = EC_FSM_RETRIES;
         fsm->state = ec_fsm_coe_dict_check;
         return;
@@ -743,12 +889,12 @@ void ec_fsm_coe_dict_response_data(
 
     if (list_empty(&slave->sdo_dictionary))
     {
-        // no SDOs in dictionary. finished.
-        fsm->state = ec_fsm_coe_end; // success
+        // 字典中没有SDO对象，处理完成
+        fsm->state = ec_fsm_coe_end; // 成功
         return;
     }
 
-    // fetch SDO descriptions
+    // 获取SDO描述
     fsm->sdo = list_entry(slave->sdo_dictionary.next, ec_sdo_t, list);
 
     fsm->retries = EC_FSM_RETRIES;
@@ -761,13 +907,23 @@ void ec_fsm_coe_dict_response_data(
 /*****************************************************************************/
 
 /**
-   CoE state: DICT DESC REQUEST.
-   \todo Timeout behavior
-*/
-
+ * CoE状态: DICT DESC REQUEST.
+ * \todo 超时行为
+ *
+ * @param fsm 有限状态机。
+ * @param datagram 要使用的数据报。
+ *
+ * @details
+ * 该函数用于处理CoE字典描述请求状态。根据不同的情况，它执行相应的操作。
+ * 如果数据报状态为超时并且重试次数不为零，则准备SDO描述请求并返回。
+ * 如果数据报状态不是已接收，则将状态机的状态设置为ec_fsm_coe_error，并打印错误信息。
+ * 如果数据报的工作计数器不为1，则将状态机的状态设置为ec_fsm_coe_error，并打印错误信息。
+ * 
+ * 如果成功准备了SDO描述请求，则将状态机的状态设置为ec_fsm_coe_dict_desc_response_data。
+ */
 void ec_fsm_coe_dict_desc_request(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 要使用的数据报。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -784,8 +940,7 @@ void ec_fsm_coe_dict_desc_request(
     if (fsm->datagram->state != EC_DATAGRAM_RECEIVED)
     {
         fsm->state = ec_fsm_coe_error;
-        EC_SLAVE_ERR(slave, "Failed to receive CoE SDO"
-                            " description request datagram: ");
+        EC_SLAVE_ERR(slave, "接收CoE SDO描述请求数据报失败：");
         ec_datagram_print_state(fsm->datagram);
         return;
     }
@@ -793,24 +948,23 @@ void ec_fsm_coe_dict_desc_request(
     if (fsm->datagram->working_counter != 1)
     {
         fsm->state = ec_fsm_coe_error;
-        EC_SLAVE_ERR(slave, "Reception of CoE SDO description"
-                            " request failed: ");
+        EC_SLAVE_ERR(slave, "接收CoE SDO描述请求失败：");
         ec_datagram_print_wc_error(fsm->datagram);
         return;
     }
 
     fsm->jiffies_start = fsm->datagram->jiffies_sent;
 
-    // mailbox read check is skipped if a read request is already ongoing
+    // 如果已经有一个读取请求正在进行，则跳过邮箱读取检查
     if (ec_read_mbox_locked(slave))
     {
         fsm->state = ec_fsm_coe_dict_desc_response_data;
-        // the datagram is not used and marked as invalid
+        // 数据报不使用并标记为无效
         datagram->state = EC_DATAGRAM_INVALID;
     }
     else
     {
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_check(slave, datagram); // 不能失败。
         fsm->retries = EC_FSM_RETRIES;
         fsm->state = ec_fsm_coe_dict_desc_check;
     }
@@ -819,19 +973,29 @@ void ec_fsm_coe_dict_desc_request(
 /*****************************************************************************/
 
 /**
-   CoE state: DICT DESC CHECK.
-*/
-
+ * CoE状态: DICT DESC CHECK.
+ *
+ * @param fsm 有限状态机。
+ * @param datagram 要使用的数据报。
+ *
+ * @details
+ * 该函数用于处理CoE字典描述检查状态。根据不同的情况，它执行相应的操作。
+ * 如果数据报状态为超时并且重试次数不为零，则准备邮箱检查操作并返回。
+ * 如果数据报状态不是已接收，则将状态机的状态设置为ec_fsm_coe_error，并打印错误信息。
+ * 如果数据报的工作计数器不为1，则将状态机的状态设置为ec_fsm_coe_error，并打印错误信息。
+ * 
+ * 如果成功接收到邮箱检查数据报，则将状态机的状态设置为ec_fsm_coe_dict_desc_response。
+ */
 void ec_fsm_coe_dict_desc_check(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 要使用的数据报。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
 
     if (fsm->datagram->state == EC_DATAGRAM_TIMED_OUT && fsm->retries--)
     {
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_check(slave, datagram); // 不能失败。
         return;
     }
 
@@ -839,7 +1003,7 @@ void ec_fsm_coe_dict_desc_check(
     {
         fsm->state = ec_fsm_coe_error;
         ec_read_mbox_lock_clear(slave);
-        EC_SLAVE_ERR(slave, "Failed to receive CoE mailbox check datagram: ");
+        EC_SLAVE_ERR(slave, "接收CoE邮箱检查数据报失败：");
         ec_datagram_print_state(fsm->datagram);
         return;
     }
@@ -848,8 +1012,7 @@ void ec_fsm_coe_dict_desc_check(
     {
         fsm->state = ec_fsm_coe_error;
         ec_read_mbox_lock_clear(slave);
-        EC_SLAVE_ERR(slave, "Reception of CoE mailbox check"
-                            " datagram failed: ");
+        EC_SLAVE_ERR(slave, "接收CoE邮箱检查数据报失败：");
         ec_datagram_print_wc_error(fsm->datagram);
         return;
     }
@@ -858,7 +1021,7 @@ void ec_fsm_coe_dict_desc_check(
     {
         unsigned long diff_ms = 0;
 
-        // check that data is not already received by another read request
+        // 检查数据是否已经被其他读取请求接收
         if (slave->mbox_coe_data.payload_size > 0)
         {
             ec_read_mbox_lock_clear(slave);
@@ -874,19 +1037,18 @@ void ec_fsm_coe_dict_desc_check(
         {
             fsm->state = ec_fsm_coe_error;
             ec_read_mbox_lock_clear(slave);
-            EC_SLAVE_ERR(slave, "Timeout while waiting for"
-                                " SDO 0x%04x object description response.\n",
+            EC_SLAVE_ERR(slave, "等待SDO 0x%04x对象描述响应超时。\n",
                          fsm->sdo->index);
             return;
         }
 
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_check(slave, datagram); // 不能失败。
         fsm->retries = EC_FSM_RETRIES;
         return;
     }
 
-    // Fetch response
-    ec_slave_mbox_prepare_fetch(slave, datagram); // can not fail.
+    // 获取响应数据
+    ec_slave_mbox_prepare_fetch(slave, datagram); // 不能失败。
     fsm->retries = EC_FSM_RETRIES;
     fsm->state = ec_fsm_coe_dict_desc_response;
 }

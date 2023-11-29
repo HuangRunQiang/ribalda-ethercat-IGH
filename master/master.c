@@ -68,57 +68,83 @@
 
 /*****************************************************************************/
 
-/** Set to 1 to enable external datagram injection debugging.
+/** 将此值设置为1以启用外部数据报注入调试。
  */
 #define DEBUG_INJECT 0
 
-/** Always output corrupted frames.
+/** 总是输出损坏的帧。
  */
 #define FORCE_OUTPUT_CORRUPTED 0
 
 #ifdef EC_HAVE_CYCLES
 
-/** Frame timeout in cycles.
+/** 帧超时时间（以cycles为单位）。
  */
 static cycles_t timeout_cycles;
 
-/** Timeout for external datagram injection [cycles].
+/** 外部数据报注入超时时间（以cycles为单位）。
  */
 static cycles_t ext_injection_timeout_cycles;
 
 #else
 
-/** Frame timeout in jiffies.
+/** 帧超时时间（以jiffies为单位）。
  */
 static unsigned long timeout_jiffies;
 
-/** Timeout for external datagram injection [jiffies].
+/** 外部数据报注入超时时间（以jiffies为单位）。
  */
 static unsigned long ext_injection_timeout_jiffies;
 
 #endif
 
-/** List of intervals for statistics [s].
+/** 统计信息的时间间隔列表（以秒为单位）。
  */
 const unsigned int rate_intervals[] = {
     1, 10, 60};
 
 /*****************************************************************************/
 
+/** 清除主站的从站配置。
+ */
 void ec_master_clear_slave_configs(ec_master_t *);
+
+/** 清除主站的域。
+ */
 void ec_master_clear_domains(ec_master_t *);
+
+/** 主站的空闲线程。
+ */
 static int ec_master_idle_thread(void *);
+
+/** 主站的操作线程。
+ */
 static int ec_master_operation_thread(void *);
+
 #ifdef EC_EOE
+/** 主站的EOE线程。
+ */
 static int ec_master_eoe_thread(void *);
 #endif
+
+/** 查找主站的DC参考时钟。
+ */
 void ec_master_find_dc_ref_clock(ec_master_t *);
+
+/** 清除主站的设备统计信息。
+ */
 void ec_master_clear_device_stats(ec_master_t *);
+
+/** 更新主站的设备统计信息。
+ */
 void ec_master_update_device_stats(ec_master_t *);
+
 
 /*****************************************************************************/
 
-/** Static variables initializer.
+/**
+ * @brief	静态变量初始化函数
+ * @作用	初始化静态变量
  */
 void ec_master_init_static(void)
 {
@@ -127,28 +153,35 @@ void ec_master_init_static(void)
     ext_injection_timeout_cycles =
         (cycles_t)EC_SDO_INJECTION_TIMEOUT /* us */ * (cpu_khz / 1000);
 #else
-    // one jiffy may always elapse between time measurement
+    // 两次时间测量之间可能会经过一个jiffy
     timeout_jiffies = max(EC_IO_TIMEOUT * HZ / 1000000, 1);
     ext_injection_timeout_jiffies =
         max(EC_SDO_INJECTION_TIMEOUT * HZ / 1000000, 1);
 #endif
 }
 
+
 /*****************************************************************************/
 
 /**
-   Master constructor.
-   \return 0 in case of success, else < 0
-*/
-
-int ec_master_init(ec_master_t *master,       /**< EtherCAT master */
-                   unsigned int index,        /**< master index */
-                   const uint8_t *main_mac,   /**< MAC address of main device */
-                   const uint8_t *backup_mac, /**< MAC address of backup device */
-                   dev_t device_number,       /**< Character device number. */
-                   struct class *class,       /**< Device class. */
-                   unsigned int debug_level   /**< Debug level (module parameter). */
-)
+ * @brief	主站初始化函数
+ * @作用	初始化EtherCAT主站
+ * @param	master			EtherCAT主站对象
+ * @param	index			主站索引
+ * @param	main_mac		主设备的MAC地址
+ * @param	backup_mac		备份设备的MAC地址
+ * @param	device_number	字符设备编号
+ * @param	class			设备类
+ * @param	debug_level		调试级别（模块参数）
+ * @retval	0：成功，< 0：失败
+ */
+int ec_master_init(ec_master_t *master,
+                   unsigned int index,
+                   const uint8_t *main_mac,
+                   const uint8_t *backup_mac,
+                   dev_t device_number,
+                   struct class *class,
+                   unsigned int debug_level)
 {
     int ret;
     unsigned int dev_idx, i;
@@ -217,7 +250,7 @@ int ec_master_init(ec_master_t *master,       /**< EtherCAT master */
     master->rt_slave_requests = 0;
     master->rt_slaves_available = 0;
 
-    // init external datagram ring
+    // 初始化外部数据报环
     for (i = 0; i < EC_EXT_RING_SIZE; i++)
     {
         ec_datagram_t *datagram = &master->ext_datagram_ring[i];
@@ -225,7 +258,7 @@ int ec_master_init(ec_master_t *master,       /**< EtherCAT master */
         snprintf(datagram->name, EC_DATAGRAM_NAME_SIZE, "ext-%u", i);
     }
 
-    // send interval in IDLE phase
+    // 设置IDLE阶段的发送间隔
     ec_master_set_send_interval(master, 1000000 / HZ);
 
     master->fsm_slave = NULL;
@@ -238,7 +271,7 @@ int ec_master_init(ec_master_t *master,       /**< EtherCAT master */
     master->stats.unmatched = 0;
     master->stats.output_jiffies = 0;
 
-    // set up pcap debugging
+    // 设置pcap调试
     if (pcap_size > 0)
     {
         master->pcap_data = vmalloc(pcap_size);
@@ -269,7 +302,7 @@ int ec_master_init(ec_master_t *master,       /**< EtherCAT master */
 
     init_waitqueue_head(&master->request_queue);
 
-    // init devices
+    // 初始化设备
     for (dev_idx = EC_DEVICE_MAIN; dev_idx < ec_master_num_devices(master);
          dev_idx++)
     {
@@ -280,7 +313,7 @@ int ec_master_init(ec_master_t *master,       /**< EtherCAT master */
         }
     }
 
-    // init state machine datagram
+    // 初始化状态机数据报
     ec_datagram_init(&master->fsm_datagram);
     snprintf(master->fsm_datagram.name, EC_DATAGRAM_NAME_SIZE, "master-fsm");
     ret = ec_datagram_prealloc(&master->fsm_datagram, EC_MAX_DATA_SIZE);
@@ -291,10 +324,10 @@ int ec_master_init(ec_master_t *master,       /**< EtherCAT master */
         goto out_clear_devices;
     }
 
-    // create state machine object
+    // 创建状态机对象
     ec_fsm_master_init(&master->fsm, master, &master->fsm_datagram);
 
-    // alloc external datagram ring
+    // 分配外部数据报环
     for (i = 0; i < EC_EXT_RING_SIZE; i++)
     {
         ec_datagram_t *datagram = &master->ext_datagram_ring[i];
@@ -308,7 +341,7 @@ int ec_master_init(ec_master_t *master,       /**< EtherCAT master */
         }
     }
 
-    // init reference sync datagram
+    // 初始化参考同步数据报
     ec_datagram_init(&master->ref_sync_datagram);
     snprintf(master->ref_sync_datagram.name, EC_DATAGRAM_NAME_SIZE,
              "refsync");
@@ -321,7 +354,7 @@ int ec_master_init(ec_master_t *master,       /**< EtherCAT master */
         goto out_clear_ext_datagrams;
     }
 
-    // init sync datagram
+    // 初始化同步数据报
     ec_datagram_init(&master->sync_datagram);
     snprintf(master->sync_datagram.name, EC_DATAGRAM_NAME_SIZE, "sync");
     ret = ec_datagram_prealloc(&master->sync_datagram, 4);
@@ -333,7 +366,7 @@ int ec_master_init(ec_master_t *master,       /**< EtherCAT master */
         goto out_clear_ref_sync;
     }
 
-    // init sync64 datagram
+    // 初始化64位同步数据报
     ec_datagram_init(&master->sync64_datagram);
     snprintf(master->sync64_datagram.name, EC_DATAGRAM_NAME_SIZE, "sync64");
     ret = ec_datagram_prealloc(&master->sync64_datagram, 8);
@@ -345,7 +378,7 @@ int ec_master_init(ec_master_t *master,       /**< EtherCAT master */
         goto out_clear_sync;
     }
 
-    // init sync monitor datagram
+    // 初始化同步监控数据报
     ec_datagram_init(&master->sync_mon_datagram);
     snprintf(master->sync_mon_datagram.name, EC_DATAGRAM_NAME_SIZE,
              "syncmon");
@@ -361,7 +394,7 @@ int ec_master_init(ec_master_t *master,       /**< EtherCAT master */
     master->dc_ref_config = NULL;
     master->dc_ref_clock = NULL;
 
-    // init character device
+    // 初始化字符设备
     ret = ec_cdev_init(&master->cdev, master, device_number);
     if (ret)
         goto out_clear_sync_mon;
@@ -391,7 +424,7 @@ int ec_master_init(ec_master_t *master,       /**< EtherCAT master */
     }
 
 #ifdef EC_RTDM
-    // init RTDM device
+    // 初始化RTDM设备
     ret = ec_rtdm_dev_init(&master->rtdm_dev, master);
     if (ret)
     {
@@ -436,10 +469,13 @@ out_clear_devices:
 
 /*****************************************************************************/
 
-/** Destructor.
+/**
+ * @brief	析构函数
+ * @作用	清理EtherCAT主站对象
+ * @param	master	EtherCAT主站对象
  */
 void ec_master_clear(
-    ec_master_t *master /**< EtherCAT master */
+    ec_master_t *master /**< EtherCAT主站 */
 )
 {
     unsigned int dev_idx, i;
@@ -458,7 +494,7 @@ void ec_master_clear(
 
     ec_master_slaves_not_available(master);
 #ifdef EC_EOE
-    // free all EoE handlers
+    // 释放所有EoE处理程序
     ec_master_clear_eoe_handlers(master, 1);
 #endif
     ec_master_clear_domains(master);
@@ -496,12 +532,15 @@ void ec_master_clear(
 /*****************************************************************************/
 
 #ifdef EC_EOE
-/** Clear and free auto created EoE handlers.
- * Clear the slave reference from manually created EoE handlers.
+/**
+ * @brief	清除并释放自动创建的EoE处理程序
+ * @作用	清除手动创建的EoE处理程序的从站引用
+ * @param	master	EtherCAT主站对象
+ * @param	free_all	释放自动和手动创建的EoE处理程序
  */
 void ec_master_clear_eoe_handlers(
-    ec_master_t *master,  /**< EtherCAT master */
-    unsigned int free_all /**< free auto and manual EoE handlers */
+    ec_master_t *master, /**< EtherCAT主站 */
+    unsigned int free_all /**< 释放自动和手动EoE处理程序 */
 )
 {
     ec_eoe_t *eoe, *next;
@@ -510,14 +549,14 @@ void ec_master_clear_eoe_handlers(
     {
         if (free_all || eoe->auto_created)
         {
-            // free_all or auto created eoe: clear and free
+            // 释放所有或者自动创建的EoE处理程序：清除并释放
             list_del(&eoe->list);
             ec_eoe_clear(eoe);
             kfree(eoe);
         }
         else
         {
-            // manaully created eoe: clear slave ref
+            // 手动创建的EoE处理程序：清除从站引用
             ec_eoe_clear_slave(eoe);
         }
     }
@@ -526,7 +565,9 @@ void ec_master_clear_eoe_handlers(
 
 /*****************************************************************************/
 
-/** Clear all slave configurations.
+/**
+ * @brief	清除所有从站配置
+ * @param	master	EtherCAT主站对象
  */
 void ec_master_clear_slave_configs(ec_master_t *master)
 {
@@ -544,14 +585,17 @@ void ec_master_clear_slave_configs(ec_master_t *master)
 
 /*****************************************************************************/
 
-/** Clear the SII data.
+
+/**
+ * @brief	清除SII数据
+ * @param	sii_image	SII 映像对象
  */
 void ec_sii_image_clear(ec_sii_image_t *sii_image)
 {
     unsigned int i;
     ec_pdo_t *pdo, *next_pdo;
 
-    // free all sync managers
+    // 释放所有同步管理器
     if (sii_image->sii.syncs)
     {
         for (i = 0; i < sii_image->sii.sync_count; i++)
@@ -562,7 +606,7 @@ void ec_sii_image_clear(ec_sii_image_t *sii_image)
         sii_image->sii.syncs = NULL;
     }
 
-    // free all strings
+    // 释放所有字符串
     if (sii_image->sii.strings)
     {
         for (i = 0; i < sii_image->sii.string_count; i++)
@@ -570,7 +614,7 @@ void ec_sii_image_clear(ec_sii_image_t *sii_image)
         kfree(sii_image->sii.strings);
     }
 
-    // free all SII PDOs
+    // 释放所有SII PDOs
     list_for_each_entry_safe(pdo, next_pdo, &sii_image->sii.pdos, list)
     {
         list_del(&pdo->list);
@@ -584,12 +628,16 @@ void ec_sii_image_clear(ec_sii_image_t *sii_image)
     }
 }
 
+
 /*****************************************************************************/
 
-/** Clear the SII data applied during bus scanning.
+/**
+ * @brief 清除总线扫描期间应用的SII数据。
+ * 
+ * @param master EtherCAT主站。
  */
 void ec_master_clear_sii_images(
-    ec_master_t *master /**< EtherCAT master. */
+    ec_master_t *master /**< EtherCAT主站。 */
 )
 {
     ec_sii_image_t *sii_image, *next;
@@ -608,24 +656,30 @@ void ec_master_clear_sii_images(
     }
 }
 
+
 /*****************************************************************************/
 
-/** Set flag to say that the slaves are not available for slave request
- * processing.
+/**
+ * @brief 设置标志，表示从站不可用于从站请求处理。
  *
- * Called from master fsm, which is processed inside the master_sem lock
+ * 从主站fsm中调用，该函数在master_sem锁内处理。
+ *
+ * @param master EtherCAT主站。
  */
 void ec_master_slaves_not_available(ec_master_t *master)
 {
     master->rt_slaves_available = 0;
 }
 
+
 /*****************************************************************************/
 
-/** Set flag to say that the slaves are now available for slave request
- * processing.
+/**
+ * @brief 设置标志，表示从站现在可用于从站请求处理。
  *
- * Called from master fsm, which is processed inside the master_sem lock
+ * 从主站fsm中调用，该函数在master_sem锁内处理。
+ *
+ * @param master EtherCAT主站。
  */
 void ec_master_slaves_available(ec_master_t *master)
 {
@@ -634,7 +688,13 @@ void ec_master_slaves_available(ec_master_t *master)
 
 /*****************************************************************************/
 
-/** Clear all slaves.
+/**
+ * @brief 清除所有从站。
+ *
+ * 该函数的作用是清除主站中的所有从站。
+ *
+ * @param master EtherCAT主站。
+ * @retval 无
  */
 void ec_master_clear_slaves(ec_master_t *master)
 {
@@ -642,17 +702,15 @@ void ec_master_clear_slaves(ec_master_t *master)
 
     master->dc_ref_clock = NULL;
 
-    // External requests are obsolete, so we wake pending waiters and remove
-    // them from the list.
+    // 外部请求已过时，因此我们唤醒待处理的等待者并将其从列表中移除。
 
     while (!list_empty(&master->sii_requests))
     {
         ec_sii_write_request_t *request =
             list_entry(master->sii_requests.next,
                        ec_sii_write_request_t, list);
-        list_del_init(&request->list); // dequeue
-        EC_MASTER_WARN(master, "Discarding SII request, slave %s-%u about"
-                               " to be deleted.\n",
+        list_del_init(&request->list); // 出队
+        EC_MASTER_WARN(master, "丢弃SII请求，从站 %s-%u 即将被删除。\n",
                        ec_device_names[request->slave->device_index != 0],
                        request->slave->ring_position);
         request->state = EC_INT_REQUEST_FAILURE;
@@ -679,9 +737,16 @@ void ec_master_clear_slaves(ec_master_t *master)
     master->slave_count = 0;
 }
 
+
 /*****************************************************************************/
 
-/** Clear all domains.
+/**
+ * @brief 清除所有域。
+ *
+ * 该函数的作用是清除主站中的所有域。
+ *
+ * @param master EtherCAT主站。
+ * @retval 无
  */
 void ec_master_clear_domains(ec_master_t *master)
 {
@@ -695,12 +760,17 @@ void ec_master_clear_domains(ec_master_t *master)
     }
 }
 
+
 /*****************************************************************************/
 
-/** Clear the configuration applied by the application.
+/**
+ * @brief 清除应用程序应用的配置。
+ * @作用：清除应用程序应用的配置。
+ * @param master EtherCAT主站。
+ * @retval 无。
  */
 void ec_master_clear_config(
-    ec_master_t *master /**< EtherCAT master. */
+    ec_master_t *master /**< EtherCAT主站。 */
 )
 {
     ec_lock_down(&master->master_sem);
@@ -711,10 +781,14 @@ void ec_master_clear_config(
 
 /*****************************************************************************/
 
-/** Internal sending callback.
- */
+/**
+@brief 内部发送回调函数。
+@作用 用于发送EtherCAT主站的内部回调函数。
+@param cb_data 回调数据。
+@retval 无
+*/
 void ec_master_internal_send_cb(
-    void *cb_data /**< Callback data. */
+void *cb_data /**< 回调数据。 */
 )
 {
     ec_master_t *master = (ec_master_t *)cb_data;
@@ -723,12 +797,19 @@ void ec_master_internal_send_cb(
     ec_lock_up(&master->io_sem);
 }
 
+
 /*****************************************************************************/
 
-/** Internal receiving callback.
+/**
+ * @brief 内部接收回调函数。
+ *
+ * 此函数用作EtherCAT主站的内部接收回调函数。
+ *
+ * @param cb_data 回调数据。
+ * @retval 无。
  */
 void ec_master_internal_receive_cb(
-    void *cb_data /**< Callback data. */
+    void *cb_data /**< 回调数据。 */
 )
 {
     ec_master_t *master = (ec_master_t *)cb_data;
@@ -736,74 +817,91 @@ void ec_master_internal_receive_cb(
     ecrt_master_receive(master);
     ec_lock_up(&master->io_sem);
 }
-
+*/
 /*****************************************************************************/
 
-/** Starts the master thread.
+/**
+ * @brief 启动主站线程。
  *
- * \retval  0 Success.
- * \retval <0 Error code.
+ * 此函数用于启动EtherCAT主站的线程。
+ *
+ * @param master EtherCAT主站。
+ * @param thread_func 要启动的线程函数。
+ * @param name 线程名称。
+ * @retval 0 成功。
+ * @retval <0 错误代码。
  */
 int ec_master_thread_start(
-    ec_master_t *master,        /**< EtherCAT master */
-    int (*thread_func)(void *), /**< thread function to start */
-    const char *name            /**< Thread name. */
+    ec_master_t *master,        /**< EtherCAT主站 */
+    int (*thread_func)(void *), /**< 要启动的线程函数 */
+    const char *name            /**< 线程名称 */
 )
 {
-    EC_MASTER_INFO(master, "Starting %s thread.\n", name);
+    EC_MASTER_INFO(master, "启动%s线程。\n", name);
     master->thread = kthread_run(thread_func, master, name);
     if (IS_ERR(master->thread))
     {
         int err = (int)PTR_ERR(master->thread);
-        EC_MASTER_ERR(master, "Failed to start master thread (error %i)!\n",
-                      err);
+        EC_MASTER_ERR(master, "无法启动主站线程（错误代码 %i）！\n", err);
         master->thread = NULL;
         return err;
     }
 
     return 0;
 }
+*/
 
 /*****************************************************************************/
 
-/** Stops the master thread.
+/**
+ * @brief 停止主站线程。
+ *
+ * 此函数用于停止EtherCAT主站的线程。
+ *
+ * @param master EtherCAT主站。
+ * @retval 无。
  */
 void ec_master_thread_stop(
-    ec_master_t *master /**< EtherCAT master */
+    ec_master_t *master /**< EtherCAT主站 */
 )
 {
     unsigned long sleep_jiffies;
 
     if (!master->thread)
     {
-        EC_MASTER_WARN(master, "%s(): Already finished!\n", __func__);
+        EC_MASTER_WARN(master, "%s(): 已经停止！\n", __func__);
         return;
     }
 
-    EC_MASTER_DBG(master, 1, "Stopping master thread.\n");
+    EC_MASTER_DBG(master, 1, "停止主站线程。\n");
 
     kthread_stop(master->thread);
     master->thread = NULL;
-    EC_MASTER_INFO(master, "Master thread exited.\n");
+    EC_MASTER_INFO(master, "主站线程已退出。\n");
 
     if (master->fsm_datagram.state != EC_DATAGRAM_SENT)
     {
         return;
     }
 
-    // wait for FSM datagram
-    sleep_jiffies = max(HZ / 100, 1); // 10 ms, at least 1 jiffy
+    // 等待FSM数据报
+    sleep_jiffies = max(HZ / 100, 1); // 10毫秒，至少1个jiffy
     schedule_timeout(sleep_jiffies);
 }
+*/
 
 /*****************************************************************************/
 
-/** Transition function from ORPHANED to IDLE phase.
+/**
+ * @brief 从ORPHANED（孤立）状态转换到IDLE（空闲）阶段的函数。
  *
- * \return Zero on success, otherwise a negative error code.
+ * 此函数用于将EtherCAT主站从ORPHANED状态转换到IDLE状态。
+ *
+ * @param master EtherCAT主站。
+ * @return 成功返回零，否则返回负的错误代码。
  */
 int ec_master_enter_idle_phase(
-    ec_master_t *master /**< EtherCAT master */
+    ec_master_t *master /**< EtherCAT主站 */
 )
 {
     int ret;
@@ -822,7 +920,7 @@ int ec_master_enter_idle_phase(
 
     master->phase = EC_IDLE;
 
-    // reset number of responding slaves to trigger scanning
+    // 重置响应从站的数量以触发扫描
     for (dev_idx = EC_DEVICE_MAIN; dev_idx < ec_master_num_devices(master);
          dev_idx++)
     {
@@ -830,9 +928,8 @@ int ec_master_enter_idle_phase(
     }
 
 #ifdef EC_EOE
-    // create eoe interfaces for this master on startup
-    // Note: needs the masters main device to be configured to init the
-    //   eoe's mac address
+    // 在启动时为该主站创建EOE接口
+    // 注意：需要主站的主设备进行配置以初始化EOE的MAC地址
     for (i = 0; i < eoe_count; i++)
     {
         ret = ec_eoe_parse(eoe_interfaces[i], &master_index, &alias,
@@ -840,9 +937,8 @@ int ec_master_enter_idle_phase(
 
         if ((ret == 0) && (master_index == master->index))
         {
-            EC_MASTER_INFO(master, "Adding EOE iface \"%s\" for master %d, "
-                                   "alias %u, ring position %u.\n",
-                           eoe_interfaces[i], master_index, alias, ring_position);
+            EC_MASTER_INFO(master, "为主站 %d 添加EOE接口 \"%s\"，别名 %u，环位置 %u。\n",
+                           master_index, eoe_interfaces[i], alias, ring_position);
             ecrt_master_eoe_addif(master, alias, ring_position);
         }
     }
@@ -858,9 +954,15 @@ int ec_master_enter_idle_phase(
 
 /*****************************************************************************/
 
-/** Transition function from IDLE to ORPHANED phase.
+/**
+ * @brief 从IDLE（空闲）状态转换到ORPHANED（孤立）阶段的函数。
+ *
+ * 此函数用于将EtherCAT主站从IDLE状态转换到ORPHANED状态。
+ *
+ * @param master EtherCAT主站。
+ * @return 无。
  */
-void ec_master_leave_idle_phase(ec_master_t *master /**< EtherCAT master */)
+void ec_master_leave_idle_phase(ec_master_t *master /**< EtherCAT主站 */)
 {
     EC_MASTER_DBG(master, 1, "IDLE -> ORPHANED.\n");
 
@@ -882,12 +984,16 @@ void ec_master_leave_idle_phase(ec_master_t *master /**< EtherCAT master */)
 
 /*****************************************************************************/
 
-/** Transition function from IDLE to OPERATION phase.
+/**
+ * @brief 从IDLE（空闲）状态转换到OPERATION（运行）阶段的函数。
  *
- * \return Zero on success, otherwise a negative error code.
+ * 此函数用于将EtherCAT主站从IDLE状态转换到OPERATION状态。
+ *
+ * @param master EtherCAT主站。
+ * @return 成功返回零，否则返回负的错误代码。
  */
 int ec_master_enter_operation_phase(
-    ec_master_t *master /**< EtherCAT master */
+    ec_master_t *master /**< EtherCAT主站 */
 )
 {
     int ret = 0;
@@ -900,18 +1006,16 @@ int ec_master_enter_operation_phase(
     {
         ec_lock_up(&master->config_sem);
 
-        // wait for slave configuration to complete
+        // 等待从站配置完成
         ret = wait_event_interruptible(master->config_queue,
                                        !master->config_busy);
         if (ret)
         {
-            EC_MASTER_INFO(master, "Finishing slave configuration"
-                                   " interrupted by signal.\n");
+            EC_MASTER_INFO(master, "从站配置被信号中断，正在完成配置。\n");
             goto out_return;
         }
 
-        EC_MASTER_DBG(master, 1, "Waiting for pending slave"
-                                 " configuration returned.\n");
+        EC_MASTER_DBG(master, 1, "等待待处理的从站配置返回。\n");
     }
     else
     {
@@ -928,21 +1032,19 @@ int ec_master_enter_operation_phase(
     {
         ec_lock_up(&master->scan_sem);
 
-        // wait for slave scan to complete
+        // 等待从站扫描完成
         ret = wait_event_interruptible(master->scan_queue,
                                        !master->scan_busy);
         if (ret)
         {
-            EC_MASTER_INFO(master, "Waiting for slave scan"
-                                   " interrupted by signal.\n");
+            EC_MASTER_INFO(master, "等待从站扫描被信号中断。\n");
             goto out_allow;
         }
 
-        EC_MASTER_DBG(master, 1, "Waiting for pending"
-                                 " slave scan returned.\n");
+        EC_MASTER_DBG(master, 1, "等待待处理的从站扫描返回。\n");
     }
 
-    // set states for all slaves
+    // 设置所有从站的状态为PREOP
     for (slave = master->slaves;
          slave < master->slaves + master->slave_count;
          slave++)
@@ -964,22 +1066,28 @@ out_return:
 
 /*****************************************************************************/
 
-/** Transition function from OPERATION to IDLE phase.
+/**
+ * @brief 从OPERATION（运行）状态转换到IDLE（空闲）阶段的函数。
+ *
+ * 此函数用于将EtherCAT主站从OPERATION状态转换到IDLE状态。
+ *
+ * @param master EtherCAT主站。
+ * @return 无。
  */
 void ec_master_leave_operation_phase(
-    ec_master_t *master /**< EtherCAT master */
+    ec_master_t *master /**< EtherCAT主站 */
 )
 {
     if (master->active)
     {
-        ecrt_master_deactivate(master); // also clears config
+        ecrt_master_deactivate(master); // 同时清除配置
     }
     else
     {
         ec_master_clear_config(master);
     }
 
-    /* Re-allow scanning for IDLE phase. */
+    /* 重新允许扫描以进行IDLE阶段。 */
     master->allow_scan = 1;
 
     EC_MASTER_DBG(master, 1, "OPERATION -> IDLE.\n");
@@ -989,10 +1097,16 @@ void ec_master_leave_operation_phase(
 
 /*****************************************************************************/
 
-/** Injects external datagrams that fit into the datagram queue.
+/**
+ * @brief 注入适合于数据报队列的外部数据报的函数。
+ *
+ * 此函数用于注入适合于数据报队列的外部数据报。
+ *
+ * @param master EtherCAT主站。
+ * @return 无。
  */
 void ec_master_inject_external_datagrams(
-    ec_master_t *master /**< EtherCAT master */
+    ec_master_t *master /**< EtherCAT主站 */
 )
 {
     ec_datagram_t *datagram;
@@ -1003,7 +1117,7 @@ void ec_master_inject_external_datagrams(
 
     if (master->ext_ring_idx_rt == master->ext_ring_idx_fsm)
     {
-        // nothing to inject
+        // 没有需要注入的数据报
         return;
     }
 
@@ -1016,7 +1130,7 @@ void ec_master_inject_external_datagrams(
     }
 
 #if DEBUG_INJECT
-    EC_MASTER_DBG(master, 1, "Injecting datagrams, queue_size=%zu\n",
+    EC_MASTER_DBG(master, 1, "正在注入数据报，queue_size=%zu\n",
                   queue_size);
 #endif
 
@@ -1026,7 +1140,7 @@ void ec_master_inject_external_datagrams(
 
         if (datagram->state != EC_DATAGRAM_INIT)
         {
-            // skip datagram
+            // 跳过数据报
             master->ext_ring_idx_rt =
                 (master->ext_ring_idx_rt + 1) % EC_EXT_RING_SIZE;
             continue;
@@ -1036,8 +1150,7 @@ void ec_master_inject_external_datagrams(
         if (new_queue_size <= master->max_queue_size)
         {
 #if DEBUG_INJECT
-            EC_MASTER_DBG(master, 1, "Injecting datagram %s"
-                                     " size=%zu, queue_size=%zu\n",
+            EC_MASTER_DBG(master, 1, "正在注入数据报 %s，大小为%zu，queue_size=%zu\n",
                           datagram->name,
                           datagram->data_size, new_queue_size);
             datagram_count++;
@@ -1052,13 +1165,12 @@ void ec_master_inject_external_datagrams(
         else if (datagram->data_size > master->max_queue_size)
         {
             datagram->state = EC_DATAGRAM_ERROR;
-            EC_MASTER_ERR(master, "External datagram %s is too large,"
-                                  " size=%zu, max_queue_size=%zu\n",
+            EC_MASTER_ERR(master, "外部数据报 %s 太大，大小为%zu，最大队列大小为%zu\n",
                           datagram->name, datagram->data_size,
                           master->max_queue_size);
         }
         else
-        { // datagram does not fit in the current cycle
+        { // 数据报无法在当前周期内容纳
 #ifdef EC_HAVE_CYCLES
             cycles_t cycles_now = get_cycles();
 
@@ -1079,9 +1191,7 @@ void ec_master_inject_external_datagrams(
 #else
                 time_us = (unsigned int)((jiffies - datagram->jiffies_sent) * 1000000 / HZ);
 #endif
-                EC_MASTER_ERR(master, "Timeout %u us: Injecting"
-                                      " external datagram %s size=%zu,"
-                                      " max_queue_size=%zu\n",
+                EC_MASTER_ERR(master, "超时 %u 微秒：注入外部数据报 %s，大小为%zu，最大队列大小为%zu\n",
                               time_us, datagram->name,
                               datagram->data_size, master->max_queue_size);
 #endif
@@ -1089,8 +1199,7 @@ void ec_master_inject_external_datagrams(
             else
             {
 #if DEBUG_INJECT
-                EC_MASTER_DBG(master, 1, "Deferred injecting"
-                                         " external datagram %s size=%u, queue_size=%u\n",
+                EC_MASTER_DBG(master, 1, "延迟注入外部数据报 %s，大小为%u，queue_size=%u\n",
                               datagram->name, datagram->data_size, queue_size);
 #endif
                 break;
@@ -1102,18 +1211,24 @@ void ec_master_inject_external_datagrams(
     }
 
 #if DEBUG_INJECT
-    EC_MASTER_DBG(master, 1, "Injected %u datagrams.\n", datagram_count);
+    EC_MASTER_DBG(master, 1, "已注入 %u 个数据报。\n", datagram_count);
 #endif
 }
 
 /*****************************************************************************/
 
-/** Sets the expected interval between calls to ecrt_master_send
- * and calculates the maximum amount of data to queue.
+/**
+ * @brief 设置ecrt_master_send调用之间的预期间隔，并计算最大队列中的数据量。
+ *
+ * 此函数用于设置ecrt_master_send调用之间的预期间隔，并计算最大队列中的数据量。
+ *
+ * @param master EtherCAT主站。
+ * @param send_interval 发送间隔。
+ * @return 无。
  */
 void ec_master_set_send_interval(
-    ec_master_t *master,       /**< EtherCAT master */
-    unsigned int send_interval /**< Send interval */
+    ec_master_t *master,       /**< EtherCAT主站 */
+    unsigned int send_interval /**< 发送间隔 */
 )
 {
     master->send_interval = send_interval;
@@ -1124,10 +1239,16 @@ void ec_master_set_send_interval(
 
 /*****************************************************************************/
 
-/** Requests that all slaves on this master be rebooted (if supported).
+/**
+ * @brief 请求重启此主站上的所有从站（如果支持）。
+ *
+ * 此函数用于请求重启此主站上的所有从站（如果支持）。
+ *
+ * @param master EtherCAT主站。
+ * @return 无。
  */
 void ec_master_reboot_slaves(
-    ec_master_t *master /**< EtherCAT master */
+    ec_master_t *master /**< EtherCAT主站 */
 )
 {
     master->reboot = 1;
@@ -1135,12 +1256,16 @@ void ec_master_reboot_slaves(
 
 /*****************************************************************************/
 
-/** Searches for a free datagram in the external datagram ring.
+/**
+ * @brief 在外部数据报环中搜索空闲的数据报。
  *
- * \return Next free datagram, or NULL.
+ * 此函数用于在外部数据报环中搜索空闲的数据报。
+ *
+ * @param master EtherCAT主站。
+ * @return 下一个空闲的数据报，如果没有则返回NULL。
  */
 ec_datagram_t *ec_master_get_external_datagram(
-    ec_master_t *master /**< EtherCAT master */
+    ec_master_t *master /**< EtherCAT主站 */
 )
 {
     if ((master->ext_ring_idx_fsm + 1) % EC_EXT_RING_SIZE !=
@@ -1148,7 +1273,7 @@ ec_datagram_t *ec_master_get_external_datagram(
     {
         ec_datagram_t *datagram =
             &master->ext_datagram_ring[master->ext_ring_idx_fsm];
-        /* Record the queued time for ec_master_inject_external_datagrams */
+        /* 记录ec_master_inject_external_datagrams的排队时间 */
 #ifdef EC_HAVE_CYCLES
         datagram->cycles_sent = get_cycles();
 #endif
@@ -1164,21 +1289,25 @@ ec_datagram_t *ec_master_get_external_datagram(
 
 /*****************************************************************************/
 
-/** Places a datagram in the datagram queue.
+/**
+ * @brief 将数据报放入数据报队列。
+ *
+ * 此函数用于将数据报放入数据报队列。
+ *
+ * @param master EtherCAT主站。
+ * @param datagram 数据报。
+ * @return 无。
  */
 void ec_master_queue_datagram(
-    ec_master_t *master,    /**< EtherCAT master */
-    ec_datagram_t *datagram /**< datagram */
+    ec_master_t *master,    /**< EtherCAT主站 */
+    ec_datagram_t *datagram /**< 数据报 */
 )
 {
     ec_datagram_t *queued_datagram;
 
-    /* It is possible, that a datagram in the queue is re-initialized with the
-     * ec_datagram_<type>() methods and then shall be queued with this method.
-     * In that case, the state is already reset to EC_DATAGRAM_INIT. Check if
-     * the datagram is queued to avoid duplicate queuing (which results in an
-     * infinite loop!). Set the state to EC_DATAGRAM_QUEUED again, probably
-     * causing an unmatched datagram. */
+    /* 可能会出现在队列中重置状态为EC_DATAGRAM_INIT的数据报，然后使用此方法将其排队。
+     * 在这种情况下，状态已经重置为EC_DATAGRAM_INIT。检查数据报是否已排队以避免重复排队（这将导致无限循环！）。
+     * 将状态重新设置为EC_DATAGRAM_QUEUED，可能导致数据报不匹配。 */
     list_for_each_entry(queued_datagram, &master->datagram_queue, queue)
     {
         if (queued_datagram == datagram)
@@ -1186,7 +1315,7 @@ void ec_master_queue_datagram(
             datagram->skip_count++;
 #ifdef EC_RT_SYSLOG
             EC_MASTER_DBG(master, 1,
-                          "Datagram %p already queued (skipping).\n", datagram);
+                          "数据报 %p 已排队（跳过）。\n", datagram);
 #endif
             datagram->state = EC_DATAGRAM_QUEUED;
             return;
@@ -1202,11 +1331,18 @@ void ec_master_queue_datagram(
 
 /*****************************************************************************/
 
-/** Places a datagram in the non-application datagram queue.
+/**
+ * @brief 将数据报放入非应用数据报队列。
+ *
+ * 此函数用于将数据报放入非应用数据报队列。
+ *
+ * @param master EtherCAT主站。
+ * @param datagram 数据报。
+ * @return 无。
  */
 void ec_master_queue_datagram_ext(
-    ec_master_t *master,    /**< EtherCAT master */
-    ec_datagram_t *datagram /**< datagram */
+    ec_master_t *master,    /**< EtherCAT主站 */
+    ec_datagram_t *datagram /**< 数据报 */
 )
 {
     ec_lock_down(&master->ext_queue_sem);
@@ -1223,12 +1359,15 @@ static int index_in_use(ec_master_t *master, uint8_t index)
     return 0;
 }
 
-/** Sends the datagrams in the queue for a certain device.
+/** 发送队列中的数据报给特定的设备。
  *
+ * @param master EtherCAT主站。
+ * @param device_index 设备索引。
+ * @return 发送的字节数。
  */
 size_t ec_master_send_datagrams(
-    ec_master_t *master,           /**< EtherCAT master */
-    ec_device_index_t device_index /**< Device index. */
+    ec_master_t *master,           /**< EtherCAT主站 */
+    ec_device_index_t device_index /**< 设备索引 */
 )
 {
     ec_datagram_t *datagram, *next;
@@ -1259,7 +1398,7 @@ size_t ec_master_send_datagrams(
         follows_word = NULL;
         more_datagrams_waiting = 0;
 
-        // fill current frame with datagrams
+        // 填充当前帧的数据报
         list_for_each_entry(datagram, &master->datagram_queue, queue)
         {
             if (datagram->state != EC_DATAGRAM_QUEUED ||
@@ -1270,13 +1409,13 @@ size_t ec_master_send_datagrams(
 
             if (!frame_data)
             {
-                // fetch pointer to transmit socket buffer
+                // 获取传输套接字缓冲区的指针
                 frame_data =
                     ec_device_tx_data(&master->devices[device_index]);
                 cur_data = frame_data + EC_FRAME_HEADER_SIZE;
             }
 
-            // does the current datagram fit in the frame?
+            // 当前数据报是否适合帧中？
             datagram_size = EC_DATAGRAM_HEADER_SIZE + datagram->data_size + EC_DATAGRAM_FOOTER_SIZE;
             if (cur_data - frame_data + datagram_size > ETH_DATA_LEN)
             {
@@ -1284,14 +1423,13 @@ size_t ec_master_send_datagrams(
                 break;
             }
 
-            // do not reuse the index of a pending datagram to avoid confusion
-            // in ec_master_receive_datagrams()
+            // 不要重用待处理的数据报的索引，以避免在ec_master_receive_datagrams()中混淆
             last_index = master->datagram_index;
             while (index_in_use(master, master->datagram_index))
             {
                 if (++master->datagram_index == last_index)
                 {
-                    EC_MASTER_ERR(master, "No free datagram index, sending delayed\n");
+                    EC_MASTER_ERR(master, "没有空闲的数据报索引，发送延迟\n");
                     goto break_send;
                 }
             }
@@ -1299,17 +1437,17 @@ size_t ec_master_send_datagrams(
 
             list_add_tail(&datagram->sent, &sent_datagrams);
 
-            EC_MASTER_DBG(master, 2, "Adding datagram 0x%02X\n",
+            EC_MASTER_DBG(master, 2, "添加数据报 0x%02X\n",
                           datagram->index);
 
-            // set "datagram following" flag in previous datagram
+            // 在上一个数据报中设置“数据报后续”标志
             if (follows_word)
             {
                 EC_WRITE_U16(follows_word,
                              EC_READ_U16(follows_word) | 0x8000);
             }
 
-            // EtherCAT datagram header
+            // EtherCAT数据报头
             EC_WRITE_U8(cur_data, datagram->type);
             EC_WRITE_U8(cur_data + 1, datagram->index);
             memcpy(cur_data + 2, datagram->address, EC_ADDR_LEN);
@@ -1318,42 +1456,42 @@ size_t ec_master_send_datagrams(
             follows_word = cur_data + 6;
             cur_data += EC_DATAGRAM_HEADER_SIZE;
 
-            // EtherCAT datagram data
+            // EtherCAT数据报数据
             memcpy(cur_data, datagram->data, datagram->data_size);
             cur_data += datagram->data_size;
 
-            // EtherCAT datagram footer
-            EC_WRITE_U16(cur_data, 0x0000); // reset working counter
+            // EtherCAT数据报尾部
+            EC_WRITE_U16(cur_data, 0x0000); // 重置工作计数器
             cur_data += EC_DATAGRAM_FOOTER_SIZE;
         }
 
     break_send:
         if (list_empty(&sent_datagrams))
         {
-            EC_MASTER_DBG(master, 2, "nothing to send.\n");
+            EC_MASTER_DBG(master, 2, "没有要发送的数据。\n");
             break;
         }
 
-        // EtherCAT frame header
+        // EtherCAT帧头
         EC_WRITE_U16(frame_data, ((cur_data - frame_data - EC_FRAME_HEADER_SIZE) & 0x7FF) | 0x1000);
 
-        // pad frame
+        // 填充帧
         while (cur_data - frame_data < ETH_ZLEN - ETH_HLEN)
             EC_WRITE_U8(cur_data++, 0x00);
 
-        EC_MASTER_DBG(master, 2, "frame size: %zu\n", cur_data - frame_data);
+        EC_MASTER_DBG(master, 2, "帧大小：%zu\n", cur_data - frame_data);
 
-        // send frame
+        // 发送帧
         ec_device_send(&master->devices[device_index],
                        cur_data - frame_data);
-        /* preamble and inter-frame gap */
+        /* 前导码和帧间隙 */
         sent_bytes += ETH_HLEN + cur_data - frame_data + ETH_FCS_LEN + 20;
 #ifdef EC_HAVE_CYCLES
         cycles_sent = get_cycles();
 #endif
         jiffies_sent = jiffies;
 
-        // set datagram states and sending timestamps
+        // 设置数据报的状态和发送时间戳
         list_for_each_entry_safe(datagram, next, &sent_datagrams, sent)
         {
             datagram->state = EC_DATAGRAM_SENT;
@@ -1362,7 +1500,7 @@ size_t ec_master_send_datagrams(
 #endif
             datagram->jiffies_sent = jiffies_sent;
             datagram->app_time_sent = master->app_time;
-            list_del_init(&datagram->sent); // empty list of sent datagrams
+            list_del_init(&datagram->sent); // 清空已发送数据报的列表
         }
 
         frame_count++;
@@ -1373,7 +1511,7 @@ size_t ec_master_send_datagrams(
     {
         cycles_end = get_cycles();
         EC_MASTER_DBG(master, 0, "%s()"
-                                 " sent %u frames in %uus.\n",
+                                 " 在%u微秒内发送了%u帧。\n",
                       __func__, frame_count,
                       (unsigned int)(cycles_end - cycles_start) * 1000 / cpu_khz);
     }
@@ -1383,17 +1521,21 @@ size_t ec_master_send_datagrams(
 
 /*****************************************************************************/
 
-/** Processes a received frame.
+/** 处理接收到的帧。
  *
- * This function is called by the network driver for every received frame.
+ * 网络驱动程序会为每个接收到的帧调用此函数。
  *
- * \return 0 in case of success, else < 0
+ * @param master EtherCAT主站。
+ * @param device EtherCAT设备。
+ * @param frame_data 帧数据。
+ * @param size 接收到的数据大小。
+ * @return 无。
  */
 void ec_master_receive_datagrams(
-    ec_master_t *master,       /**< EtherCAT master */
-    ec_device_t *device,       /**< EtherCAT device */
-    const uint8_t *frame_data, /**< frame data */
-    size_t size                /**< size of the received data */
+    ec_master_t *master,       /**< EtherCAT主站 */
+    ec_device_t *device,       /**< EtherCAT设备 */
+    const uint8_t *frame_data, /**< 帧数据 */
+    size_t size                /**< 接收到的数据大小 */
 )
 {
     size_t frame_size, data_size;
@@ -1410,8 +1552,7 @@ void ec_master_receive_datagrams(
     {
         if (master->debug_level || FORCE_OUTPUT_CORRUPTED)
         {
-            EC_MASTER_DBG(master, 0, "Corrupted frame received"
-                                     " on %s (size %zu < %u byte):\n",
+            EC_MASTER_DBG(master, 0, "在%s上接收到损坏的帧（大小%zu < %u字节）：\n",
                           device->dev->name, size, EC_FRAME_HEADER_SIZE);
             ec_print_data(frame_data, size);
         }
@@ -1424,7 +1565,7 @@ void ec_master_receive_datagrams(
 
     cur_data = frame_data;
 
-    // check length of entire frame
+    // 检查整个帧的长度
     frame_size = EC_READ_U16(cur_data) & 0x07FF;
     cur_data += EC_FRAME_HEADER_SIZE;
 
@@ -1432,9 +1573,7 @@ void ec_master_receive_datagrams(
     {
         if (master->debug_level || FORCE_OUTPUT_CORRUPTED)
         {
-            EC_MASTER_DBG(master, 0, "Corrupted frame received"
-                                     " on %s (invalid frame size %zu for "
-                                     "received size %zu):\n",
+            EC_MASTER_DBG(master, 0, "在%s上接收到损坏的帧（无效的帧大小%zu，接收到的大小%zu）：\n",
                           device->dev->name,
                           frame_size, size);
             ec_print_data(frame_data, size);
@@ -1449,7 +1588,7 @@ void ec_master_receive_datagrams(
     cmd_follows = 1;
     while (cmd_follows)
     {
-        // process datagram header
+        // 处理数据报头
         datagram_type = EC_READ_U8(cur_data);
         datagram_index = EC_READ_U8(cur_data + 1);
         datagram_slave_addr = EC_READ_U16(cur_data + 2);
@@ -1462,8 +1601,7 @@ void ec_master_receive_datagrams(
         {
             if (master->debug_level || FORCE_OUTPUT_CORRUPTED)
             {
-                EC_MASTER_DBG(master, 0, "Corrupted frame received"
-                                         " on %s (invalid data size %zu):\n",
+                EC_MASTER_DBG(master, 0, "在%s上接收到损坏的帧（无效的数据大小%zu）：\n",
                               device->dev->name, data_size);
                 ec_print_data(frame_data, size);
             }
@@ -1474,7 +1612,7 @@ void ec_master_receive_datagrams(
             return;
         }
 
-        // search for matching datagram in the queue
+        // 在队列中搜索匹配的数据报
         matched = 0;
         list_for_each_entry(datagram, &master->datagram_queue, queue)
         {
@@ -1485,7 +1623,7 @@ void ec_master_receive_datagrams(
             }
         }
 
-        // no matching datagram was found
+        // 没有找到匹配的数据报
         if (!matched)
         {
             master->stats.unmatched++;
@@ -1495,7 +1633,7 @@ void ec_master_receive_datagrams(
 
             if (unlikely(master->debug_level > 0))
             {
-                EC_MASTER_DBG(master, 0, "UNMATCHED datagram:\n");
+                EC_MASTER_DBG(master, 0, "未匹配的数据报：\n");
                 ec_print_data(cur_data - EC_DATAGRAM_HEADER_SIZE,
                               EC_DATAGRAM_HEADER_SIZE + data_size + EC_DATAGRAM_FOOTER_SIZE);
 #ifdef EC_DEBUG_RING
@@ -1513,7 +1651,7 @@ void ec_master_receive_datagrams(
             datagram->type != EC_DATAGRAM_LWR)
         {
 
-            // common mailbox dispatcher for mailboxes read using the physical slave address
+            // 使用物理从站地址读取的常规邮箱调度程序
             if (datagram->type == EC_DATAGRAM_FPRD)
             {
                 datagram_wc = EC_READ_U16(cur_data + data_size);
@@ -1536,18 +1674,14 @@ void ec_master_receive_datagrams(
                                 {
                                     if (slave->valid_mbox_data)
                                     {
-                                        // check if the mailbox header slave address is the
-                                        // MBox Gateway addr offset above the slave position, and
-                                        // a valid MBox Gateway address
-                                        // Note: the datagram station address is the slave position + 1
-                                        // Note: the EL6614 EoE module does not fill in the MailBox Header
-                                        //   Address value in the EoE response.  Other modules / protocols
-                                        //   may do the same.
+                                        // 检查邮箱头的从站地址是否为从站位置上方的MBox Gateway地址偏移量，并且是有效的MBox Gateway地址
+                                        // 注意：数据报的站地址为从站位置+1
+                                        // 注意：EL6614 EoE模块不会填充EoE响应中的邮箱头地址值。其他模块/协议可能也会这样做。
                                         if (unlikely(
                                                 (EC_READ_U16(cur_data + 2) == datagram_slave_addr + EC_MBG_SLAVE_ADDR_OFFSET - 1) &&
                                                 (EC_READ_U16(cur_data + 2) >= EC_MBG_SLAVE_ADDR_OFFSET)))
                                         {
-                                            // EtherCAT Mailbox Gateway response
+                                            // EtherCAT邮箱网关响应
                                             if ((slave->mbox_mbg_data.data) && (data_size <= slave->mbox_mbg_data.data_size))
                                             {
                                                 memcpy(slave->mbox_mbg_data.data, cur_data, data_size);
@@ -1561,14 +1695,14 @@ void ec_master_receive_datagrams(
                                             {
 #ifdef EC_EOE
                                             case EC_MBOX_TYPE_EOE:
-                                                // check EOE type and store in correct handlers mbox data cache
+                                                // 检查EOE类型并存储在正确的处理程序的邮箱数据缓存中
                                                 eoe_type = EC_READ_U8(cur_data + 6) & 0x0F;
 
                                                 switch (eoe_type)
                                                 {
 
                                                 case EC_EOE_TYPE_FRAME_FRAG:
-                                                    // EoE Frame Fragment handler
+                                                    // EoE帧片段处理程序
                                                     if ((slave->mbox_eoe_frag_data.data) && (data_size <= slave->mbox_eoe_frag_data.data_size))
                                                     {
                                                         memcpy(slave->mbox_eoe_frag_data.data, cur_data, data_size);
@@ -1576,7 +1710,7 @@ void ec_master_receive_datagrams(
                                                     }
                                                     break;
                                                 case EC_EOE_TYPE_INIT_RES:
-                                                    // EoE Init / Set IP response handler
+                                                    // EoE初始化/设置IP响应处理程序
                                                     if ((slave->mbox_eoe_init_data.data) && (data_size <= slave->mbox_eoe_init_data.data_size))
                                                     {
                                                         memcpy(slave->mbox_eoe_init_data.data, cur_data, data_size);
@@ -1584,9 +1718,9 @@ void ec_master_receive_datagrams(
                                                     }
                                                     break;
                                                 default:
-                                                    EC_MASTER_DBG(master, 1, "Unhandled EoE protocol type from slave: %u Protocol: %u, Type: %x\n",
+                                                    EC_MASTER_DBG(master, 1, "从从站接收到未处理的EOE协议类型：%u 协议：%u 类型：%x\n",
                                                                   datagram_slave_addr, datagram_mbox_prot, eoe_type);
-                                                    // copy instead received data into the datagram memory.
+                                                    // 将接收到的数据复制到数据报内存中。
                                                     memcpy(datagram->data, cur_data, data_size);
                                                     break;
                                                 }
@@ -1621,8 +1755,8 @@ void ec_master_receive_datagrams(
                                                 }
                                                 break;
                                             default:
-                                                EC_MASTER_DBG(master, 1, "Unknown mailbox protocol from slave: %u Protocol: %u\n", datagram_slave_addr, datagram_mbox_prot);
-                                                // copy instead received data into the datagram memory.
+                                                EC_MASTER_DBG(master, 1, "从从站接收到未知的邮箱协议：从站：%u 协议：%u\n", datagram_slave_addr, datagram_mbox_prot);
+                                                // 将接收到的数据复制到数据报内存中。
                                                 memcpy(datagram->data, cur_data, data_size);
                                                 break;
                                             }
@@ -1630,49 +1764,50 @@ void ec_master_receive_datagrams(
                                     }
                                     else
                                     {
-                                        // copy instead received data into the datagram memory.
+                                        // 将接收到的数据复制到数据报内存中。
                                         memcpy(datagram->data, cur_data, data_size);
                                     }
                                 }
                                 else
                                 {
-                                    // copy instead received data into the datagram memory.
+                                    // 将接收到的数据复制到数据报内存中。
                                     memcpy(datagram->data, cur_data, data_size);
                                 }
                             }
                             else
                             {
-                                // copy instead received data into the datagram memory.
-                                memcpy(datagram->data, cur_data, data_size);
+                                EC_MASTER_DBG(master, 1, "没有匹配的从站与数据报从站地址匹配：%u\n", datagram_slave_addr);
                             }
                         }
                         else
                         {
-                            EC_MASTER_DBG(master, 1, "No slave matching datagram slave address: %u\n", datagram_slave_addr);
+                            EC_MASTER_DBG(master, 1, "没有配置的从站！\n");
+                            // 将接收到的数据复制到数据报内存中。
+                            memcpy(datagram->data, cur_data, data_size);
                         }
                     }
                     else
                     {
-                        EC_MASTER_DBG(master, 1, "No configured slaves!\n");
-                        // copy instead received data into the datagram memory.
+                        EC_MASTER_DBG(master, 1, "没有配置的从站！\n");
+                        // 将接收到的数据复制到数据报内存中。
                         memcpy(datagram->data, cur_data, data_size);
                     }
                 }
                 else
                 {
-                    // copy instead received data into the datagram memory.
+                    // 将接收到的数据复制到数据报内存中。
                     memcpy(datagram->data, cur_data, data_size);
                 }
             }
             else
             {
-                // copy instead received data into the datagram memory.
+                // 将接收到的数据复制到数据报内存中。
                 memcpy(datagram->data, cur_data, data_size);
             }
         }
         cur_data += data_size;
 
-        // set the datagram's working counter
+        // 设置数据报的工作计数器
         datagram->working_counter = EC_READ_U16(cur_data);
         cur_data += EC_DATAGRAM_FOOTER_SIZE;
 
@@ -1683,9 +1818,9 @@ void ec_master_receive_datagrams(
         datagram->jiffies_received =
             master->devices[EC_DEVICE_MAIN].jiffies_poll;
 
-        barrier(); /* reordering might lead to races */
+        barrier(); /* 重排序可能导致竞争条件 */
 
-        // dequeue the received datagram
+        // 出队接收到的数据报
         datagram->state = EC_DATAGRAM_RECEIVED;
         list_del_init(&datagram->queue);
     }
@@ -1693,12 +1828,17 @@ void ec_master_receive_datagrams(
 
 /*****************************************************************************/
 
-/** Output master statistics.
+/**
+ * @brief 输出主站的统计信息。
  *
- * This function outputs statistical data on demand, but not more often than
- * necessary. The output happens at most once a second.
+ * 此函数在需要时输出统计数据，但不超过每秒一次。
+ *
+ * @param master EtherCAT主站。
+ * @return 无。
  */
-void ec_master_output_stats(ec_master_t *master /**< EtherCAT master */)
+void ec_master_output_stats(
+    ec_master_t *master /**< EtherCAT主站 */
+)
 {
     if (unlikely(jiffies - master->stats.output_jiffies >= HZ))
     {
@@ -1707,23 +1847,20 @@ void ec_master_output_stats(ec_master_t *master /**< EtherCAT master */)
             master->stats.output_jiffies = jiffies;
             if (master->stats.timeouts)
             {
-                EC_MASTER_WARN(master, "%u datagram%s TIMED OUT!\n",
-                               master->stats.timeouts,
-                               master->stats.timeouts == 1 ? "" : "s");
+                EC_MASTER_WARN(master, "%u个数据报超时！\n",
+                               master->stats.timeouts);
                 master->stats.timeouts = 0;
             }
             if (master->stats.corrupted)
             {
-                EC_MASTER_WARN(master, "%u frame%s CORRUPTED!\n",
-                               master->stats.corrupted,
-                               master->stats.corrupted == 1 ? "" : "s");
+                EC_MASTER_WARN(master, "%u个帧损坏！\n",
+                               master->stats.corrupted);
                 master->stats.corrupted = 0;
             }
             if (master->stats.unmatched)
             {
-                EC_MASTER_WARN(master, "%u datagram%s UNMATCHED!\n",
-                               master->stats.unmatched,
-                               master->stats.unmatched == 1 ? "" : "s");
+                EC_MASTER_WARN(master, "%u个数据报无法匹配！\n",
+                               master->stats.unmatched);
                 master->stats.unmatched = 0;
             }
         }
@@ -1732,15 +1869,21 @@ void ec_master_output_stats(ec_master_t *master /**< EtherCAT master */)
 
 /*****************************************************************************/
 
-/** Clears the common device statistics.
+/**
+ * @brief 清除常见设备统计信息。
+ *
+ * 此函数用于清除常见设备统计信息。
+ *
+ * @param master EtherCAT主站。
+ * @return 无。
  */
 void ec_master_clear_device_stats(
-    ec_master_t *master /**< EtherCAT master */
+    ec_master_t *master /**< EtherCAT主站 */
 )
 {
     unsigned int i;
 
-    // zero frame statistics
+    // 清零帧统计信息
     master->device_stats.tx_count = 0;
     master->device_stats.last_tx_count = 0;
     master->device_stats.rx_count = 0;
@@ -1765,10 +1908,16 @@ void ec_master_clear_device_stats(
 
 /*****************************************************************************/
 
-/** Updates the common device statistics.
+/**
+ * @brief 更新常见设备统计信息。
+ *
+ * 此函数用于更新常见设备的统计信息。
+ *
+ * @param master EtherCAT主站。
+ * @return 无。
  */
 void ec_master_update_device_stats(
-    ec_master_t *master /**< EtherCAT master */
+    ec_master_t *master /**< EtherCAT主站 */
 )
 {
     ec_device_stats_t *s = &master->device_stats;
@@ -1776,7 +1925,7 @@ void ec_master_update_device_stats(
     u64 loss;
     unsigned int i, dev_idx;
 
-    // frame statistics
+    // 帧统计信息
     if (likely(jiffies - s->jiffies < HZ))
     {
         return;
@@ -1789,7 +1938,7 @@ void ec_master_update_device_stats(
     loss = s->tx_count - s->rx_count;
     loss_rate = (loss - s->last_loss) * 1000;
 
-    /* Low-pass filter:
+    /* 低通滤波器：
      *      Y_n = y_(n - 1) + T / tau * (x - y_(n - 1))   | T = 1
      *   -> Y_n += (x - y_(n - 1)) / tau
      */
@@ -1823,7 +1972,7 @@ void ec_master_update_device_stats(
 #ifdef EC_USE_HRTIMER
 
 /*
- * Sleep related functions:
+ * 休眠相关函数：
  */
 static enum hrtimer_restart ec_master_nanosleep_wakeup(struct hrtimer *timer)
 {
@@ -1842,7 +1991,12 @@ static enum hrtimer_restart ec_master_nanosleep_wakeup(struct hrtimer *timer)
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 28)
 
-/* compatibility with new hrtimer interface */
+/* 兼容新的hrtimer接口 */
+/**
+ * @brief   获取hrtimer的到期时间。
+ * @param   timer   指向hrtimer结构的指针。
+ * @retval  hrtimer的到期时间。
+ */
 static inline ktime_t hrtimer_get_expires(const struct hrtimer *timer)
 {
     return timer->expires;
@@ -1850,6 +2004,12 @@ static inline ktime_t hrtimer_get_expires(const struct hrtimer *timer)
 
 /*****************************************************************************/
 
+/**
+ * @brief   设置hrtimer的到期时间。
+ * @param   timer   指向hrtimer结构的指针。
+ * @param   time    新的到期时间。
+ * @retval  None.
+ */
 static inline void hrtimer_set_expires(struct hrtimer *timer, ktime_t time)
 {
     timer->expires = time;
@@ -1859,6 +2019,11 @@ static inline void hrtimer_set_expires(struct hrtimer *timer, ktime_t time)
 
 /*****************************************************************************/
 
+/**
+ * @brief   使用高分辨率定时器睡眠指定的纳秒数。
+ * @param   nsecs   要睡眠的纳秒数。
+ * @retval  None.
+ */
 void ec_master_nanosleep(const unsigned long nsecs)
 {
     struct hrtimer_sleeper t;
@@ -1896,7 +2061,13 @@ void ec_master_nanosleep(const unsigned long nsecs)
 
 /*****************************************************************************/
 
-/* compatibility for priority changes */
+/* 优先级更改的兼容性 */
+/**
+ * @brief   设置进程的普通优先级。
+ * @param   p       指向进程结构的指针。
+ * @param   nice    优先级值。
+ * @retval  None.
+ */
 static inline void set_normal_priority(struct task_struct *p, int nice)
 {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0)
@@ -1910,10 +2081,17 @@ static inline void set_normal_priority(struct task_struct *p, int nice)
 
 /*****************************************************************************/
 
-/** Execute slave FSMs.
+/**
+ * @brief 执行从站有限状态机（FSM）。
+ *
+ * 该函数用于执行从站的有限状态机（FSM）。
+ *
+ * @param master EtherCAT主站。
+ * 
+ * @retval 无。
  */
 void ec_master_exec_slave_fsms(
-    ec_master_t *master /**< EtherCAT master. */
+    ec_master_t *master /**< EtherCAT主站。 */
 )
 {
     ec_datagram_t *datagram;
@@ -1924,8 +2102,7 @@ void ec_master_exec_slave_fsms(
     {
         if (!fsm->datagram)
         {
-            EC_MASTER_WARN(master, "Slave %s-%u FSM has zero datagram."
-                                   "This is a bug!\n",
+            EC_MASTER_WARN(master, "从站 %s-%u 的FSM没有数据报文。这是一个错误！\n",
                            ec_device_names[fsm->slave->device_index != 0],
                            fsm->slave->ring_position);
             list_del_init(&fsm->list);
@@ -1937,22 +2114,21 @@ void ec_master_exec_slave_fsms(
             fsm->datagram->state == EC_DATAGRAM_QUEUED ||
             fsm->datagram->state == EC_DATAGRAM_SENT)
         {
-            // previous datagram was not sent or received yet.
-            // wait until next thread execution
+            // 上一个数据报文尚未发送或接收。
+            // 等待下一次线程执行。
             return;
         }
 
         datagram = ec_master_get_external_datagram(master);
         if (!datagram)
         {
-            // no free datagrams at the moment
-            EC_MASTER_WARN(master, "No free datagram during"
-                                   " slave FSM execution. This is a bug!\n");
+            // 当前没有可用的数据报文。
+            EC_MASTER_WARN(master, "在执行从站FSM时没有可用的数据报文。这是一个错误！\n");
             continue;
         }
 
 #if DEBUG_INJECT
-        EC_MASTER_DBG(master, 1, "Executing slave %s-%u FSM.\n",
+        EC_MASTER_DBG(master, 1, "执行从站 %s-%u 的FSM。\n",
                       ec_device_names[fsm->slave->device_index != 0],
                       fsm->slave->ring_position);
 #endif
@@ -1960,9 +2136,9 @@ void ec_master_exec_slave_fsms(
         {
             if (datagram->state != EC_DATAGRAM_INVALID)
             {
-                // FSM consumed datagram
+                // FSM消耗了数据报文
 #if DEBUG_INJECT
-                EC_MASTER_DBG(master, 1, "FSM consumed datagram %s\n",
+                EC_MASTER_DBG(master, 1, "FSM消耗了数据报文 %s\n",
                               datagram->name);
 #endif
                 master->ext_ring_idx_fsm =
@@ -1971,11 +2147,11 @@ void ec_master_exec_slave_fsms(
         }
         else
         {
-            // FSM finished
+            // FSM完成
             list_del_init(&fsm->list);
             master->fsm_exec_count--;
 #if DEBUG_INJECT
-            EC_MASTER_DBG(master, 1, "FSM finished. %u remaining.\n",
+            EC_MASTER_DBG(master, 1, "FSM完成。剩余 %u 个。\n",
                           master->fsm_exec_count);
 #endif
         }
@@ -1999,8 +2175,7 @@ void ec_master_exec_slave_fsms(
                               &master->fsm_exec_list);
                 master->fsm_exec_count++;
 #if DEBUG_INJECT
-                EC_MASTER_DBG(master, 1, "New slave %s-%u FSM"
-                                         " consumed datagram %s, now %u FSMs in list.\n",
+                EC_MASTER_DBG(master, 1, "新的从站 %s-%u 的FSM消耗了数据报文 %s，当前列表中有 %u 个FSM。\n",
                               ec_device_names[master->fsm_slave->device_index != 0],
                               master->fsm_slave->ring_position, datagram->name,
                               master->fsm_exec_count);
@@ -2019,7 +2194,11 @@ void ec_master_exec_slave_fsms(
 
 /*****************************************************************************/
 
-/** Master kernel thread function for IDLE phase.
+/**
+ * @brief	主站内核线程函数，用于IDLE阶段。
+ * @作用：执行IDLE阶段的功能。
+ * @param	priv_data	指向ec_master_t结构体的指针，包含主站的信息和状态。
+ * @retval	返回执行结果的整数值。
  */
 static int ec_master_idle_thread(void *priv_data)
 {
@@ -2027,24 +2206,24 @@ static int ec_master_idle_thread(void *priv_data)
     int fsm_exec;
     size_t sent_bytes;
 
-    // send interval in IDLE phase
+    // 设置IDLE阶段的发送间隔
     ec_master_set_send_interval(master, 1000000 / HZ);
 
-    EC_MASTER_DBG(master, 1, "Idle thread running with send interval = %u us,"
-                             " max data size=%zu\n",
+    EC_MASTER_DBG(master, 1, "IDLE线程运行中，发送间隔 = %u 微秒，最大数据大小 = %zu\n",
                   master->send_interval,
                   master->max_queue_size);
 
     while (!kthread_should_stop())
     {
+        // 输出数据报文统计信息
         ec_datagram_output_stats(&master->fsm_datagram);
 
-        // receive
+        // 接收数据
         ec_lock_down(&master->io_sem);
         ecrt_master_receive(master);
         ec_lock_up(&master->io_sem);
 
-        // execute master & slave state machines
+        // 执行主站和从站状态机
         if (ec_lock_down_interruptible(&master->master_sem))
         {
             break;
@@ -2052,12 +2231,12 @@ static int ec_master_idle_thread(void *priv_data)
 
         fsm_exec = ec_fsm_master_exec(&master->fsm);
 
-        // idle thread will still be in charge of calling the slave requests
+        // IDLE线程仍负责调用从站请求
         ec_master_exec_slave_fsms(master);
 
         ec_lock_up(&master->master_sem);
 
-        // queue and send
+        // 队列并发送数据
         ec_lock_down(&master->io_sem);
         if (fsm_exec)
         {
@@ -2086,33 +2265,37 @@ static int ec_master_idle_thread(void *priv_data)
         }
     }
 
-    EC_MASTER_DBG(master, 1, "Master IDLE thread exiting...\n");
+    EC_MASTER_DBG(master, 1, "主站IDLE线程退出...\n");
 
     return 0;
 }
 
 /*****************************************************************************/
 
-/** Master kernel thread function for OPERATION phase.
+/**
+ * @brief	主站内核线程函数，用于操作阶段。
+ * @作用：执行操作阶段的功能。
+ * @param	priv_data	指向ec_master_t结构体的指针，包含主站的信息和状态。
+ * @retval	返回执行结果的整数值。
  */
 static int ec_master_operation_thread(void *priv_data)
 {
     ec_master_t *master = (ec_master_t *)priv_data;
 
-    EC_MASTER_DBG(master, 1, "Operation thread running"
-                             " with fsm interval = %u us, max data size=%zu\n",
+    EC_MASTER_DBG(master, 1, "操作线程运行中，fsm间隔 = %u 微秒，最大数据大小 = %zu\n",
                   master->send_interval, master->max_queue_size);
 
     while (!kthread_should_stop())
     {
+        // 输出数据报文统计信息
         ec_datagram_output_stats(&master->fsm_datagram);
 
         if (master->injection_seq_rt == master->injection_seq_fsm)
         {
-            // output statistics
+            // 输出统计信息
             ec_master_output_stats(master);
 
-            // execute master & slave state machines
+            // 执行主站和从站状态机
             if (ec_lock_down_interruptible(&master->master_sem))
             {
                 break;
@@ -2120,14 +2303,11 @@ static int ec_master_operation_thread(void *priv_data)
 
             if (ec_fsm_master_exec(&master->fsm))
             {
-                // Inject datagrams (let the RT thread queue them, see
-                // ecrt_master_send())
+                // 注入数据报文（让RT线程将其加入队列，参见ecrt_master_send()）
                 master->injection_seq_fsm++;
             }
 
-            // if rt_slave_requests is true and the slaves are available
-            // this will be handled by the app explicitly calling
-            // ecrt_master_exec_slave_request()
+            // 如果rt_slave_requests为true且从站可用，这将由应用程序显式调用ecrt_master_exec_slave_request()处理
             if (!master->rt_slave_requests || !master->rt_slaves_available)
             {
                 ec_master_exec_slave_fsms(master);
@@ -2137,7 +2317,7 @@ static int ec_master_operation_thread(void *priv_data)
         }
 
 #ifdef EC_USE_HRTIMER
-        // the op thread should not work faster than the sending RT thread
+        // 操作线程不应该比发送RT线程更快
         ec_master_nanosleep(master->send_interval * 1000);
 #else
         if (ec_fsm_master_idle(&master->fsm))
@@ -2152,64 +2332,75 @@ static int ec_master_operation_thread(void *priv_data)
 #endif
     }
 
-    EC_MASTER_DBG(master, 1, "Master OP thread exiting...\n");
+    EC_MASTER_DBG(master, 1, "主站操作线程退出...\n");
     return 0;
 }
 
 /*****************************************************************************/
 
 #ifdef EC_EOE
-/** Starts Ethernet over EtherCAT processing on demand.
- */
-void ec_master_eoe_start(ec_master_t *master /**< EtherCAT master */)
+/**
+
+@brief 启动以太网通过EtherCAT的处理。
+
+@作用：在需要时启动以太网通过EtherCAT的处理。
+
+@param master EtherCAT主站
+
+@retval 无
+*/
+void ec_master_eoe_start(ec_master_t *master /**< EtherCAT主站 */)
 {
-    if (master->eoe_thread)
-    {
-        EC_MASTER_WARN(master, "EoE already running!\n");
-        return;
-    }
+if (master->eoe_thread)
+{
+EC_MASTER_WARN(master, "EoE已经在运行！\n");
+return;
+}
 
-    if (list_empty(&master->eoe_handlers))
-    {
-        return;
-    }
+if (list_empty(&master->eoe_handlers))
+{
+return;
+}
 
-    if (!master->send_cb || !master->receive_cb)
-    {
-        EC_MASTER_WARN(master, "EoE External processing"
-                               " required!\n");
-        return;
-    }
+if (!master->send_cb || !master->receive_cb)
+{
+EC_MASTER_WARN(master, "EoE需要外部处理！\n");
+return;
+}
 
-    EC_MASTER_INFO(master, "Starting EoE thread.\n");
+EC_MASTER_INFO(master, "启动EoE线程。\n");
 
-    master->eoe_thread = kthread_run(ec_master_eoe_thread, master,
-                                     "EtherCAT-EoE");
-    if (IS_ERR(master->eoe_thread))
-    {
-        int err = (int)PTR_ERR(master->eoe_thread);
-        EC_MASTER_ERR(master, "Failed to start EoE thread (error %i)!\n",
-                      err);
-        master->eoe_thread = NULL;
-        return;
-    }
+master->eoe_thread = kthread_run(ec_master_eoe_thread, master,
+"EtherCAT-EoE");
+if (IS_ERR(master->eoe_thread))
+{
+int err = (int)PTR_ERR(master->eoe_thread);
+EC_MASTER_ERR(master, "无法启动EoE线程（错误 %i）！\n",
+err);
+master->eoe_thread = NULL;
+return;
+}
 
-    set_normal_priority(master->eoe_thread, 0);
+set_normal_priority(master->eoe_thread, 0);
 }
 
 /*****************************************************************************/
 
-/** Stops the Ethernet over EtherCAT processing.
+/**
+ * @brief 停止以太网通过EtherCAT的处理。
+ * @作用：停止以太网通过EtherCAT的处理。
+ * @param master EtherCAT主站
+ * @retval 无
  */
-void ec_master_eoe_stop(ec_master_t *master /**< EtherCAT master */)
+void ec_master_eoe_stop(ec_master_t *master /**< EtherCAT主站 */)
 {
     if (master->eoe_thread)
     {
-        EC_MASTER_INFO(master, "Stopping EoE thread.\n");
+        EC_MASTER_INFO(master, "停止EoE线程。\n");
 
         kthread_stop(master->eoe_thread);
         master->eoe_thread = NULL;
-        EC_MASTER_INFO(master, "EoE thread exited.\n");
+        EC_MASTER_INFO(master, "EoE线程已退出。\n");
     }
 }
 
@@ -2217,21 +2408,21 @@ void ec_master_eoe_stop(ec_master_t *master /**< EtherCAT master */)
 
 #ifdef EC_RTDM
 
-/** Check if any EOE handlers are open.
- *
- * \return 1 if any eoe handlers are open, zero if not,
- *   otherwise a negative error code.
+/**
+ * @brief 检查是否有任何EOE处理程序处于打开状态。
+ * @作用：检查是否有任何EOE处理程序处于打开状态。
+ * @param master EtherCAT主站
+ * @retval 如果有任何EOE处理程序处于打开状态，则返回1；如果没有，则返回0；否则返回负错误代码。
  */
-int ec_master_eoe_is_open(ec_master_t *master /**< EtherCAT master */)
+int ec_master_eoe_is_open(ec_master_t *master /**< EtherCAT主站 */)
 {
     ec_eoe_t *eoe;
 
-    // check that eoe is not already being processed by the master
-    // and that we can currently process EoE
+    // 检查EOE是否已被主站处理，并且我们当前可以处理EOE
     if ((master->phase != EC_OPERATION) || master->eoe_thread ||
         !master->rt_slaves_available)
     {
-        // protocol not available
+        // 协议不可用
         return -ENOPROTOOPT;
     }
 
@@ -2251,24 +2442,24 @@ int ec_master_eoe_is_open(ec_master_t *master /**< EtherCAT master */)
 
 /*****************************************************************************/
 
-/** Check if any EOE handlers are open.
- *
- * \return 1 if something to send +
- *   2 if an eoe handler has something still pending
+/**
+ * @brief 检查是否有任何EOE处理程序处于打开状态。
+ * @param master EtherCAT主站
+ * @return 1：如果有要发送的内容；2：如果某个EOE处理程序仍有待处理的内容
  */
-int ec_master_eoe_process(ec_master_t *master /**< EtherCAT master */)
+int ec_master_eoe_process(ec_master_t *master /**< EtherCAT主站 */)
 {
     ec_eoe_t *eoe;
     int sth_to_send = 0;
     int sth_pending = 0;
 
-    // check that eoe is not already being processed by the master
+    // 检查是否已经有主站正在处理EOE
     if (master->eoe_thread)
     {
         return 0;
     }
 
-    // actual EoE processing
+    // 实际的EOE处理
     ec_lock_down(&master->master_sem);
     list_for_each_entry(eoe, &master->eoe_handlers, list)
     {
@@ -2301,11 +2492,15 @@ int ec_master_eoe_process(ec_master_t *master /**< EtherCAT master */)
     return sth_to_send + sth_pending;
 }
 
+
 #endif
 
 /*****************************************************************************/
 
-/** Does the Ethernet over EtherCAT processing.
+
+/** 执行以太网通过EtherCAT的处理。
+ * @param priv_data 私有数据，指向EtherCAT主站
+ * @return 0
  */
 static int ec_master_eoe_thread(void *priv_data)
 {
@@ -2313,7 +2508,7 @@ static int ec_master_eoe_thread(void *priv_data)
     ec_eoe_t *eoe;
     unsigned int none_open, sth_to_send, all_idle;
 
-    EC_MASTER_DBG(master, 1, "EoE thread running.\n");
+    EC_MASTER_DBG(master, 1, "EoE线程正在运行。\n");
 
     while (!kthread_should_stop())
     {
@@ -2336,10 +2531,10 @@ static int ec_master_eoe_thread(void *priv_data)
             goto schedule;
         }
 
-        // receive datagrams
+        // 接收数据报文
         master->receive_cb(master->cb_data);
 
-        // actual EoE processing
+        // 实际的EoE处理
         ec_lock_down(&master->master_sem);
         sth_to_send = 0;
         list_for_each_entry(eoe, &master->eoe_handlers, list)
@@ -2371,7 +2566,7 @@ static int ec_master_eoe_thread(void *priv_data)
             }
             ec_lock_up(&master->master_sem);
 
-            // (try to) send datagrams
+            // 尝试发送数据报文
             master->send_cb(master->cb_data);
         }
 
@@ -2387,17 +2582,19 @@ static int ec_master_eoe_thread(void *priv_data)
         }
     }
 
-    EC_MASTER_DBG(master, 1, "EoE thread exiting...\n");
+    EC_MASTER_DBG(master, 1, "EoE线程退出...\n");
     return 0;
 }
+
 #endif
 
 /*****************************************************************************/
 
-/** Attaches the slave configurations to the slaves.
+/** 将从站配置附加到从站。
+ * @param master EtherCAT主站。
  */
 void ec_master_attach_slave_configs(
-    ec_master_t *master /**< EtherCAT master. */
+    ec_master_t *master /**< EtherCAT主站。 */
 )
 {
     ec_slave_config_t *sc;
@@ -2410,10 +2607,11 @@ void ec_master_attach_slave_configs(
 
 /*****************************************************************************/
 
-/** Abort active requests for slave configs without attached slaves.
+/** 中止未附加从站的从站配置的活动请求。
+ * @param master EtherCAT主站。
  */
 void ec_master_expire_slave_config_requests(
-    ec_master_t *master /**< EtherCAT master. */
+    ec_master_t *master /**< EtherCAT主站。 */
 )
 {
     ec_slave_config_t *sc;
@@ -2424,10 +2622,14 @@ void ec_master_expire_slave_config_requests(
     }
 }
 
+
 /*****************************************************************************/
 
-/** Common implementation for ec_master_find_slave()
- * and ec_master_find_slave_const().
+/**
+ * @brief 通用的ec_master_find_slave()和ec_master_find_slave_const()的实现。
+ * @param alias 从站别名
+ * @param position 从站位置
+ * @return 搜索结果，如果找不到则返回NULL。
  */
 #define EC_FIND_SLAVE                                            \
     do                                                           \
@@ -2455,44 +2657,50 @@ void ec_master_expire_slave_config_requests(
         }                                                        \
     } while (0)
 
-/** Finds a slave in the bus, given the alias and position.
- *
- * \return Search result, or NULL.
+/**
+ * @brief 根据别名和位置在总线上查找从站。
+ * @param master EtherCAT主站
+ * @param alias 从站别名
+ * @param position 从站位置
+ * @return 搜索结果，如果找不到则返回NULL。
  */
 ec_slave_t *ec_master_find_slave(
-    ec_master_t *master, /**< EtherCAT master. */
-    uint16_t alias,      /**< Slave alias. */
-    uint16_t position    /**< Slave position. */
+    ec_master_t *master, /**< EtherCAT主站 */
+    uint16_t alias,      /**< 从站别名 */
+    uint16_t position    /**< 从站位置 */
 )
 {
     ec_slave_t *slave = master->slaves;
     EC_FIND_SLAVE;
 }
 
-/** Finds a slave in the bus, given the alias and position.
- *
- * Const version.
- *
- * \return Search result, or NULL.
+/**
+ * @brief 根据别名和位置在总线上查找从站。
+ * @param master EtherCAT主站
+ * @param alias 从站别名
+ * @param position 从站位置
+ * @return 搜索结果，如果找不到则返回NULL。
  */
 const ec_slave_t *ec_master_find_slave_const(
-    const ec_master_t *master, /**< EtherCAT master. */
-    uint16_t alias,            /**< Slave alias. */
-    uint16_t position          /**< Slave position. */
+    const ec_master_t *master, /**< EtherCAT主站 */
+    uint16_t alias,            /**< 从站别名 */
+    uint16_t position          /**< 从站位置 */
 )
 {
     const ec_slave_t *slave = master->slaves;
     EC_FIND_SLAVE;
 }
 
+
 /*****************************************************************************/
 
-/** Get the number of slave configurations provided by the application.
- *
- * \return Number of configurations.
+/**
+ * @brief 获取应用程序提供的从站配置数量。
+ * @param master EtherCAT主站。
+ * @return 配置数量。
  */
 unsigned int ec_master_config_count(
-    const ec_master_t *master /**< EtherCAT master. */
+    const ec_master_t *master /**< EtherCAT主站 */
 )
 {
     const ec_slave_config_t *sc;
@@ -2508,8 +2716,10 @@ unsigned int ec_master_config_count(
 
 /*****************************************************************************/
 
-/** Common implementation for ec_master_get_config()
- * and ec_master_get_config_const().
+/**
+ * @brief 通用的ec_master_get_config()和ec_master_get_config_const()的实现。
+ * @param pos 列表位置。
+ * @return 从站配置或NULL。
  */
 #define EC_FIND_CONFIG                                  \
     do                                                  \
@@ -2523,42 +2733,46 @@ unsigned int ec_master_config_count(
         return NULL;                                    \
     } while (0)
 
-/** Get a slave configuration via its position in the list.
- *
- * \return Slave configuration or \a NULL.
+/**
+ * @brief 根据列表中的位置获取从站配置。
+ * @param master EtherCAT主站。
+ * @param pos 列表位置。
+ * @return 从站配置或NULL。
  */
 ec_slave_config_t *ec_master_get_config(
-    const ec_master_t *master, /**< EtherCAT master. */
-    unsigned int pos           /**< List position. */
+    const ec_master_t *master, /**< EtherCAT主站 */
+    unsigned int pos           /**< 列表位置 */
 )
 {
     ec_slave_config_t *sc;
     EC_FIND_CONFIG;
 }
 
-/** Get a slave configuration via its position in the list.
- *
- * Const version.
- *
- * \return Slave configuration or \a NULL.
+/**
+ * @brief 根据列表中的位置获取从站配置。
+ * @param master EtherCAT主站。
+ * @param pos 列表位置。
+ * @return 从站配置或NULL。
  */
 const ec_slave_config_t *ec_master_get_config_const(
-    const ec_master_t *master, /**< EtherCAT master. */
-    unsigned int pos           /**< List position. */
+    const ec_master_t *master, /**< EtherCAT主站 */
+    unsigned int pos           /**< 列表位置 */
 )
 {
     const ec_slave_config_t *sc;
     EC_FIND_CONFIG;
 }
 
+
 /*****************************************************************************/
 
-/** Get the number of domains.
- *
- * \return Number of domains.
+/**
+ * @brief 获取域的数量。
+ * @param master EtherCAT主站。
+ * @return 域的数量。
  */
 unsigned int ec_master_domain_count(
-    const ec_master_t *master /**< EtherCAT master. */
+    const ec_master_t *master /**< EtherCAT主站 */
 )
 {
     const ec_domain_t *domain;
@@ -2574,8 +2788,10 @@ unsigned int ec_master_domain_count(
 
 /*****************************************************************************/
 
-/** Common implementation for ec_master_find_domain() and
- * ec_master_find_domain_const().
+/**
+ * @brief 通用的ec_master_find_domain()和ec_master_find_domain_const()的实现。
+ * @param index 域索引。
+ * @return 域指针，如果找不到则返回NULL。
  */
 #define EC_FIND_DOMAIN                                      \
     do                                                      \
@@ -2590,44 +2806,48 @@ unsigned int ec_master_domain_count(
         return NULL;                                        \
     } while (0)
 
-/** Get a domain via its position in the list.
- *
- * \return Domain pointer, or \a NULL if not found.
+/**
+ * @brief 根据列表中的位置获取域。
+ * @param master EtherCAT主站。
+ * @param index 域索引。
+ * @return 域指针，如果找不到则返回NULL。
  */
 ec_domain_t *ec_master_find_domain(
-    ec_master_t *master, /**< EtherCAT master. */
-    unsigned int index   /**< Domain index. */
+    ec_master_t *master, /**< EtherCAT主站 */
+    unsigned int index   /**< 域索引 */
 )
 {
     ec_domain_t *domain;
     EC_FIND_DOMAIN;
 }
 
-/** Get a domain via its position in the list.
- *
- * Const version.
- *
- * \return Domain pointer, or \a NULL if not found.
+/**
+ * @brief 根据列表中的位置获取域。
+ * @param master EtherCAT主站。
+ * @param index 域索引。
+ * @return 域指针，如果找不到则返回NULL。
  */
 const ec_domain_t *ec_master_find_domain_const(
-    const ec_master_t *master, /**< EtherCAT master. */
-    unsigned int index         /**< Domain index. */
+    const ec_master_t *master, /**< EtherCAT主站 */
+    unsigned int index         /**< 域索引 */
 )
 {
     const ec_domain_t *domain;
     EC_FIND_DOMAIN;
 }
 
+
 /*****************************************************************************/
 
 #ifdef EC_EOE
 
-/** Get the number of EoE handlers.
- *
- * \return Number of EoE handlers.
+/**
+ * @brief 获取EoE处理程序的数量。
+ * @param master EtherCAT主站。
+ * @return EoE处理程序的数量。
  */
 uint16_t ec_master_eoe_handler_count(
-    const ec_master_t *master /**< EtherCAT master. */
+    const ec_master_t *master /**< EtherCAT主站 */
 )
 {
     const ec_eoe_t *eoe;
@@ -2643,15 +2863,15 @@ uint16_t ec_master_eoe_handler_count(
 
 /*****************************************************************************/
 
-/** Get an EoE handler via its position in the list.
- *
- * Const version.
- *
- * \return EoE handler pointer, or \a NULL if not found.
+/**
+ * @brief 根据列表中的位置获取EoE处理程序。
+ * @param master EtherCAT主站。
+ * @param index EoE处理程序索引。
+ * @return EoE处理程序指针，如果找不到则返回NULL。
  */
 const ec_eoe_t *ec_master_get_eoe_handler_const(
-    const ec_master_t *master, /**< EtherCAT master. */
-    uint16_t index             /**< EoE handler index. */
+    const ec_master_t *master, /**< EtherCAT主站 */
+    uint16_t index             /**< EoE处理程序索引 */
 )
 {
     const ec_eoe_t *eoe;
@@ -2670,45 +2890,48 @@ const ec_eoe_t *ec_master_get_eoe_handler_const(
 
 /*****************************************************************************/
 
-/** Set the debug level.
- *
- * \retval       0 Success.
- * \retval -EINVAL Invalid debug level.
+/**
+ * @brief 设置调试级别。
+ * @param master EtherCAT主站。
+ * @param level 调试级别。可以是0、1或2。
+ * @retval 0 成功。
+ * @retval -EINVAL 无效的调试级别。
  */
 int ec_master_debug_level(
-    ec_master_t *master, /**< EtherCAT master. */
-    unsigned int level   /**< Debug level. May be 0, 1 or 2. */
+    ec_master_t *master, /**< EtherCAT主站 */
+    unsigned int level   /**< 调试级别 */
 )
 {
     if (level > 2)
     {
-        EC_MASTER_ERR(master, "Invalid debug level %u!\n", level);
+        EC_MASTER_ERR(master, "无效的调试级别 %u！\n", level);
         return -EINVAL;
     }
 
     if (level != master->debug_level)
     {
         master->debug_level = level;
-        EC_MASTER_INFO(master, "Master debug level set to %u.\n",
+        EC_MASTER_INFO(master, "主站调试级别设置为 %u。\n",
                        master->debug_level);
     }
 
     return 0;
 }
-
 /*****************************************************************************/
 
-/** Finds the DC reference clock.
+/**
+ * @brief 查找DC参考时钟。
+ * @param master EtherCAT主站。
  */
 void ec_master_find_dc_ref_clock(
-    ec_master_t *master /**< EtherCAT master. */
+    ec_master_t *master /**< EtherCAT主站 */
 )
 {
     ec_slave_t *slave, *ref = NULL;
 
     if (master->dc_ref_config)
     {
-        // Check application-selected reference clock
+        // 检查应用程序选择的参考时钟
         slave = master->dc_ref_config->slave;
 
         if (slave)
@@ -2716,23 +2939,22 @@ void ec_master_find_dc_ref_clock(
             if (slave->base_dc_supported && slave->has_dc_system_time)
             {
                 ref = slave;
-                EC_MASTER_INFO(master, "Using slave %s-%u as application selected"
-                                       " DC reference clock.\n",
+                EC_MASTER_INFO(master, "使用从站 %s-%u 作为应用程序选择的"
+                                       " DC参考时钟。\n",
                                ec_device_names[slave->device_index != 0],
                                ref->ring_position);
             }
             else
             {
-                EC_MASTER_WARN(master, "Application selected slave %s-%u can not"
-                                       " act as a DC reference clock!",
+                EC_MASTER_WARN(master, "应用程序选择的从站 %s-%u 无法"
+                                       " 作为DC参考时钟！",
                                ec_device_names[slave->device_index != 0],
                                slave->ring_position);
             }
         }
         else
         {
-            EC_MASTER_WARN(master, "Application selected DC reference clock"
-                                   " config (%u-%u) has no slave attached!\n",
+            EC_MASTER_WARN(master, "应用程序选择的DC参考时钟配置 (%u-%u) 未连接从站！\n",
                            master->dc_ref_config->alias,
                            master->dc_ref_config->position);
         }
@@ -2740,7 +2962,7 @@ void ec_master_find_dc_ref_clock(
 
     if (!ref)
     {
-        // Use first slave with DC support as reference clock
+        // 使用第一个支持DC的从站作为参考时钟
         for (slave = master->slaves;
              slave < master->slaves + master->slave_count;
              slave++)
@@ -2757,16 +2979,15 @@ void ec_master_find_dc_ref_clock(
 
     if (ref)
     {
-        EC_MASTER_INFO(master, "Using slave %s-%u as DC reference clock.\n",
+        EC_MASTER_INFO(master, "使用从站 %s-%u 作为DC参考时钟。\n",
                        ec_device_names[ref->device_index != 0], ref->ring_position);
     }
     else
     {
-        EC_MASTER_INFO(master, "No DC reference clock found.\n");
+        EC_MASTER_INFO(master, "未找到DC参考时钟。\n");
     }
 
-    // These calls always succeed, because the
-    // datagrams have been pre-allocated.
+    // 这些调用总是成功的，因为数据报已经预分配。
     ec_datagram_fpwr(&master->ref_sync_datagram,
                      ref ? ref->station_address : 0xffff, 0x0910, 4);
     ec_datagram_frmw(&master->sync_datagram,
@@ -2775,16 +2996,20 @@ void ec_master_find_dc_ref_clock(
                      ref ? ref->station_address : 0xffff, 0x0910, 8);
 }
 
+
 /*****************************************************************************/
 
-/** Calculates the bus topology; recursion function.
- *
- * \return Zero on success, otherwise a negative error code.
+/**
+ * @brief 计算总线拓扑结构的递归函数。
+ * @param master EtherCAT主站。
+ * @param upstream_slave 上游端口的从站。
+ * @param slave_position 从站位置。
+ * @return 成功返回0，否则返回负数错误代码。
  */
 int ec_master_calc_topology_rec(
-    ec_master_t *master,         /**< EtherCAT master. */
-    ec_slave_t *upstream_slave,  /**< Slave at upstream port. */
-    unsigned int *slave_position /**< Slave position. */
+    ec_master_t *master,         /**< EtherCAT主站 */
+    ec_slave_t *upstream_slave,  /**< 上游端口的从站 */
+    unsigned int *slave_position /**< 从站位置 */
 )
 {
     ec_slave_t *slave = master->slaves + *slave_position;
@@ -2825,12 +3050,15 @@ int ec_master_calc_topology_rec(
     return 0;
 }
 
+
 /*****************************************************************************/
 
-/** Calculates the bus topology.
+/**
+ * @brief 计算总线拓扑结构。
+ * @param master 主站。
  */
 void ec_master_calc_topology(
-    ec_master_t *master /**< EtherCAT master. */
+    ec_master_t *master /**< EtherCAT主站 */
 )
 {
     unsigned int slave_position = 0;
@@ -2852,10 +3080,12 @@ void ec_master_calc_topology(
 
 /*****************************************************************************/
 
-/** Calculates the bus transmission delays.
+/**
+ * @brief 计算总线传输延迟。
+ * @param master 主站。
  */
 void ec_master_calc_transmission_delays(
-    ec_master_t *master /**< EtherCAT master. */
+    ec_master_t *master /**< EtherCAT主站 */
 )
 {
     ec_slave_t *slave;
@@ -2874,29 +3104,36 @@ void ec_master_calc_transmission_delays(
     }
 }
 
+
 /*****************************************************************************/
 
-/** Distributed-clocks calculations.
+
+/**
+ * @brief 分布式时钟计算。
+ * @param master 主站。
  */
 void ec_master_calc_dc(
-    ec_master_t *master /**< EtherCAT master. */
+    ec_master_t *master /**< EtherCAT主站 */
 )
 {
-    // find DC reference clock
+    // 查找DC参考时钟
     ec_master_find_dc_ref_clock(master);
 
-    // calculate bus topology
+    // 计算总线拓扑结构
     ec_master_calc_topology(master);
 
+    // 计算总线传输延迟
     ec_master_calc_transmission_delays(master);
 }
 
 /*****************************************************************************/
 
-/** Request OP state for configured slaves.
+/**
+ * @brief 为配置的从站请求OP状态。
+ * @param master 主站。
  */
 void ec_master_request_op(
-    ec_master_t *master /**< EtherCAT master. */
+    ec_master_t *master /**< EtherCAT主站 */
 )
 {
     unsigned int i;
@@ -2905,9 +3142,9 @@ void ec_master_request_op(
     if (!master->active)
         return;
 
-    EC_MASTER_DBG(master, 1, "Requesting OP...\n");
+    EC_MASTER_DBG(master, 1, "请求OP状态...\n");
 
-    // request OP for all configured slaves
+    // 为所有配置的从站请求OP状态
     for (i = 0; i < master->slave_count; i++)
     {
         slave = master->slaves + i;
@@ -2918,16 +3155,26 @@ void ec_master_request_op(
     }
 
 #ifdef EC_REFCLKOP
-    // always set DC reference clock to OP
+    // 总是将DC参考时钟设置为OP状态
     if (master->dc_ref_clock)
     {
         ec_slave_request_state(master->dc_ref_clock, EC_SLAVE_STATE_OP);
     }
 #endif
 }
+```
 
 /*****************************************************************************/
 
+/**
+ * @brief 上传从站字典到EtherCAT主站。
+ *
+ * 该函数将从站字典上传到EtherCAT主站。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @param slave_position 从站位置。
+ * @return 成功返回0，失败返回负数错误码。
+ */
 int ec_master_dict_upload(ec_master_t *master, uint16_t slave_position)
 {
     ec_dict_request_t request;
@@ -2948,22 +3195,22 @@ int ec_master_dict_upload(ec_master_t *master, uint16_t slave_position)
     if (!(slave = ec_master_find_slave(master, 0, slave_position)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Slave %u does not exist!\n", slave_position);
+        EC_MASTER_ERR(master, "从站 %u 不存在！\n", slave_position);
         return -EINVAL;
     }
 
-    EC_SLAVE_DBG(slave, 1, "Scheduling dictionary upload request.\n");
+    EC_SLAVE_DBG(slave, 1, "调度字典上传请求。\n");
 
-    // schedule request.
+    // 调度请求。
     list_add_tail(&request.list, &slave->dict_requests);
 
     ec_lock_up(&master->master_sem);
 
-    // wait for processing through FSM
+    // 等待FSM处理
     if (wait_event_interruptible(master->request_queue,
                                  request.state != EC_INT_REQUEST_QUEUED))
     {
-        // interrupted by signal
+        // 被信号中断
         ec_lock_down(&master->master_sem);
         if (request.state == EC_INT_REQUEST_QUEUED)
         {
@@ -2971,11 +3218,11 @@ int ec_master_dict_upload(ec_master_t *master, uint16_t slave_position)
             ec_lock_up(&master->master_sem);
             return -EINTR;
         }
-        // request already processing: interrupt not possible.
+        // 请求已在处理中：无法中断。
         ec_lock_up(&master->master_sem);
     }
 
-    // wait until master FSM has finished processing
+    // 等待主站FSM处理完成
     wait_event(master->request_queue, request.state != EC_INT_REQUEST_BUSY);
 
     if (request.state != EC_INT_REQUEST_SUCCESS)
@@ -2985,16 +3232,21 @@ int ec_master_dict_upload(ec_master_t *master, uint16_t slave_position)
     return ret;
 }
 
+
 /******************************************************************************
  *  Application interface
  *****************************************************************************/
 
-/** Same as ecrt_master_create_domain(), but with ERR_PTR() return value.
+/**
+ * @brief 创建EtherCAT主站域（Domain）。
  *
- * \return New domain, or ERR_PTR() return value.
+ * 该函数创建一个新的EtherCAT主站域（Domain）。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @return 成功返回新的域（Domain）指针，失败返回错误指针（ERR_PTR()）。
  */
 ec_domain_t *ecrt_master_create_domain_err(
-    ec_master_t *master /**< master */
+    ec_master_t *master /**< 主站 */
 )
 {
     ec_domain_t *domain, *last_domain;
@@ -3006,7 +3258,7 @@ ec_domain_t *ecrt_master_create_domain_err(
     if (!(domain =
               (ec_domain_t *)kmalloc(sizeof(ec_domain_t), GFP_KERNEL)))
     {
-        EC_MASTER_ERR(master, "Error allocating domain memory!\n");
+        EC_MASTER_ERR(master, "分配域（Domain）内存时发生错误！\n");
         return ERR_PTR(-ENOMEM);
     }
 
@@ -3027,15 +3279,24 @@ ec_domain_t *ecrt_master_create_domain_err(
 
     ec_lock_up(&master->master_sem);
 
-    EC_MASTER_DBG(master, 1, "Created domain %u.\n", domain->index);
+    EC_MASTER_DBG(master, 1, "创建域（Domain）%u。\n", domain->index);
 
     return domain;
 }
 
+
 /*****************************************************************************/
 
+/**
+ * @brief 创建EtherCAT主站域（Domain）。
+ *
+ * 该函数创建一个新的EtherCAT主站域（Domain）。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @return 成功返回新的域（Domain）指针，失败返回NULL。
+ */
 ec_domain_t *ecrt_master_create_domain(
-    ec_master_t *master /**< master */
+    ec_master_t *master /**< 主站 */
 )
 {
     ec_domain_t *d = ecrt_master_create_domain_err(master);
@@ -3044,14 +3305,31 @@ ec_domain_t *ecrt_master_create_domain(
 
 /*****************************************************************************/
 
+/**
+ * @brief 设置EtherCAT主站域（Domain）的内存。
+ *
+ * 目前不支持此功能。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @return 返回错误码 -ENOMEM。
+ */
 int ecrt_master_setup_domain_memory(ec_master_t *master)
 {
-    // not currently supported
+    // 目前不支持
     return -ENOMEM; // FIXME
 }
 
+
 /*****************************************************************************/
 
+/**
+ * @brief 激活EtherCAT主站。
+ *
+ * 该函数激活EtherCAT主站，使其进入操作状态。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @return 成功返回0，失败返回错误码。
+ */
 int ecrt_master_activate(ec_master_t *master)
 {
     uint32_t domain_offset;
@@ -3065,13 +3343,13 @@ int ecrt_master_activate(ec_master_t *master)
 
     if (master->active)
     {
-        EC_MASTER_WARN(master, "%s: Master already active!\n", __func__);
+        EC_MASTER_WARN(master, "%s: 主站已经激活！\n", __func__);
         return 0;
     }
 
     ec_lock_down(&master->master_sem);
 
-    // finish all domains
+    // 完成所有域（Domain）
     domain_offset = 0;
     list_for_each_entry(domain, &master->domains, list)
     {
@@ -3079,7 +3357,7 @@ int ecrt_master_activate(ec_master_t *master)
         if (ret < 0)
         {
             ec_lock_up(&master->master_sem);
-            EC_MASTER_ERR(master, "Failed to finish domain 0x%p!\n", domain);
+            EC_MASTER_ERR(master, "无法完成域（Domain）0x%p！\n", domain);
             return ret;
         }
         domain_offset += domain->data_size;
@@ -3087,7 +3365,7 @@ int ecrt_master_activate(ec_master_t *master)
 
     ec_lock_up(&master->master_sem);
 
-    // restart EoE process and master thread with new locking
+    // 重新启动EoE进程和主线程，并使用新的锁定机制
 
     ec_master_thread_stop(master);
 #ifdef EC_EOE
@@ -3095,7 +3373,7 @@ int ecrt_master_activate(ec_master_t *master)
     ec_master_eoe_stop(master);
 #endif
 
-    EC_MASTER_DBG(master, 1, "FSM datagram is %p.\n", &master->fsm_datagram);
+    EC_MASTER_DBG(master, 1, "FSM数据报文为 %p。\n", &master->fsm_datagram);
 
     master->injection_seq_fsm = 0;
     master->injection_seq_rt = 0;
@@ -3114,16 +3392,16 @@ int ecrt_master_activate(ec_master_t *master)
                                  "EtherCAT-OP");
     if (ret < 0)
     {
-        EC_MASTER_ERR(master, "Failed to start master thread!\n");
+        EC_MASTER_ERR(master, "无法启动主线程！\n");
         return ret;
     }
 
-    /* Allow scanning after a topology change. */
+    /* 允许在拓扑变化后进行扫描。 */
     master->allow_scan = 1;
 
     master->active = 1;
 
-    // notify state machine, that the configuration shall now be applied
+    // 通知状态机，现在应用配置
     master->config_changed = 1;
     master->dc_offset_valid = 0;
 
@@ -3132,6 +3410,13 @@ int ecrt_master_activate(ec_master_t *master)
 
 /*****************************************************************************/
 
+/**
+ * @brief 停用所有从站。
+ *
+ * 该函数停用所有从站，将其状态设置为PREOP，并进行重新配置。
+ *
+ * @param master EtherCAT主站对象指针。
+ */
 void ecrt_master_deactivate_slaves(ec_master_t *master)
 {
     ec_slave_t *slave;
@@ -3141,11 +3426,11 @@ void ecrt_master_deactivate_slaves(ec_master_t *master)
 
     if (!master->active)
     {
-        EC_MASTER_WARN(master, "%s: Master not active.\n", __func__);
+        EC_MASTER_WARN(master, "%s: 主站未激活。\n", __func__);
         return;
     }
 
-    // clear dc settings on all slaves
+    // 清除所有从站的DC设置
     list_for_each_entry_safe(sc, next, &master->configs, list)
     {
         if (sc->dc_assign_activate)
@@ -3159,18 +3444,23 @@ void ecrt_master_deactivate_slaves(ec_master_t *master)
          slave++)
     {
 
-        // set states for all slaves
+        // 设置所有从站的状态为PREOP
         ec_slave_request_state(slave, EC_SLAVE_STATE_PREOP);
 
-        // mark for reconfiguration, because the master could have no
-        // possibility for a reconfiguration between two sequential operation
-        // phases.
+        // 标记为需要重新配置，因为主站在两个连续操作阶段之间可能没有重新配置的机会。
         slave->force_config = 1;
     }
 }
 
 /*****************************************************************************/
 
+/**
+ * @brief 停用EtherCAT主站。
+ *
+ * 该函数停用EtherCAT主站，将其状态设置为非激活状态，并进行必要的清理和重置。
+ *
+ * @param master EtherCAT主站对象指针。
+ */
 void ecrt_master_deactivate(ec_master_t *master)
 {
     ec_slave_t *slave;
@@ -3179,7 +3469,7 @@ void ecrt_master_deactivate(ec_master_t *master)
 
     if (!master->active)
     {
-        EC_MASTER_WARN(master, "%s: Master not active.\n", __func__);
+        EC_MASTER_WARN(master, "%s: 主站未激活。\n", __func__);
         ec_master_clear_config(master);
         return;
     }
@@ -3200,15 +3490,13 @@ void ecrt_master_deactivate(ec_master_t *master)
          slave++)
     {
 
-        // set states for all slaves
+        // 设置所有从站的状态为PREOP
         ec_slave_request_state(slave, EC_SLAVE_STATE_PREOP);
 
-        // clear read_mbox_busy flag in case slave CoE FSM were interrupted
+        // 清除read_mbox_busy标志，以防止从站的CoE状态机中断
         ec_read_mbox_lock_clear(slave);
 
-        // mark for reconfiguration, because the master could have no
-        // possibility for a reconfiguration between two sequential operation
-        // phases.
+        // 标记为需要重新配置，因为主站在两个连续操作阶段之间可能没有重新配置的机会。
         slave->force_config = 1;
     }
 
@@ -3216,8 +3504,7 @@ void ecrt_master_deactivate(ec_master_t *master)
     master->dc_ref_time = 0ULL;
     master->dc_offset_valid = 0;
 
-    /* Disallow scanning to get into the same state like after a master
-     * request (after ec_master_enter_operation_phase() is called). */
+    /* 禁止扫描，以达到与主站请求后（在调用ec_master_enter_operation_phase()之后）相同的状态。 */
     master->allow_scan = 0;
 
     master->active = 0;
@@ -3228,12 +3515,21 @@ void ecrt_master_deactivate(ec_master_t *master)
     if (ec_master_thread_start(master, ec_master_idle_thread,
                                "EtherCAT-IDLE"))
     {
-        EC_MASTER_WARN(master, "Failed to restart master thread!\n");
+        EC_MASTER_WARN(master, "无法重新启动主站线程！\n");
     }
 }
 
+
 /*****************************************************************************/
 
+/**
+ * @brief 发送EtherCAT主站的数据报文。
+ *
+ * 该函数发送EtherCAT主站的数据报文，并返回发送的字节数。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @return 返回发送的字节数。
+ */
 size_t ecrt_master_send(ec_master_t *master)
 {
     ec_datagram_t *datagram, *n;
@@ -3242,7 +3538,7 @@ size_t ecrt_master_send(ec_master_t *master)
 
     if (master->injection_seq_rt != master->injection_seq_fsm)
     {
-        // inject datagram produced by master FSM
+        // 注入主站FSM生成的数据报文
         ec_master_queue_datagram(master, &master->fsm_datagram);
         master->injection_seq_rt = master->injection_seq_fsm;
     }
@@ -3254,7 +3550,7 @@ size_t ecrt_master_send(ec_master_t *master)
     {
         if (unlikely(!master->devices[dev_idx].link_state))
         {
-            // link is down, no datagram can be sent
+            // 链路断开，无法发送数据报文
             list_for_each_entry_safe(datagram, n,
                                      &master->datagram_queue, queue)
             {
@@ -3270,15 +3566,15 @@ size_t ecrt_master_send(ec_master_t *master)
                 continue;
             }
 
-            // query link state
+            // 查询链路状态
             ec_device_poll(&master->devices[dev_idx]);
 
-            // clear frame statistics
+            // 清除帧统计信息
             ec_device_clear_stats(&master->devices[dev_idx]);
             continue;
         }
 
-        // send frames
+        // 发送帧
         sent_bytes = max(sent_bytes,
                          ec_master_send_datagrams(master, dev_idx));
     }
@@ -3288,12 +3584,19 @@ size_t ecrt_master_send(ec_master_t *master)
 
 /*****************************************************************************/
 
+/**
+ * @brief 接收EtherCAT主站的数据报文。
+ *
+ * 该函数接收EtherCAT主站的数据报文，并进行必要的处理。
+ *
+ * @param master EtherCAT主站对象指针。
+ */
 void ecrt_master_receive(ec_master_t *master)
 {
     unsigned int dev_idx;
     ec_datagram_t *datagram, *next;
 
-    // receive datagrams
+    // 接收数据报文
     for (dev_idx = EC_DEVICE_MAIN; dev_idx < ec_master_num_devices(master);
          dev_idx++)
     {
@@ -3301,7 +3604,7 @@ void ecrt_master_receive(ec_master_t *master)
     }
     ec_master_update_device_stats(master);
 
-    // dequeue all datagrams that timed out
+    // 移除所有超时的数据报文
     list_for_each_entry_safe(datagram, next, &master->datagram_queue, queue)
     {
         if (datagram->state != EC_DATAGRAM_SENT)
@@ -3337,8 +3640,7 @@ void ecrt_master_receive(ec_master_t *master)
                                           datagram->jiffies_sent) *
                                          1000000 / HZ);
 #endif
-                EC_MASTER_DBG(master, 0, "TIMED OUT datagram %p,"
-                                         " index %02X waited %u us.\n",
+                EC_MASTER_DBG(master, 0, "超时的数据报文 %p，索引 %02X，等待时间 %u 微秒。\n",
                               datagram, datagram->index, time_us);
             }
 #endif /* RT_SYSLOG */
@@ -3348,6 +3650,14 @@ void ecrt_master_receive(ec_master_t *master)
 
 /*****************************************************************************/
 
+/**
+ * @brief 发送扩展的EtherCAT主站数据报文。
+ *
+ * 该函数发送扩展的EtherCAT主站数据报文，并返回发送的字节数。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @return 返回发送的字节数。
+ */
 size_t ecrt_master_send_ext(ec_master_t *master)
 {
     ec_datagram_t *datagram, *next;
@@ -3367,7 +3677,15 @@ size_t ecrt_master_send_ext(ec_master_t *master)
 
 /*****************************************************************************/
 
-/** Same as ecrt_master_slave_config(), but with ERR_PTR() return value.
+/**
+ * @brief ecrt_master_slave_config_err()函数的作用与ecrt_master_slave_config()相同，但返回值为ERR_PTR()。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @param alias 从站的别名。
+ * @param position 从站的位置。
+ * @param vendor_id 从站的厂商ID。
+ * @param product_code 从站的产品代码。
+ * @return 返回指向ec_slave_config_t结构体的指针，表示从站的配置；如果出现错误，则返回ERR_PTR()。
  */
 ec_slave_config_t *ecrt_master_slave_config_err(ec_master_t *master,
                                                 uint16_t alias, uint16_t position, uint32_t vendor_id,
@@ -3391,12 +3709,10 @@ ec_slave_config_t *ecrt_master_slave_config_err(ec_master_t *master,
     }
 
     if (found)
-    { // config with same alias/position already existing
+    { // 已存在相同alias/position的配置
         if (sc->vendor_id != vendor_id || sc->product_code != product_code)
         {
-            EC_MASTER_ERR(master, "Slave type mismatch. Slave was"
-                                  " configured as 0x%08X/0x%08X before. Now configuring"
-                                  " with 0x%08X/0x%08X.\n",
+            EC_MASTER_ERR(master, "从站类型不匹配。之前已配置为0x%08X/0x%08X。现在配置为0x%08X/0x%08X。\n",
                           sc->vendor_id, sc->product_code,
                           vendor_id, product_code);
             return ERR_PTR(-ENOENT);
@@ -3404,15 +3720,13 @@ ec_slave_config_t *ecrt_master_slave_config_err(ec_master_t *master,
     }
     else
     {
-        EC_MASTER_DBG(master, 1, "Creating slave configuration for %u:%u,"
-                                 " 0x%08X/0x%08X.\n",
+        EC_MASTER_DBG(master, 1, "为 %u:%u，0x%08X/0x%08X 创建从站配置。\n",
                       alias, position, vendor_id, product_code);
 
         if (!(sc = (ec_slave_config_t *)kmalloc(sizeof(ec_slave_config_t),
                                                 GFP_KERNEL)))
         {
-            EC_MASTER_ERR(master, "Failed to allocate memory"
-                                  " for slave configuration.\n");
+            EC_MASTER_ERR(master, "无法为从站配置分配内存。\n");
             return ERR_PTR(-ENOMEM);
         }
 
@@ -3421,7 +3735,7 @@ ec_slave_config_t *ecrt_master_slave_config_err(ec_master_t *master,
 
         ec_lock_down(&master->master_sem);
 
-        // try to find the addressed slave
+        // 尝试找到指定的从站
         ec_slave_config_attach(sc);
         ec_slave_config_load_default_sync_config(sc);
         list_add_tail(&sc->list, &master->configs);
@@ -3432,8 +3746,20 @@ ec_slave_config_t *ecrt_master_slave_config_err(ec_master_t *master,
     return sc;
 }
 
+
+
 /*****************************************************************************/
 
+/**
+ * @brief 根据别名、位置、厂商ID和产品代码配置EtherCAT从站。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @param alias 从站的别名。
+ * @param position 从站的位置。
+ * @param vendor_id 从站的厂商ID。
+ * @param product_code 从站的产品代码。
+ * @return 返回指向ec_slave_config_t结构体的指针，表示从站的配置；如果出现错误，则返回NULL。
+ */
 ec_slave_config_t *ecrt_master_slave_config(ec_master_t *master,
                                             uint16_t alias, uint16_t position, uint32_t vendor_id,
                                             uint32_t product_code)
@@ -3445,6 +3771,13 @@ ec_slave_config_t *ecrt_master_slave_config(ec_master_t *master,
 
 /*****************************************************************************/
 
+/**
+ * @brief 选择EtherCAT主站的参考时钟配置。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @param sc 从站配置对象指针。
+ * @return 返回0表示成功，返回负值表示错误。
+ */
 int ecrt_master_select_reference_clock(ec_master_t *master,
                                        ec_slave_config_t *sc)
 {
@@ -3452,18 +3785,16 @@ int ecrt_master_select_reference_clock(ec_master_t *master,
 
     if (master->dc_ref_config)
     {
-        EC_MASTER_INFO(master, "Application selected DC reference clock"
-                               " config (%u-%u) set by application.\n",
+        EC_MASTER_INFO(master, "应用程序选择了由应用程序设置的DC参考时钟配置（%u-%u）。\n",
                        master->dc_ref_config->alias,
                        master->dc_ref_config->position);
     }
     else
     {
-        EC_MASTER_INFO(master, "Application selected DC reference clock"
-                               " config cleared by application.\n");
+        EC_MASTER_INFO(master, "应用程序清除了由应用程序设置的DC参考时钟配置。\n");
     }
 
-    // update dc datagrams
+    // 更新DC数据报文
     ec_master_find_dc_ref_clock(master);
 
     return 0;
@@ -3471,6 +3802,13 @@ int ecrt_master_select_reference_clock(ec_master_t *master,
 
 /*****************************************************************************/
 
+/**
+ * @brief 获取EtherCAT主站的信息。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @param master_info 用于存储主站信息的结构体指针。
+ * @return 返回0表示成功，返回负值表示错误。
+ */
 int ecrt_master(ec_master_t *master, ec_master_info_t *master_info)
 {
     EC_MASTER_DBG(master, 1, "ecrt_master(master = 0x%p,"
@@ -3486,6 +3824,14 @@ int ecrt_master(ec_master_t *master, ec_master_info_t *master_info)
 
 /*****************************************************************************/
 
+/**
+ * @brief 获取EtherCAT主站中指定从站的信息。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @param slave_position 从站的位置。
+ * @param slave_info 用于存储从站信息的结构体指针。
+ * @return 返回0表示成功，返回负值表示错误。
+ */
 int ecrt_master_get_slave(ec_master_t *master, uint16_t slave_position,
                           ec_slave_info_t *slave_info)
 {
@@ -3508,7 +3854,7 @@ int ecrt_master_get_slave(ec_master_t *master, uint16_t slave_position,
 
     if (slave->sii_image == NULL)
     {
-        EC_MASTER_WARN(master, "Cannot access SII data from slave position %s-%u",
+        EC_MASTER_WARN(master, "无法访问从站位置 %s-%u 的SII数据",
                        ec_device_names[slave->device_index != 0], slave->ring_position);
         ret = -ENOENT;
         goto out_get_slave;
@@ -3566,8 +3912,17 @@ out_get_slave:
     return ret;
 }
 
+
 /*****************************************************************************/
 
+/**
+ * @brief 设置EtherCAT主站的回调函数。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @param send_cb 发送回调函数指针。
+ * @param receive_cb 接收回调函数指针。
+ * @param cb_data 回调函数的用户数据指针。
+ */
 void ecrt_master_callbacks(ec_master_t *master,
                            void (*send_cb)(void *), void (*receive_cb)(void *), void *cb_data)
 {
@@ -3582,6 +3937,12 @@ void ecrt_master_callbacks(ec_master_t *master,
 
 /*****************************************************************************/
 
+/**
+ * @brief 获取EtherCAT主站的状态。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @param state 用于存储主站状态的结构体指针。
+ */
 void ecrt_master_state(const ec_master_t *master, ec_master_state_t *state)
 {
     ec_device_index_t dev_idx;
@@ -3594,19 +3955,27 @@ void ecrt_master_state(const ec_master_t *master, ec_master_state_t *state)
     for (dev_idx = EC_DEVICE_MAIN; dev_idx < ec_master_num_devices(master);
          dev_idx++)
     {
-        /* Announce sum of responding slaves on all links. */
+        /* 所有链路上响应的从站数量之和 */
         state->slaves_responding += master->fsm.slaves_responding[dev_idx];
 
-        /* Binary-or slave states of all links. */
+        /* 所有链路上的从站状态的二进制或结果 */
         state->al_states |= master->fsm.slave_states[dev_idx];
 
-        /* Signal link up if at least one device has link. */
+        /* 如果至少有一个设备具有链路，则设置链路状态为真 */
         state->link_up |= master->devices[dev_idx].link_state;
     }
 }
 
 /*****************************************************************************/
 
+/**
+ * @brief 获取EtherCAT主站指定设备索引的链路状态。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @param dev_idx 设备索引。
+ * @param state 用于存储链路状态的结构体指针。
+ * @return 返回0表示成功，返回负值表示错误。
+ */
 int ecrt_master_link_state(const ec_master_t *master, unsigned int dev_idx,
                            ec_master_link_state_t *state)
 {
@@ -3622,8 +3991,15 @@ int ecrt_master_link_state(const ec_master_t *master, unsigned int dev_idx,
     return 0;
 }
 
+
 /*****************************************************************************/
 
+/**
+ * @brief 设置EtherCAT主站的应用时间。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @param app_time 应用时间。
+ */
 void ecrt_master_application_time(ec_master_t *master, uint64_t app_time)
 {
     master->app_time = app_time;
@@ -3636,6 +4012,13 @@ void ecrt_master_application_time(ec_master_t *master, uint64_t app_time)
 
 /*****************************************************************************/
 
+/**
+ * @brief 获取EtherCAT主站参考时钟时间。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @param time 用于存储参考时钟时间的指针。
+ * @return 返回0表示成功，返回负值表示错误。
+ */
 int ecrt_master_reference_clock_time(ec_master_t *master, uint32_t *time)
 {
     if (!master->dc_ref_clock)
@@ -3653,7 +4036,7 @@ int ecrt_master_reference_clock_time(ec_master_t *master, uint32_t *time)
         return -EAGAIN;
     }
 
-    // Get returned datagram time, transmission delay removed.
+    // 获取返回的数据报时间，排除传输延迟。
     *time = EC_READ_U32(master->sync_datagram.data) -
             master->dc_ref_clock->transmission_delay;
 
@@ -3662,6 +4045,11 @@ int ecrt_master_reference_clock_time(ec_master_t *master, uint32_t *time)
 
 /*****************************************************************************/
 
+/**
+ * @brief 同步EtherCAT主站的参考时钟。
+ *
+ * @param master EtherCAT主站对象指针。
+ */
 void ecrt_master_sync_reference_clock(ec_master_t *master)
 {
     if (master->dc_ref_clock && master->dc_offset_valid)
@@ -3673,6 +4061,12 @@ void ecrt_master_sync_reference_clock(ec_master_t *master)
 
 /*****************************************************************************/
 
+/**
+ * @brief 将EtherCAT主站的参考时钟同步到指定时间。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @param sync_time 同步时间。
+ */
 void ecrt_master_sync_reference_clock_to(
     ec_master_t *master,
     uint64_t sync_time)
@@ -3686,6 +4080,11 @@ void ecrt_master_sync_reference_clock_to(
 
 /*****************************************************************************/
 
+/**
+ * @brief 同步EtherCAT主站的从站时钟。
+ *
+ * @param master EtherCAT主站对象指针。
+ */
 void ecrt_master_sync_slave_clocks(ec_master_t *master)
 {
     if (master->dc_ref_clock && master->dc_offset_valid)
@@ -3695,8 +4094,14 @@ void ecrt_master_sync_slave_clocks(ec_master_t *master)
     }
 }
 
+
 /*****************************************************************************/
 
+/**
+ * @brief 将EtherCAT主站的64位参考时钟时间加入队列。
+ *
+ * @param master EtherCAT主站对象指针。
+ */
 void ecrt_master_64bit_reference_clock_time_queue(ec_master_t *master)
 {
     if (master->dc_ref_clock && master->dc_offset_valid)
@@ -3708,6 +4113,13 @@ void ecrt_master_64bit_reference_clock_time_queue(ec_master_t *master)
 
 /*****************************************************************************/
 
+/**
+ * @brief 获取EtherCAT主站64位参考时钟时间。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @param time 用于存储64位参考时钟时间的指针。
+ * @return 返回0表示成功，返回负值表示错误。
+ */
 int ecrt_master_64bit_reference_clock_time(ec_master_t *master, uint64_t *time)
 {
     if (!master->dc_ref_clock)
@@ -3725,7 +4137,7 @@ int ecrt_master_64bit_reference_clock_time(ec_master_t *master, uint64_t *time)
         return -EAGAIN;
     }
 
-    // Get returned datagram time, transmission delay removed.
+    // 获取返回的数据报时间，排除传输延迟。
     *time = EC_READ_U64(master->sync64_datagram.data) -
             master->dc_ref_clock->transmission_delay;
 
@@ -3734,6 +4146,11 @@ int ecrt_master_64bit_reference_clock_time(ec_master_t *master, uint64_t *time)
 
 /*****************************************************************************/
 
+/**
+ * @brief 同步EtherCAT主站的监视器。
+ *
+ * @param master EtherCAT主站对象指针。
+ */
 void ecrt_master_sync_monitor_queue(ec_master_t *master)
 {
     ec_datagram_zero(&master->sync_mon_datagram);
@@ -3742,6 +4159,12 @@ void ecrt_master_sync_monitor_queue(ec_master_t *master)
 
 /*****************************************************************************/
 
+/**
+ * @brief 处理EtherCAT主站的监视器同步。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @return 返回监视器同步的处理结果。
+ */
 uint32_t ecrt_master_sync_monitor_process(ec_master_t *master)
 {
     if (master->sync_mon_datagram.state == EC_DATAGRAM_RECEIVED)
@@ -3754,8 +4177,21 @@ uint32_t ecrt_master_sync_monitor_process(ec_master_t *master)
     }
 }
 
+
 /*****************************************************************************/
 
+/**
+ * @brief 下载数据到EtherCAT主站的SDO对象。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @param slave_position 从站位置。
+ * @param index SDO索引。
+ * @param subindex SDO子索引。
+ * @param data 数据指针。
+ * @param data_size 数据大小。
+ * @param abort_code 用于存储中止代码的指针。
+ * @return 返回0表示成功，返回负值表示错误。
+ */
 int ecrt_master_sdo_download(ec_master_t *master, uint16_t slave_position,
                              uint16_t index, uint8_t subindex, const uint8_t *data,
                              size_t data_size, uint32_t *abort_code)
@@ -3772,7 +4208,7 @@ int ecrt_master_sdo_download(ec_master_t *master, uint16_t slave_position,
 
     if (!data_size)
     {
-        EC_MASTER_ERR(master, "Zero data size!\n");
+        EC_MASTER_ERR(master, "数据大小为零！\n");
         return -EINVAL;
     }
 
@@ -3798,23 +4234,23 @@ int ecrt_master_sdo_download(ec_master_t *master, uint16_t slave_position,
     if (!(slave = ec_master_find_slave(master, 0, slave_position)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Slave %u does not exist!\n", slave_position);
+        EC_MASTER_ERR(master, "从站 %u 不存在！\n", slave_position);
         ec_sdo_request_clear(&request);
         return -EINVAL;
     }
 
-    EC_SLAVE_DBG(slave, 1, "Scheduling SDO download request.\n");
+    EC_SLAVE_DBG(slave, 1, "调度SDO下载请求。\n");
 
-    // schedule request.
+    // 调度请求。
     list_add_tail(&request.list, &slave->sdo_requests);
 
     ec_lock_up(&master->master_sem);
 
-    // wait for processing through FSM
+    // 等待FSM处理
     if (wait_event_interruptible(master->request_queue,
                                  request.state != EC_INT_REQUEST_QUEUED))
     {
-        // interrupted by signal
+        // 被信号中断
         ec_lock_down(&master->master_sem);
         if (request.state == EC_INT_REQUEST_QUEUED)
         {
@@ -3823,11 +4259,11 @@ int ecrt_master_sdo_download(ec_master_t *master, uint16_t slave_position,
             ec_sdo_request_clear(&request);
             return -EINTR;
         }
-        // request already processing: interrupt not possible.
+        // 请求已在处理中：无法中断。
         ec_lock_up(&master->master_sem);
     }
 
-    // wait until master FSM has finished processing
+    // 等待主站FSM处理完成
     wait_event(master->request_queue, request.state != EC_INT_REQUEST_BUSY);
 
     *abort_code = request.abort_code;
@@ -3851,6 +4287,17 @@ int ecrt_master_sdo_download(ec_master_t *master, uint16_t slave_position,
 
 /*****************************************************************************/
 
+/**
+ * @brief 使用完整访问方式将数据下载到EtherCAT主站的SDO对象。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @param slave_position 从站位置。
+ * @param index SDO索引。
+ * @param data 数据指针。
+ * @param data_size 数据大小。
+ * @param abort_code 用于存储中止代码的指针。
+ * @return 返回0表示成功，返回负值表示错误。
+ */
 int ecrt_master_sdo_download_complete(ec_master_t *master,
                                       uint16_t slave_position, uint16_t index, const uint8_t *data,
                                       size_t data_size, uint32_t *abort_code)
@@ -3867,7 +4314,7 @@ int ecrt_master_sdo_download_complete(ec_master_t *master,
 
     if (!data_size)
     {
-        EC_MASTER_ERR(master, "Zero data size!\n");
+        EC_MASTER_ERR(master, "数据大小为零！\n");
         return -EINVAL;
     }
 
@@ -3893,24 +4340,23 @@ int ecrt_master_sdo_download_complete(ec_master_t *master,
     if (!(slave = ec_master_find_slave(master, 0, slave_position)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Slave %u does not exist!\n", slave_position);
+        EC_MASTER_ERR(master, "从站 %u 不存在！\n", slave_position);
         ec_sdo_request_clear(&request);
         return -EINVAL;
     }
 
-    EC_SLAVE_DBG(slave, 1, "Scheduling SDO download request"
-                           " (complete access).\n");
+    EC_SLAVE_DBG(slave, 1, "调度SDO下载请求 (完整访问)。\n");
 
-    // schedule request.
+    // 调度请求。
     list_add_tail(&request.list, &slave->sdo_requests);
 
     ec_lock_up(&master->master_sem);
 
-    // wait for processing through FSM
+    // 等待FSM处理
     if (wait_event_interruptible(master->request_queue,
                                  request.state != EC_INT_REQUEST_QUEUED))
     {
-        // interrupted by signal
+        // 被信号中断
         ec_lock_down(&master->master_sem);
         if (request.state == EC_INT_REQUEST_QUEUED)
         {
@@ -3919,11 +4365,11 @@ int ecrt_master_sdo_download_complete(ec_master_t *master,
             ec_sdo_request_clear(&request);
             return -EINTR;
         }
-        // request already processing: interrupt not possible.
+        // 请求已在处理中：无法中断。
         ec_lock_up(&master->master_sem);
     }
 
-    // wait until master FSM has finished processing
+    // 等待主站FSM处理完成
     wait_event(master->request_queue, request.state != EC_INT_REQUEST_BUSY);
 
     *abort_code = request.abort_code;
@@ -3947,6 +4393,19 @@ int ecrt_master_sdo_download_complete(ec_master_t *master,
 
 /*****************************************************************************/
 
+/**
+ * @brief 从EtherCAT主站的SDO对象上传数据。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @param slave_position 从站位置。
+ * @param index SDO索引。
+ * @param subindex SDO子索引。
+ * @param target 目标缓冲区指针。
+ * @param target_size 目标缓冲区大小。
+ * @param result_size 用于存储结果大小的指针。
+ * @param abort_code 用于存储中止代码的指针。
+ * @return 返回0表示成功，返回负值表示错误。
+ */
 int ecrt_master_sdo_upload(ec_master_t *master, uint16_t slave_position,
                            uint16_t index, uint8_t subindex, uint8_t *target,
                            size_t target_size, size_t *result_size, uint32_t *abort_code)
@@ -3976,22 +4435,22 @@ int ecrt_master_sdo_upload(ec_master_t *master, uint16_t slave_position,
     {
         ec_lock_up(&master->master_sem);
         ec_sdo_request_clear(&request);
-        EC_MASTER_ERR(master, "Slave %u does not exist!\n", slave_position);
+        EC_MASTER_ERR(master, "从站 %u 不存在！\n", slave_position);
         return -EINVAL;
     }
 
-    EC_SLAVE_DBG(slave, 1, "Scheduling SDO upload request.\n");
+    EC_SLAVE_DBG(slave, 1, "调度SDO上传请求。\n");
 
-    // schedule request.
+    // 调度请求。
     list_add_tail(&request.list, &slave->sdo_requests);
 
     ec_lock_up(&master->master_sem);
 
-    // wait for processing through FSM
+    // 等待FSM处理
     if (wait_event_interruptible(master->request_queue,
                                  request.state != EC_INT_REQUEST_QUEUED))
     {
-        // interrupted by signal
+        // 被信号中断
         ec_lock_down(&master->master_sem);
         if (request.state == EC_INT_REQUEST_QUEUED)
         {
@@ -4000,11 +4459,11 @@ int ecrt_master_sdo_upload(ec_master_t *master, uint16_t slave_position,
             ec_sdo_request_clear(&request);
             return -EINTR;
         }
-        // request already processing: interrupt not possible.
+        // 请求已在处理中：无法中断。
         ec_lock_up(&master->master_sem);
     }
 
-    // wait until master FSM has finished processing
+    // 等待主站FSM处理完成
     wait_event(master->request_queue, request.state != EC_INT_REQUEST_BUSY);
 
     *abort_code = request.abort_code;
@@ -4025,7 +4484,7 @@ int ecrt_master_sdo_upload(ec_master_t *master, uint16_t slave_position,
     {
         if (request.data_size > target_size)
         {
-            EC_SLAVE_ERR(slave, "%s(): Buffer too small.\n", __func__);
+            EC_SLAVE_ERR(slave, "%s(): 缓冲区太小。\n", __func__);
             ret = -EOVERFLOW;
         }
         else
@@ -4040,8 +4499,21 @@ int ecrt_master_sdo_upload(ec_master_t *master, uint16_t slave_position,
     return ret;
 }
 
+
 /*****************************************************************************/
 
+/**
+ * @brief 使用完整访问方式从EtherCAT主站的SDO对象上传数据。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @param slave_position 从站位置。
+ * @param index SDO索引。
+ * @param target 目标缓冲区指针。
+ * @param target_size 目标缓冲区大小。
+ * @param result_size 用于存储结果大小的指针。
+ * @param abort_code 用于存储中止代码的指针。
+ * @return 返回0表示成功，返回负值表示错误。
+ */
 int ecrt_master_sdo_upload_complete(ec_master_t *master, uint16_t slave_position,
                                     uint16_t index, uint8_t *target,
                                     size_t target_size, size_t *result_size, uint32_t *abort_code)
@@ -4071,22 +4543,22 @@ int ecrt_master_sdo_upload_complete(ec_master_t *master, uint16_t slave_position
     {
         ec_lock_up(&master->master_sem);
         ec_sdo_request_clear(&request);
-        EC_MASTER_ERR(master, "Slave %u does not exist!\n", slave_position);
+        EC_MASTER_ERR(master, "从站 %u 不存在！\n", slave_position);
         return -EINVAL;
     }
 
-    EC_SLAVE_DBG(slave, 1, "Scheduling SDO upload request (complete access).\n");
+    EC_SLAVE_DBG(slave, 1, "调度SDO上传请求 (完整访问)。\n");
 
-    // schedule request.
+    // 调度请求。
     list_add_tail(&request.list, &slave->sdo_requests);
 
     ec_lock_up(&master->master_sem);
 
-    // wait for processing through FSM
+    // 等待FSM处理
     if (wait_event_interruptible(master->request_queue,
                                  request.state != EC_INT_REQUEST_QUEUED))
     {
-        // interrupted by signal
+        // 被信号中断
         ec_lock_down(&master->master_sem);
         if (request.state == EC_INT_REQUEST_QUEUED)
         {
@@ -4095,11 +4567,11 @@ int ecrt_master_sdo_upload_complete(ec_master_t *master, uint16_t slave_position
             ec_sdo_request_clear(&request);
             return -EINTR;
         }
-        // request already processing: interrupt not possible.
+        // 请求已在处理中：无法中断。
         ec_lock_up(&master->master_sem);
     }
 
-    // wait until master FSM has finished processing
+    // 等待主站FSM处理完成
     wait_event(master->request_queue, request.state != EC_INT_REQUEST_BUSY);
 
     *abort_code = request.abort_code;
@@ -4120,7 +4592,7 @@ int ecrt_master_sdo_upload_complete(ec_master_t *master, uint16_t slave_position
     {
         if (request.data_size > target_size)
         {
-            EC_MASTER_ERR(master, "Buffer too small.\n");
+            EC_MASTER_ERR(master, "缓冲区太小。\n");
             ret = -EOVERFLOW;
         }
         else
@@ -4137,6 +4609,18 @@ int ecrt_master_sdo_upload_complete(ec_master_t *master, uint16_t slave_position
 
 /*****************************************************************************/
 
+/**
+ * @brief 向EtherCAT主站写入IDN数据。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @param slave_position 从站位置。
+ * @param drive_no 驱动器编号。
+ * @param idn IDN值。
+ * @param data 数据指针。
+ * @param data_size 数据大小。
+ * @param error_code 用于存储错误代码的指针。
+ * @return 返回0表示成功，返回负值表示错误。
+ */
 int ecrt_master_write_idn(ec_master_t *master, uint16_t slave_position,
                           uint8_t drive_no, uint16_t idn, uint8_t *data, size_t data_size,
                           uint16_t *error_code)
@@ -4147,7 +4631,7 @@ int ecrt_master_write_idn(ec_master_t *master, uint16_t slave_position,
 
     if (drive_no > 7)
     {
-        EC_MASTER_ERR(master, "Invalid drive number!\n");
+        EC_MASTER_ERR(master, "无效的驱动器编号！\n");
         return -EINVAL;
     }
 
@@ -4175,28 +4659,28 @@ int ecrt_master_write_idn(ec_master_t *master, uint16_t slave_position,
     if (!(slave = ec_master_find_slave(master, 0, slave_position)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Slave %u does not exist!\n",
+        EC_MASTER_ERR(master, "从站 %u 不存在！\n",
                       slave_position);
         ec_soe_request_clear(&request);
         return -EINVAL;
     }
 
-    EC_SLAVE_DBG(slave, 1, "Scheduling SoE write request.\n");
+    EC_SLAVE_DBG(slave, 1, "调度SoE写入请求。\n");
 
-    // schedule SoE write request.
+    // 调度SoE写入请求。
     list_add_tail(&request.list, &slave->soe_requests);
 
     ec_lock_up(&master->master_sem);
 
-    // wait for processing through FSM
+    // 等待FSM处理
     if (wait_event_interruptible(master->request_queue,
                                  request.state != EC_INT_REQUEST_QUEUED))
     {
-        // interrupted by signal
+        // 被信号中断
         ec_lock_down(&master->master_sem);
         if (request.state == EC_INT_REQUEST_QUEUED)
         {
-            // abort request
+            // 中止请求
             list_del(&request.list);
             ec_lock_up(&master->master_sem);
             ec_soe_request_clear(&request);
@@ -4205,7 +4689,7 @@ int ecrt_master_write_idn(ec_master_t *master, uint16_t slave_position,
         ec_lock_up(&master->master_sem);
     }
 
-    // wait until master FSM has finished processing
+    // 等待主站FSM处理完成
     wait_event(master->request_queue, request.state != EC_INT_REQUEST_BUSY);
 
     if (error_code)
@@ -4220,6 +4704,19 @@ int ecrt_master_write_idn(ec_master_t *master, uint16_t slave_position,
 
 /*****************************************************************************/
 
+/**
+ * @brief 从EtherCAT主站读取IDN数据。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @param slave_position 从站位置。
+ * @param drive_no 驱动器编号。
+ * @param idn IDN值。
+ * @param target 目标缓冲区指针。
+ * @param target_size 目标缓冲区大小。
+ * @param result_size 用于存储结果大小的指针。
+ * @param error_code 用于存储错误代码的指针。
+ * @return 返回0表示成功，返回负值表示错误。
+ */
 int ecrt_master_read_idn(ec_master_t *master, uint16_t slave_position,
                          uint8_t drive_no, uint16_t idn, uint8_t *target, size_t target_size,
                          size_t *result_size, uint16_t *error_code)
@@ -4230,7 +4727,7 @@ int ecrt_master_read_idn(ec_master_t *master, uint16_t slave_position,
 
     if (drive_no > 7)
     {
-        EC_MASTER_ERR(master, "Invalid drive number!\n");
+        EC_MASTER_ERR(master, "无效的驱动器编号！\n");
         return -EINVAL;
     }
 
@@ -4249,22 +4746,22 @@ int ecrt_master_read_idn(ec_master_t *master, uint16_t slave_position,
     {
         ec_lock_up(&master->master_sem);
         ec_soe_request_clear(&request);
-        EC_MASTER_ERR(master, "Slave %u does not exist!\n", slave_position);
+        EC_MASTER_ERR(master, "从站 %u 不存在！\n", slave_position);
         return -EINVAL;
     }
 
-    EC_SLAVE_DBG(slave, 1, "Scheduling SoE read request.\n");
+    EC_SLAVE_DBG(slave, 1, "调度SoE读取请求。\n");
 
-    // schedule request.
+    // 调度请求。
     list_add_tail(&request.list, &slave->soe_requests);
 
     ec_lock_up(&master->master_sem);
 
-    // wait for processing through FSM
+    // 等待FSM处理
     if (wait_event_interruptible(master->request_queue,
                                  request.state != EC_INT_REQUEST_QUEUED))
     {
-        // interrupted by signal
+        // 被信号中断
         ec_lock_down(&master->master_sem);
         if (request.state == EC_INT_REQUEST_QUEUED)
         {
@@ -4273,11 +4770,11 @@ int ecrt_master_read_idn(ec_master_t *master, uint16_t slave_position,
             ec_soe_request_clear(&request);
             return -EINTR;
         }
-        // request already processing: interrupt not possible.
+        // 请求已在处理中：无法中断。
         ec_lock_up(&master->master_sem);
     }
 
-    // wait until master FSM has finished processing
+    // 等待主站FSM处理完成
     wait_event(master->request_queue, request.state != EC_INT_REQUEST_BUSY);
 
     if (error_code)
@@ -4294,14 +4791,14 @@ int ecrt_master_read_idn(ec_master_t *master, uint16_t slave_position,
         ret = -EIO;
     }
     else
-    { // success
+    { // 成功
         if (request.data_size > target_size)
         {
-            EC_SLAVE_ERR(slave, "%s(): Buffer too small.\n", __func__);
+            EC_SLAVE_ERR(slave, "%s(): 缓冲区太小。\n", __func__);
             ret = -EOVERFLOW;
         }
         else
-        { // data fits in buffer
+        { // 数据适应缓冲区
             if (result_size)
             {
                 *result_size = request.data_size;
@@ -4317,39 +4814,48 @@ int ecrt_master_read_idn(ec_master_t *master, uint16_t slave_position,
 
 /*****************************************************************************/
 
+/**
+ * @brief 设置EtherCAT主站的实时从站请求处理方式。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @param rt_slave_requests 实时从站请求处理方式标志。
+ * @return 返回0表示成功。
+ */
 int ecrt_master_rt_slave_requests(ec_master_t *master,
                                   unsigned int rt_slave_requests)
 {
-    // set flag as to whether the master or the external application
-    // should be handling processing the slave request
+    // 设置标志，确定是主站还是外部应用程序处理从站请求
     master->rt_slave_requests = rt_slave_requests;
 
     if (master->rt_slave_requests)
     {
-        EC_MASTER_INFO(master, "Application selected to process"
-                               " slave request by the application.\n");
+        EC_MASTER_INFO(master, "应用程序选择由应用程序处理从站请求。\n");
     }
     else
     {
-        EC_MASTER_INFO(master, "Application selected to process"
-                               " slave request by the master.\n");
+        EC_MASTER_INFO(master, "应用程序选择由主站处理从站请求。\n");
     }
 
     return 0;
 }
 
+
 /*****************************************************************************/
 
+/**
+ * @brief 执行从站请求。
+ *
+ * @param master EtherCAT主站对象指针。
+ */
 void ecrt_master_exec_slave_requests(ec_master_t *master)
 {
-    // execute slave state machines
+    // 执行从站状态机
     if (ec_lock_down_interruptible(&master->master_sem))
     {
         return;
     }
 
-    // ignore this call if the master is not operational or not set to
-    // handle the slave requests from the application
+    // 如果主站处于操作状态且设置为由应用程序处理从站请求，则执行从站状态机
     if (master->rt_slave_requests && master->rt_slaves_available &&
         (master->phase == EC_OPERATION))
     {
@@ -4363,6 +4869,14 @@ void ecrt_master_exec_slave_requests(ec_master_t *master)
 
 #ifdef EC_EOE
 
+/**
+ * @brief 向EtherCAT主站添加EoE接口。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @param alias EoE别名。
+ * @param posn EoE位置。
+ * @return 返回0表示成功，返回负值表示错误。
+ */
 int ecrt_master_eoe_addif(ec_master_t *master,
                           uint16_t alias, uint16_t posn)
 {
@@ -4370,7 +4884,7 @@ int ecrt_master_eoe_addif(ec_master_t *master,
     char name[EC_DATAGRAM_NAME_SIZE];
     int res;
 
-    // check if the name already exists
+    // 检查名称是否已存在
     if (alias)
     {
         snprintf(name, EC_DATAGRAM_NAME_SIZE, "eoe%ua%u", master->index, alias);
@@ -4391,17 +4905,17 @@ int ecrt_master_eoe_addif(ec_master_t *master,
         }
     }
 
-    // none found, create one
+    // 未找到，创建新的EoE接口
     if (!(eoe = kmalloc(sizeof(ec_eoe_t), GFP_KERNEL)))
     {
-        EC_MASTER_ERR(master, "Failed to allocate EoE handler memory!\n");
+        EC_MASTER_ERR(master, "分配EoE处理程序内存失败！\n");
         ec_lock_up(&master->master_sem);
         return -EFAULT;
     }
 
     if ((res = ec_eoe_init(master, eoe, alias, posn)))
     {
-        EC_MASTER_ERR(master, "Failed to init EoE handler!\n");
+        EC_MASTER_ERR(master, "初始化EoE处理程序失败！\n");
         kfree(eoe);
         ec_lock_up(&master->master_sem);
         return res;
@@ -4415,6 +4929,14 @@ int ecrt_master_eoe_addif(ec_master_t *master,
 
 /*****************************************************************************/
 
+/**
+ * @brief 从EtherCAT主站删除EoE接口。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @param alias EoE别名。
+ * @param posn EoE位置。
+ * @return 返回0表示成功，返回负值表示错误。
+ */
 int ecrt_master_eoe_delif(ec_master_t *master,
                           uint16_t alias, uint16_t posn)
 {
@@ -4449,8 +4971,18 @@ int ecrt_master_eoe_delif(ec_master_t *master,
 
 #endif
 
+
 /*****************************************************************************/
 
+/**
+ * @brief 获取EtherCAT主站的对象字典。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @param data 数据指针。
+ * @param data_size 用于存储数据大小的指针。
+ * @param buff_size 缓冲区大小。
+ * @return 返回0表示成功，返回负值表示错误。
+ */
 int ec_master_obj_dict(ec_master_t *master, uint8_t *data,
                        size_t *data_size, size_t buff_size)
 {
@@ -4469,59 +5001,59 @@ int ec_master_obj_dict(ec_master_t *master, uint8_t *data,
     uint32_t abort_code;
     uint8_t resp_error = 0;
 
-    EC_MASTER_DBG(master, 1, "MBox Gateway request for Master Information.\n");
+    EC_MASTER_DBG(master, 1, "MBox Gateway请求主站信息。\n");
 
-    // check the mailbox header type is CoE
+    // 检查邮箱头类型是否为CoE
     if ((*data_size < EC_MBOX_HEADER_SIZE) ||
         ((EC_READ_U16(data + 5) & 0x0F) != EC_MBOX_TYPE_COE))
     {
-        EC_MASTER_ERR(master, "Master does not support requested mailbox type!\n");
+        EC_MASTER_ERR(master, "主站不支持所请求的邮箱类型！\n");
         return -EPROTONOSUPPORT;
     }
 
-    // ensure the CoE Header service is an SDO request
+    // 确保CoE头服务是SDO请求
     offset = EC_MBOX_HEADER_SIZE;
     if ((*data_size < EC_MBOX_HEADER_SIZE + EC_COE_HEADER_SIZE + 4) ||
         (EC_READ_U16(data + offset) >> 12 != 0x2))
     {
-        EC_MASTER_ERR(master, "Master only supports SDO requests!\n");
+        EC_MASTER_ERR(master, "主站仅支持SDO请求！\n");
         return -EINVAL;
     }
 
-    // get the SDO cmd, index, subindex
+    // 获取SDO命令、索引和子索引
     offset = EC_MBOX_HEADER_SIZE + EC_COE_HEADER_SIZE;
     sdo_req_cmd = EC_READ_U8(data + offset) >> 5;
     sdo_index = EC_READ_U16(data + offset + 1);
     sdo_sub_index = EC_READ_U8(data + offset + 3);
 
-    // get the master lock
+    // 获取主站锁
     if (ec_lock_down_interruptible(&master->master_sem))
     {
         return -EINTR;
     }
 
-    // handle SDO request
-    // See ETG.5001.3 for required object dictionary entries to support
+    // 处理SDO请求
+    // 参见ETG.5001.3，了解所需的对象字典条目支持
     if ((sdo_index >= 0x8000) && (sdo_index < 0x8000 + master->slave_count))
     {
-        // readonly commands
+        // 只读命令
         if (sdo_req_cmd != 0x02)
         {
             ec_lock_up(&master->master_sem);
-            EC_MASTER_ERR(master, "Master, unsupported SDO Command %hhu on"
-                                  " 0x%04X:%02X!\n",
+            EC_MASTER_ERR(master, "主站，不支持SDO命令 %hhu 在"
+                                  " 0x%04X:%02X 上！\n",
                           sdo_req_cmd, sdo_index, sdo_sub_index);
             return -EPROTONOSUPPORT;
         }
 
-        // calc slave position (slaves start at position 0)
+        // 计算从站位置（从站从位置0开始）
         slave_posn = sdo_index - 0x8000;
 
-        // get the slave information
+        // 获取从站信息
         if (!(slave = ec_master_find_slave(master, 0, slave_posn)))
         {
             ec_lock_up(&master->master_sem);
-            EC_MASTER_ERR(master, "Slave %u does not exist!\n", slave_posn);
+            EC_MASTER_ERR(master, "从站 %u 不存在！\n", slave_posn);
             return -EINVAL;
         }
 
@@ -4529,23 +5061,23 @@ int ec_master_obj_dict(ec_master_t *master, uint8_t *data,
         {
         case 0:
         {
-            // length of this object (uint8)
-            // Note: this may need to be 35 (there is a gap between 8 and 33)
+            // 对象的长度（uint8）
+            // 注意：这可能需要为35（8和33之间有一个间隔）
             value_size = sizeof(uint8_t);
             EC_WRITE_U8(value, 35);
         }
         break;
         case 1:
         {
-            // slave index (uint16)
-            // slave posn + MBG slave address offset
+            // 从站索引（uint16）
+            // 从站位置 + MBG从站地址偏移量
             value_size = sizeof(uint16_t);
             EC_WRITE_U16(value, slave_posn + EC_MBG_SLAVE_ADDR_OFFSET);
         }
         break;
         case 2:
         {
-            // slave type (visiblestring[16])
+            // 从站类型（visiblestring[16]）
             value_size = 16;
             memset(value, 0x00, value_size);
             if (slave->sii_image)
@@ -4556,7 +5088,7 @@ int ec_master_obj_dict(ec_master_t *master, uint8_t *data,
         break;
         case 3:
         {
-            // slave name (visiblestring[32])
+            // 从站名称（visiblestring[32]）
             value_size = 32;
             memset(value, 0x00, value_size);
             if (slave->sii_image)
@@ -4567,15 +5099,14 @@ int ec_master_obj_dict(ec_master_t *master, uint8_t *data,
         break;
         case 4:
         {
-            // device type (uint32) (Modular Device Profile)
-            // need ESI's for this information or a slave that can
-            // supports mailbox with SDO's (read 0x1000:00)
+            // 设备类型（uint32）（模块化设备配置文件）
+            // 需要ESI文件提供此信息，或支持带有SDO的邮箱的从站（读取0x1000:00）
             if (!(slave->sii_image) ||
                 !(slave->sii_image->sii.mailbox_protocols & EC_MBOX_COE) ||
                 (ecrt_master_sdo_upload(master, slave_posn, 0x1000, 0x00,
                                         value, sizeof(uint32_t), &value_size, &abort_code) != 0))
             {
-                // return 0 by default
+                // 默认返回0
                 value_size = sizeof(uint32_t);
                 EC_WRITE_U32(value, 0x00000000);
             }
@@ -4583,21 +5114,21 @@ int ec_master_obj_dict(ec_master_t *master, uint8_t *data,
         break;
         case 5:
         {
-            // vendor id (uint32)
+            // 厂商ID（uint32）
             value_size = sizeof(uint32_t);
             EC_WRITE_U32(value, slave->config->vendor_id);
         }
         break;
         case 6:
         {
-            // product code (uint32)
+            // 产品代码（uint32）
             value_size = sizeof(uint32_t);
             EC_WRITE_U32(value, slave->config->product_code);
         }
         break;
         case 7:
         {
-            // revision number (uint32)
+            // 版本号（uint32）
             value_size = sizeof(uint32_t);
             if (slave->sii_image)
             {
@@ -4611,7 +5142,7 @@ int ec_master_obj_dict(ec_master_t *master, uint8_t *data,
         break;
         case 8:
         {
-            // serial number (uint32)
+            // 序列号（uint32）
             value_size = sizeof(uint32_t);
             if (slave->sii_image)
             {
@@ -4625,7 +5156,7 @@ int ec_master_obj_dict(ec_master_t *master, uint8_t *data,
         break;
         case 9 ... 32:
         {
-            // Data can not be read or stored
+            // 无法读取或存储数据
             resp_error = 1;
             value_size = sizeof(uint32_t);
             EC_WRITE_U32(value, 0x08000020);
@@ -4633,7 +5164,7 @@ int ec_master_obj_dict(ec_master_t *master, uint8_t *data,
         break;
         case 33:
         {
-            // mailbox out size (uint16)
+            // 邮箱输出大小（uint16）
             value_size = sizeof(uint16_t);
             if (slave->sii_image)
             {
@@ -4647,7 +5178,7 @@ int ec_master_obj_dict(ec_master_t *master, uint8_t *data,
         break;
         case 34:
         {
-            // mailbox in size (uint16)
+            // 邮箱输入大小（uint16）
             value_size = sizeof(uint16_t);
             if (slave->sii_image)
             {
@@ -4661,7 +5192,7 @@ int ec_master_obj_dict(ec_master_t *master, uint8_t *data,
         break;
         case 35:
         {
-            // link status (uint8), bits 4..7 of register 0x0110:0x0111
+            // 连接状态（uint8），寄存器0x0110:0x0111的位4..7
             link_status = 0;
             for (i = 0; i < EC_MAX_PORTS; i++)
             {
@@ -4676,7 +5207,7 @@ int ec_master_obj_dict(ec_master_t *master, uint8_t *data,
         break;
         default:
         {
-            // Subindex does not exist error
+            // 子索引不存在错误
             resp_error = 1;
             value_size = sizeof(uint32_t);
             EC_WRITE_U32(value, 0x06090011);
@@ -4686,98 +5217,96 @@ int ec_master_obj_dict(ec_master_t *master, uint8_t *data,
     }
     else if ((sdo_index >= 0xA000) && (sdo_index < 0xA000 + master->slave_count))
     {
-        // Note: this is meant to be optional, but the TwinSAFE_Loader.exe seems to
-        //   want to have it
+        // 注意：这应该是可选的，但是TwinSAFE_Loader.exe似乎
+        //   希望有它
 
-        // calc slave position (slaves start at position 0)
+        // 计算从站位置（从站从位置0开始）
         slave_posn = sdo_index - 0xA000;
 
         switch (sdo_sub_index)
         {
         case 0:
         {
-            // readonly command
+            // 只读命令
             if (sdo_req_cmd != 0x02)
             {
                 ec_lock_up(&master->master_sem);
-                EC_MASTER_ERR(master, "Master, unsupported SDO Command %hhu on"
-                                      " 0x%04X:%02X!\n",
+                EC_MASTER_ERR(master, "主站，不支持SDO命令 %hhu 在"
+                                      " 0x%04X:%02X 上！\n",
                               sdo_req_cmd, sdo_index, sdo_sub_index);
                 return -EPROTONOSUPPORT;
             }
 
-            // length of this object (uint8)
+            // 对象的长度（uint8）
             value_size = sizeof(uint8_t);
             EC_WRITE_U8(value, 2);
         }
         break;
         case 1:
         {
-            // AL Status, register 0x130-0x131 (uint16)
-            // current state
+            // AL状态，寄存器0x130-0x131（uint16）
+            // 当前状态
 
-            // readonly command
+            // 只读命令
             if (sdo_req_cmd != 0x02)
             {
                 ec_lock_up(&master->master_sem);
-                EC_MASTER_ERR(master, "Master, unsupported SDO Command %hhu on"
-                                      " 0x%04X:%02X!\n",
+                EC_MASTER_ERR(master, "主站，不支持SDO命令 %hhu 在"
+                                      " 0x%04X:%02X 上！\n",
                               sdo_req_cmd, sdo_index, sdo_sub_index);
                 return -EPROTONOSUPPORT;
             }
 
-            // get the slave information
+            // 获取从站信息
             if (!(slave = ec_master_find_slave(master, 0, slave_posn)))
             {
                 ec_lock_up(&master->master_sem);
-                EC_MASTER_ERR(master, "Slave %u does not exist!\n", slave_posn);
+                EC_MASTER_ERR(master, "从站 %u 不存在！\n", slave_posn);
                 return -EINVAL;
             }
 
-            // return the cached slaves current state
-            // Note: the master only stores the first state byte
-            //   whereas the AL Status register is two bytes
-            //   (second byte reserved)
+            // 返回缓存的从站当前状态
+            // 注意：主站仅存储第一个状态字节
+            // 而AL状态寄存器是两个字节（第二个字节保留）
             value_size = sizeof(uint16_t);
             EC_WRITE_U16(value, slave->current_state);
         }
         break;
         case 2:
         {
-            // AL Control, register 0x120-0x121 (uint16)
-            // requested state
+            // AL控制，寄存器0x120-0x121（uint16）
+            // 请求的状态
 
-            // readwrite command
+            // 读写命令
             if ((sdo_req_cmd != 0x02) && (sdo_req_cmd != 0x00))
             {
                 ec_lock_up(&master->master_sem);
-                EC_MASTER_ERR(master, "Master, unsupported SDO Command %hhu on"
-                                      " 0x%04X:%02X!\n",
+                EC_MASTER_ERR(master, "主站，不支持SDO命令 %hhu 在"
+                                      " 0x%04X:%02X 上！\n",
                               sdo_req_cmd, sdo_index, sdo_sub_index);
                 return -EPROTONOSUPPORT;
             }
 
-            // get the slave information
+            // 获取从站信息
             if (!(slave = ec_master_find_slave(master, 0, slave_posn)))
             {
                 ec_lock_up(&master->master_sem);
-                EC_MASTER_ERR(master, "Slave %u does not exist!\n", slave_posn);
+                EC_MASTER_ERR(master, "从站 %u 不存在！\n", slave_posn);
                 return -EINVAL;
             }
 
             if (sdo_req_cmd == 0x02)
             {
-                // read
-                // return the cached slaves requested state
-                // Note: the master only stores the first state byte
-                //   whereas the AL Control register is two bytes
-                //   (second byte reserved)
+                // 读取
+                // 返回缓存的从站请求的状态
+                // 注意：主站仅存储第一个状态字节
+                // 而AL控制寄存器是两个字节（第二个字节保留）
                 value_size = sizeof(uint16_t);
                 EC_WRITE_U16(value, slave->requested_state);
             }
             else
             {
-                // write (sdo_req_cmd == 0x00)
+                // 写入（sdo_req_cmd == 0x00）
                 uint8_t *write_data = data + offset + 4;
                 size_t write_size;
                 uint8_t size_specified = EC_READ_U8(data + offset) & 0x01;
@@ -4790,20 +5319,20 @@ int ec_master_obj_dict(ec_master_t *master, uint8_t *data,
                     write_size = 4;
                 }
 
-                // check write size
+                // 检查写入大小
                 if (write_size != 2)
                 {
                     ec_lock_up(&master->master_sem);
-                    EC_MASTER_ERR(master, "Master, unexpected SDO write data size"
-                                          " %zu (expected %u) on 0x%04X:%02X!\n",
+                    EC_MASTER_ERR(master, "主站，SDO写入数据大小不符合预期"
+                                          " %zu（期望 %u）在 0x%04X:%02X 上！\n",
                                   write_size, 2, sdo_index, sdo_sub_index);
                     return -EPROTONOSUPPORT;
                 }
 
-                // request the slave AL state
+                // 请求从站的AL状态
                 ec_slave_request_state(slave, EC_READ_U16(write_data));
 
-                // set blank download response
+                // 设置空白下载响应
                 value_size = sizeof(uint32_t);
                 memset(value, 0x00, 4);
             }
@@ -4811,7 +5340,7 @@ int ec_master_obj_dict(ec_master_t *master, uint8_t *data,
         break;
         default:
         {
-            // Subindex does not exist error
+            // 子索引不存在错误
             resp_error = 1;
             value_size = sizeof(uint32_t);
             EC_WRITE_U32(value, 0x06090011);
@@ -4821,12 +5350,12 @@ int ec_master_obj_dict(ec_master_t *master, uint8_t *data,
     }
     else if ((sdo_index >= 0xF020) && (sdo_index < 0xF030))
     {
-        // readonly commands
+        // 只读命令
         if (sdo_req_cmd != 0x02)
         {
             ec_lock_up(&master->master_sem);
-            EC_MASTER_ERR(master, "Master, unsupported SDO Command %hhu on"
-                                  " 0x%04X:%02X!\n",
+            EC_MASTER_ERR(master, "主站，不支持SDO命令 %hhu 在"
+                                  " 0x%04X:%02X 上！\n",
                           sdo_req_cmd, sdo_index, sdo_sub_index);
             return -EPROTONOSUPPORT;
         }
@@ -4836,10 +5365,10 @@ int ec_master_obj_dict(ec_master_t *master, uint8_t *data,
             uint64_t index = master->slave_count;
             uint32_t remainder;
 
-            // length of this object (uint8)
+            // 对象的长度（uint8）
             value_size = sizeof(uint8_t);
 
-            // calc index and remainder from slave count
+            // 从从站计算索引和余数
             remainder = do_div(index, 255);
 
             if (sdo_index - 0xF020 < index)
@@ -4857,19 +5386,19 @@ int ec_master_obj_dict(ec_master_t *master, uint8_t *data,
         }
         else
         {
-            // calc slave position
+            // 计算从站位置
             slave_posn = ((sdo_index - 0xF020) << 8) + sdo_sub_index - (sdo_index - 0xF020 + 1);
 
             if (slave_posn < master->slave_count)
             {
-                // slave index (uint16)
-                // slave posn + MBG slave address offset
+                // 从站索引（uint16）
+                // 从站位置 + MBG从站地址偏移量
                 value_size = sizeof(uint16_t);
                 EC_WRITE_U16(value, slave_posn + EC_MBG_SLAVE_ADDR_OFFSET);
             }
             else
             {
-                // Object Not Found error
+                // 对象未找到错误
                 resp_error = 1;
                 value_size = sizeof(uint32_t);
                 EC_WRITE_U32(value, 0x06020000);
@@ -4878,58 +5407,58 @@ int ec_master_obj_dict(ec_master_t *master, uint8_t *data,
     }
     else if (sdo_index == 0xF000)
     {
-        // readonly commands
+        // 只读命令
         if (sdo_req_cmd != 0x02)
         {
             ec_lock_up(&master->master_sem);
-            EC_MASTER_ERR(master, "Master, unsupported SDO Command %hhu on"
-                                  " 0x%04X:%02X!\n",
+            EC_MASTER_ERR(master, "主站，不支持SDO命令 %hhu 在"
+                                  " 0x%04X:%02X 上！\n",
                           sdo_req_cmd, sdo_index, sdo_sub_index);
             return -EPROTONOSUPPORT;
         }
 
-        // Modular Device Profile
+        // 模块化设备配置文件
         switch (sdo_sub_index)
         {
         case 0:
         {
-            // length of this object (uint8)
+            // 对象的长度（uint8）
             value_size = sizeof(uint8_t);
             EC_WRITE_U8(value, 4);
         }
         break;
         case 1:
         {
-            // module index distance (uint16)
+            // 模块索引距离（uint16）
             value_size = sizeof(uint16_t);
             EC_WRITE_U16(value, 0x0001);
         }
         break;
         case 2:
         {
-            // maximum number of modules (uint16)
-            // Gateway information limit
+            // 最大模块数（uint16）
+            // 网关信息限制
             value_size = sizeof(uint16_t);
             EC_WRITE_U16(value, 4080);
         }
         break;
         case 3:
         {
-            // general configuration (uint32)
+            // 通用配置（uint32）
             value_size = sizeof(uint32_t);
             EC_WRITE_U32(value, 0x000000FF);
         }
         break;
         case 4:
         {
-            // general information (uint32)
+            // 通用信息（uint32）
             value_size = sizeof(uint32_t);
             EC_WRITE_U32(value, 0x00000000);
         }
         break;
         default:
         {
-            // Subindex does not exist error
+            // 子索引不存在错误
             resp_error = 1;
             value_size = sizeof(uint32_t);
             EC_WRITE_U32(value, 0x06090011);
@@ -4939,7 +5468,7 @@ int ec_master_obj_dict(ec_master_t *master, uint8_t *data,
     }
     else
     {
-        // Object Not Found error
+        // 对象未找到错误
         resp_error = 1;
         value_size = sizeof(uint32_t);
         EC_WRITE_U32(value, 0x06020000);
@@ -4947,7 +5476,7 @@ int ec_master_obj_dict(ec_master_t *master, uint8_t *data,
 
     ec_lock_up(&master->master_sem);
 
-    // do we need to allow room for a complete size field?
+    // 是否需要为完整大小预留空间？
     if ((value_size > 0) && (value_size <= 4))
     {
         total_value_size = value_size;
@@ -4957,77 +5486,77 @@ int ec_master_obj_dict(ec_master_t *master, uint8_t *data,
         total_value_size = value_size + sizeof(uint32_t);
     }
 
-    // set reply
+    // 设置回复
     if (EC_MBOX_HEADER_SIZE + EC_COE_HEADER_SIZE + 4 + total_value_size > buff_size)
     {
-        EC_MASTER_ERR(master, "Buffer too small.\n");
+        EC_MASTER_ERR(master, "缓冲区太小。\n");
         return -EOVERFLOW;
     }
     else
     {
-        // update data_size
+        // 更新data_size
         *data_size = EC_MBOX_HEADER_SIZE + EC_COE_HEADER_SIZE + 4 + total_value_size;
 
-        // update Mailbox Header Length (length of CoE Header onwards)
+        // 更新Mailbox Header Length（从CoE Header开始的长度）
         EC_WRITE_U16(data, *data_size - EC_MBOX_HEADER_SIZE);
 
-        // update CoE service response or SDO command specifier on error
+        // 更新CoE服务响应或错误时的SDO命令说明符
         if (resp_error)
         {
-            // not happy, return abort SDO transfer request
+            // 不满意，返回中止SDO传输请求
             offset = EC_MBOX_HEADER_SIZE + EC_COE_HEADER_SIZE;
             EC_WRITE_U8(data + offset, 0x04 << 5);
 
-            // set abort value
+            // 设置中止值
             memcpy(data + offset + 4, value, value_size);
         }
         else
         {
-            // happy, return service code 3 (SDO response)
+            // 满意，返回服务代码3（SDO响应）
             offset = EC_MBOX_HEADER_SIZE;
             EC_WRITE_U16(data + offset, 0x03 << 12);
 
-            // set SDO command specifier
+            // 设置SDO命令说明符
             if (sdo_req_cmd == 0x02)
             {
-                // upload response
+                // 上传响应
                 sdo_resp_cmd = 0x02;
             }
             else
             {
-                // download response
+                // 下载响应
                 sdo_resp_cmd = 0x01;
             }
 
-            // set value size
+            // 设置值大小
             offset = EC_MBOX_HEADER_SIZE + EC_COE_HEADER_SIZE;
             if ((value_size > 0) && (value_size <= 4))
             {
-                // upload response, expedited size specified
-                // bit 0      1 = size specified
+                // 上传响应，指定了大小
+                // bit 0      1 = 指定了大小
                 // bit 1      1 = expedited
                 // bit 2..3   4 - size
-                // bit 5..7   command specifier
+                // bit 5..7   命令说明符
                 EC_WRITE_U8(data + offset, (sdo_resp_cmd << 5) +
                                                ((4 - value_size) << 2) + 0x02 + 0x01);
 
-                // set offset to data
+                // 设置数据偏移量
                 offset += 4;
             }
             else
             {
-                // upload response, size specified
+                // 上传响应，指定了大小
                 EC_WRITE_U8(data + offset, (sdo_resp_cmd << 5) + 0x01);
 
-                // set value size
+                // 设置值大小
                 offset += 4;
                 EC_WRITE_U32(data + offset, value_size);
 
-                // set offset to value
+                // 设置值的偏移量
                 offset += sizeof(uint32_t);
             }
 
-            // set value
+            // 设置值
             memcpy(data + offset, value, value_size);
         }
     }
@@ -5035,8 +5564,18 @@ int ec_master_obj_dict(ec_master_t *master, uint8_t *data,
     return 0;
 }
 
+
 /*****************************************************************************/
 
+/**
+ * @brief 执行EtherCAT主站的邮箱网关请求。
+ *
+ * @param master EtherCAT主站对象指针。
+ * @param data 数据指针。
+ * @param data_size 用于存储数据大小的指针。
+ * @param buff_size 缓冲区大小。
+ * @return 返回0表示成功，返回负值表示错误。
+ */
 int ec_master_mbox_gateway(ec_master_t *master, uint8_t *data,
                            size_t *data_size, size_t buff_size)
 {
@@ -5045,21 +5584,21 @@ int ec_master_mbox_gateway(ec_master_t *master, uint8_t *data,
     ec_slave_t *slave;
     int ret = 0;
 
-    // get the slave address
+    // 获取从站地址
     slave_posn = EC_READ_U16(data + 2);
 
-    // check if slave address is zero (master object dictionary request)
+    // 检查从站地址是否为零（主站对象字典请求）
     if (slave_posn == 0)
     {
-        // request for master information
+        // 请求主站信息
         ret = ec_master_obj_dict(master, data, data_size, buff_size);
     }
     else if (slave_posn >= EC_MBG_SLAVE_ADDR_OFFSET)
     {
-        // calculate the slave position address
+        // 计算从站位置地址
         slave_posn -= EC_MBG_SLAVE_ADDR_OFFSET;
 
-        // pass on request to slave
+        // 将请求传递给从站
         ec_mbg_request_init(&request);
         ret = ec_mbg_request_copy_data(&request, data, *data_size);
         *data_size = 0;
@@ -5076,27 +5615,27 @@ int ec_master_mbox_gateway(ec_master_t *master, uint8_t *data,
             return -EINTR;
         }
 
-        // check for a valid slave request
+        // 检查有效的从站请求
         if (!(slave = ec_master_find_slave(master, 0, slave_posn)))
         {
             ec_lock_up(&master->master_sem);
             ec_mbg_request_clear(&request);
-            EC_MASTER_ERR(master, "Slave %u does not exist!\n", slave_posn);
+            EC_MASTER_ERR(master, "从站 %u 不存在！\n", slave_posn);
             return -EINVAL;
         }
 
-        EC_SLAVE_DBG(slave, 1, "Scheduling MBox Gateway request.\n");
+        EC_SLAVE_DBG(slave, 1, "调度邮箱网关请求。\n");
 
-        // schedule request.
+        // 调度请求
         list_add_tail(&request.list, &slave->mbg_requests);
 
         ec_lock_up(&master->master_sem);
 
-        // wait for processing through FSM
+        // 等待FSM处理
         if (wait_event_interruptible(master->request_queue,
                                      request.state != EC_INT_REQUEST_QUEUED))
         {
-            // interrupted by signal
+            // 被信号中断
             ec_lock_down(&master->master_sem);
             if (request.state == EC_INT_REQUEST_QUEUED)
             {
@@ -5105,11 +5644,11 @@ int ec_master_mbox_gateway(ec_master_t *master, uint8_t *data,
                 ec_mbg_request_clear(&request);
                 return -EINTR;
             }
-            // request already processing: interrupt not possible.
+            // 请求已在处理中：不可中断
             ec_lock_up(&master->master_sem);
         }
 
-        // wait until master FSM has finished processing
+        // 等待主站FSM完成处理
         wait_event(master->request_queue, request.state != EC_INT_REQUEST_BUSY);
 
         if (request.state != EC_INT_REQUEST_SUCCESS)
@@ -5127,7 +5666,7 @@ int ec_master_mbox_gateway(ec_master_t *master, uint8_t *data,
         {
             if (request.data_size > buff_size)
             {
-                EC_MASTER_ERR(master, "Buffer too small.\n");
+                EC_MASTER_ERR(master, "缓冲区太小。\n");
                 ret = -EOVERFLOW;
             }
             else
@@ -5142,7 +5681,7 @@ int ec_master_mbox_gateway(ec_master_t *master, uint8_t *data,
     }
     else
     {
-        EC_MASTER_ERR(master, "MBox Gateway: Invalid slave offset address %u!\n", slave_posn);
+        EC_MASTER_ERR(master, "邮箱网关：无效的从站偏移地址 %u！\n", slave_posn);
         return -EINVAL;
     }
 
@@ -5151,6 +5690,11 @@ int ec_master_mbox_gateway(ec_master_t *master, uint8_t *data,
 
 /*****************************************************************************/
 
+/**
+ * @brief 重置EtherCAT主站。
+ *
+ * @param master EtherCAT主站对象指针。
+ */
 void ecrt_master_reset(ec_master_t *master)
 {
     ec_slave_config_t *sc;
@@ -5163,6 +5707,7 @@ void ecrt_master_reset(ec_master_t *master)
         }
     }
 }
+
 
 /*****************************************************************************/
 

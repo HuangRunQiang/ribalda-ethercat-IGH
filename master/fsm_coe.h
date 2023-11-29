@@ -47,24 +47,24 @@
 
 typedef struct ec_fsm_coe ec_fsm_coe_t; /**< \see ec_fsm_coe */
 
-/** Finite state machines for the CANopen over EtherCAT protocol.
+/** CANopen over EtherCAT 协议的有限状态机。
  */
 struct ec_fsm_coe
 {
-    ec_slave_t *slave;    /**< slave the FSM runs on */
-    unsigned int retries; /**< retries upon datagram timeout */
+    ec_slave_t *slave;    /**< 运行该有限状态机的从站 */
+    unsigned int retries; /**< 数据报超时后的重试次数 */
 
-    void (*state)(ec_fsm_coe_t *, ec_datagram_t *); /**< CoE state function */
-    ec_datagram_t *datagram;                        /**< Datagram used in last step. */
-    unsigned long jiffies_start;                    /**< CoE timestamp. */
-    ec_sdo_t *sdo;                                  /**< current SDO */
-    uint8_t subindex;                               /**< current subindex */
-    ec_sdo_request_t *request;                      /**< SDO request */
-    uint32_t complete_size;                         /**< Used when segmenting. */
-    uint8_t toggle;                                 /**< toggle bit for segment commands */
-    uint32_t offset;                                /**< Data offset during segmented download. */
-    uint32_t remaining;                             /**< Remaining bytes during segmented download. */
-    size_t segment_size;                            /**< Current segment size. */
+    void (*state)(ec_fsm_coe_t *, ec_datagram_t *); /**< CoE 状态函数 */
+    ec_datagram_t *datagram;                        /**< 上一步使用的数据报。 */
+    unsigned long jiffies_start;                    /**< CoE 时间戳。 */
+    ec_sdo_t *sdo;                                  /**< 当前 SDO */
+    uint8_t subindex;                               /**< 当前子索引 */
+    ec_sdo_request_t *request;                      /**< SDO 请求 */
+    uint32_t complete_size;                         /**< 分段时使用的大小。 */
+    uint8_t toggle;                                 /**< 分段命令的切换位 */
+    uint32_t offset;                                /**< 分段下载期间的数据偏移量 */
+    uint32_t remaining;                             /**< 分段下载期间剩余的字节数 */
+    size_t segment_size;                            /**< 当前分段大小。 */
 };
 
 /*****************************************************************************/
