@@ -45,7 +45,7 @@
 #include "ethernet.h"
 #include "ioctl.h"
 
-/** Set to 1 to enable device operations debugging.
+/** 设置为1以启用设备操作调试。
  */
 #define DEBUG 0
 
@@ -56,8 +56,7 @@ static int eccdev_release(struct inode *, struct file *);
 static long eccdev_ioctl(struct file *, unsigned int, unsigned long);
 static int eccdev_mmap(struct file *, struct vm_area_struct *);
 
-/** This is the kernel version from which the .fault member of the
- * vm_operations_struct is usable.
+/** 这是可用于vm_operations_struct的.fault成员的内核版本。
  */
 #define PAGE_FAULT_VERSION KERNEL_VERSION(2, 6, 23)
 
@@ -80,7 +79,7 @@ static struct page *eccdev_vma_nopage(
 
 /*****************************************************************************/
 
-/** File operation callbacks for the EtherCAT character device.
+/** EtherCAT字符设备的文件操作回调函数。
  */
 static struct file_operations eccdev_fops = {
     .owner          = THIS_MODULE,
@@ -90,7 +89,7 @@ static struct file_operations eccdev_fops = {
     .mmap           = eccdev_mmap
 };
 
-/** Callbacks for a virtual memory area retrieved with ecdevc_mmap().
+/** 用于使用ecdevc_mmap()检索的虚拟内存区域的回调函数。
  */
 struct vm_operations_struct eccdev_vm_ops = {
 #if LINUX_VERSION_CODE >= PAGE_FAULT_VERSION
@@ -102,23 +101,32 @@ struct vm_operations_struct eccdev_vm_ops = {
 
 /*****************************************************************************/
 
-/** Private data structure for file handles.
+```cpp
+/**
+ * @brief 文件句柄的私有数据结构
  */
 typedef struct {
-    ec_cdev_t *cdev; /**< Character device. */
-    ec_ioctl_context_t ctx; /**< Context. */
+    ec_cdev_t *cdev; /**< 字符设备 */
+    ec_ioctl_context_t ctx; /**< 上下文 */
 } ec_cdev_priv_t;
 
 /*****************************************************************************/
 
-/** Constructor.
+/**
+ * @brief 初始化字符设备
  *
- * \return 0 in case of success, else < 0
+ * @param cdev EtherCAT主设备字符设备
+ * @param master 父主设备
+ * @param dev_num 设备号
+ * @return 成功返回0，否则返回负值
+ *
+ * @details 此函数用于初始化字符设备。它将主设备指针和文件操作结构初始化，并将文件操作结构的所有者设置为当前模块。
+ * 然后，它将字符设备添加到字符设备表中。如果添加失败，则打印错误信息。
  */
 int ec_cdev_init(
-        ec_cdev_t *cdev, /**< EtherCAT master character device. */
-        ec_master_t *master, /**< Parent master. */
-        dev_t dev_num /**< Device number. */
+        ec_cdev_t *cdev, /**< EtherCAT主设备字符设备 */
+        ec_master_t *master, /**< 父主设备 */
+        dev_t dev_num /**< 设备号 */
         )
 {
     int ret;
@@ -131,7 +139,7 @@ int ec_cdev_init(
     ret = cdev_add(&cdev->cdev,
             MKDEV(MAJOR(dev_num), master->index), 1);
     if (ret) {
-        EC_MASTER_ERR(master, "Failed to add character device!\n");
+        EC_MASTER_ERR(master, "添加字符设备失败！\n");
     }
 
     return ret;
@@ -139,12 +147,18 @@ int ec_cdev_init(
 
 /*****************************************************************************/
 
-/** Destructor.
+/**
+ * @brief 清除字符设备
+ *
+ * @param cdev EtherCAT XML设备
+ *
+ * @details 此函数用于清除字符设备。它从字符设备表中删除字符设备。
  */
-void ec_cdev_clear(ec_cdev_t *cdev /**< EtherCAT XML device */)
+void ec_cdev_clear(ec_cdev_t *cdev /**< EtherCAT XML设备 */)
 {
     cdev_del(&cdev->cdev);
 }
+```
 
 /******************************************************************************
  * File operations

@@ -1,6 +1,4 @@
-------------------------------------------------------------------------------
-
-This is the README file of the IgH EtherCAT Master.
+这是IgH EtherCAT Master的README文件。
 
 $Id$
 
@@ -8,25 +6,25 @@ vim: spelllang=en spell tw=78
 
 ------------------------------------------------------------------------------
 
-Contents:
-1) General Information
-2) Requirements
-3) Building and installing
-4) Realtime & Tuning
-5) License
-6) Coding Style
+目录：
+1) 通用信息
+2) 要求
+3) 构建和安装
+4) 实时性和调优
+5) 许可证
+6) 编码风格
 
 ------------------------------------------------------------------------------
 
-1) General Information
+1) 通用信息
 ======================
 
-This is an open-source EtherCAT master implementation for Linux 2.6.
+这是一个用于Linux 2.6的开源EtherCAT主站实现。
 
-See the FEATURES file for a list of features. For more information, see
-http://etherlab.org/en/ethercat.
+有关功能列表，请参阅FEATURES文件。更多信息，请访问
+http://etherlab.org/en/ethercat。
 
-or contact
+或联系
 
 Dipl.-Ing. (FH) Florian Pose <fp@igh-essen.com>
 Ingenieurgemeinschaft IgH
@@ -36,72 +34,57 @@ http://igh-essen.com
 
 ------------------------------------------------------------------------------
 
-2) Requirements
+2) 要求
 ===============
 
-1) Software requirements
+1) 软件要求
 
-Configured sources for the Linux 2.6 kernel are required to build the EtherCAT
-master.
+构建EtherCAT主站需要配置好的Linux 2.6内核源代码。
 
-2) Hardware requirements
+2) 硬件要求
 
-A table of supported hardware can be found at
-http://etherlab.org/en/ethercat/hardware.php.
+支持的硬件列表可在http://etherlab.org/en/ethercat/hardware.php找到。
 
 ------------------------------------------------------------------------------
 
-3) Building and installing
+3) 构建和安装
 ==========================
 
-See the INSTALL file.
+请参阅INSTALL文件。
 
 ------------------------------------------------------------------------------
 
-4) Realtime & Tuning
+4) 实时性和调优
 ====================
 
-Realtime patches for the Linux kernel are supported, but not required. The
-realtime processing has to be done by the calling module (see API
-documentation). The EtherCAT master code itself is passive (except for the
-idle mode and EoE).
+支持Linux内核的实时补丁，但不是必需的。实时处理必须由调用模块完成（请参阅API文档）。EtherCAT主站代码本身是被动的（除了空闲模式和EoE）。
 
-To avoid frame timeouts, deactivating DMA access for hard drives is
-recommended (hdparm -d0 <DEV>).
+为了避免帧超时，建议禁用硬盘的DMA访问（hdparm -d0 <DEV>）。
 
 ------------------------------------------------------------------------------
 
-5) License
+5) 许可证
 ==========
 
-Copyright (C) 2006-2009  Florian Pose, Ingenieurgemeinschaft IgH
+版权所有（C）2006-2009 Florian Pose，Ingenieurgemeinschaft IgH
 
-This file is part of the IgH EtherCAT Master.
+此文件属于IgH EtherCAT主站。
 
-The IgH EtherCAT Master is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License version 2, as
-published by the Free Software Foundation.
+IgH EtherCAT主站是自由软件；您可以在自由软件基金会发布的GNU通用公共许可证第2版的条款下重新发布或修改它。
 
-The IgH EtherCAT Master is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
-details.
+IgH EtherCAT主站是基于"按原样"提供的，没有任何明示或暗示的担保，包括但不限于适销性和特定用途适用性的担保。有关更多详细信息，请参阅GNU通用公共许可证。
 
-You should have received a copy of the GNU General Public License along with
-the IgH EtherCAT Master; if not, write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+您应该随IgH EtherCAT主站一起收到GNU通用公共许可证的副本；如果没有，请写信给自由软件基金会，地址为51 Franklin St，Fifth Floor，Boston，MA 02110-1301，USA。
 
 ---
 
-The license mentioned above concerns the source code only. Using the EtherCAT
-technology and brand is only permitted in compliance with the industrial
-property and similar rights of Beckhoff Automation GmbH.
+上述许可证仅适用于源代码。在遵守Beckhoff Automation GmbH的工业产权和类似权利的情况下，才允许使用EtherCAT技术和品牌。
 
 ------------------------------------------------------------------------------
 
-6) Coding Style
+6) 编码风格
 ===============
 
-Developers shall use the coding style rules in the CodingStyle.txt file.
+开发人员应遵守CodingStyle.txt文件中的编码风格规则。
 
 ------------------------------------------------------------------------------

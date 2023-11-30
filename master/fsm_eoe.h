@@ -46,17 +46,17 @@
 
 typedef struct ec_fsm_eoe ec_fsm_eoe_t; /**< \see ec_fsm_eoe */
 
-/** Finite state machines for the Ethernet over EtherCAT protocol.
+/** 以太网通过EtherCAT协议的有限状态机。
  */
 struct ec_fsm_eoe
 {
-    ec_slave_t *slave;    /**< slave the FSM runs on */
-    unsigned int retries; /**< retries upon datagram timeout */
+    ec_slave_t *slave;    /**< FSM运行的从站 */
+    unsigned int retries; /**< 数据报超时时的重试次数 */
 
-    void (*state)(ec_fsm_eoe_t *, ec_datagram_t *); /**< EoE state function */
-    ec_datagram_t *datagram;                        /**< Datagram used in the previous step. */
-    unsigned long jiffies_start;                    /**< Timestamp. */
-    ec_eoe_request_t *request;                      /**< EoE request */
+    void (*state)(ec_fsm_eoe_t *, ec_datagram_t *); /**< EoE状态函数 */
+    ec_datagram_t *datagram;                        /**< 上一步中使用的数据报。 */
+    unsigned long jiffies_start;                    /**< 时间戳。 */
+    ec_eoe_request_t *request;                      /**< EoE请求 */
 };
 
 /****************************************************************************/
@@ -69,6 +69,7 @@ void ec_fsm_eoe_set_ip_param(ec_fsm_eoe_t *, ec_slave_t *,
 
 int ec_fsm_eoe_exec(ec_fsm_eoe_t *, ec_datagram_t *);
 int ec_fsm_eoe_success(const ec_fsm_eoe_t *);
+
 
 /****************************************************************************/
 

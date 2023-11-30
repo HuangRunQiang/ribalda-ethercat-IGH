@@ -46,10 +46,9 @@
 
 /*****************************************************************************/
 
-/** Time difference [ns] to tolerate without setting a new system time offset.
+/** 允许在不设置新的系统时间偏移的情况下容忍的时间差（以纳秒为单位）。
  */
 #define EC_SYSTEM_TIME_TOLERANCE_NS 1000
-
 /*****************************************************************************/
 
 void ec_fsm_master_state_start(ec_fsm_master_t *);

@@ -43,15 +43,22 @@
 
 /*****************************************************************************/
 
+```cpp
 /**
-   Prepares a mailbox-send datagram.
-   \return Pointer to mailbox datagram data, or ERR_PTR() code.
-*/
-
-uint8_t *ec_slave_mbox_prepare_send(const ec_slave_t *slave, /**< slave */
-                                    ec_datagram_t *datagram, /**< datagram */
-                                    uint8_t type,            /**< mailbox protocol */
-                                    size_t size              /**< size of the data */
+ * @brief 准备发送邮箱数据报
+ *
+ * 此函数准备要发送的邮箱数据报，返回指向邮箱数据报数据的指针，或者返回ERR_PTR()错误代码。
+ *
+ * @param slave 从站
+ * @param datagram 数据报
+ * @param type 邮箱协议类型
+ * @param size 数据大小
+ * @return 指向邮箱数据报数据的指针，或者返回错误代码
+ */
+uint8_t *ec_slave_mbox_prepare_send(const ec_slave_t *slave, /**< 从站 */
+                                    ec_datagram_t *datagram, /**< 数据报 */
+                                    uint8_t type,            /**< 邮箱协议类型 */
+                                    size_t size              /**< 数据大小 */
 )
 {
     size_t total_size;
@@ -59,15 +66,13 @@ uint8_t *ec_slave_mbox_prepare_send(const ec_slave_t *slave, /**< slave */
 
     if (unlikely(!slave->sii_image))
     {
-        EC_SLAVE_ERR(slave, "Slave cannot verify if mailbox communication"
-                            " is supported!\n");
+        EC_SLAVE_ERR(slave, "从站无法验证是否支持邮箱通信！\n");
         return ERR_PTR(-EAGAIN);
     }
 
     if (unlikely(!slave->sii_image->sii.mailbox_protocols))
     {
-        EC_SLAVE_ERR(slave, "Slave does not support mailbox"
-                            " communication!\n");
+        EC_SLAVE_ERR(slave, "从站不支持邮箱通信！\n");
         return ERR_PTR(-EPROTONOSUPPORT);
     }
 
@@ -75,7 +80,7 @@ uint8_t *ec_slave_mbox_prepare_send(const ec_slave_t *slave, /**< slave */
 
     if (unlikely(total_size > slave->configured_rx_mailbox_size))
     {
-        EC_SLAVE_ERR(slave, "Data size (%zu) does not fit in mailbox (%u)!\n",
+        EC_SLAVE_ERR(slave, "数据大小（%zu）超过邮箱大小（%u）！\n",
                      total_size, slave->configured_rx_mailbox_size);
         return ERR_PTR(-EOVERFLOW);
     }
@@ -88,10 +93,10 @@ uint8_t *ec_slave_mbox_prepare_send(const ec_slave_t *slave, /**< slave */
         return ERR_PTR(ret);
     }
 
-    EC_WRITE_U16(datagram->data, size);                       // mailbox service data length
-    EC_WRITE_U16(datagram->data + 2, slave->station_address); // station addr.
-    EC_WRITE_U8(datagram->data + 4, 0x00);                    // channel & priority
-    EC_WRITE_U8(datagram->data + 5, type);                    // underlying protocol type
+    EC_WRITE_U16(datagram->data, size);                       // 邮箱服务数据长度
+    EC_WRITE_U16(datagram->data + 2, slave->station_address); // 站地址
+    EC_WRITE_U8(datagram->data + 4, 0x00);                    // 通道和优先级
+    EC_WRITE_U8(datagram->data + 5, type);                    // 底层协议类型
 
     return datagram->data + EC_MBOX_HEADER_SIZE;
 }
@@ -99,13 +104,16 @@ uint8_t *ec_slave_mbox_prepare_send(const ec_slave_t *slave, /**< slave */
 /*****************************************************************************/
 
 /**
-   Prepares a datagram for checking the mailbox state.
-   \todo Determine sync manager used for receive mailbox
-   \return 0 in case of success, else < 0
-*/
-
-int ec_slave_mbox_prepare_check(const ec_slave_t *slave, /**< slave */
-                                ec_datagram_t *datagram  /**< datagram */
+ * @brief 准备检查邮箱状态的数据报
+ *
+ * \todo 确定用于接收邮箱的同步管理器
+ *
+ * @param slave 从站
+ * @param datagram 数据报
+ * @return 成功返回0，否则返回小于0的值
+ */
+int ec_slave_mbox_prepare_check(const ec_slave_t *slave, /**< 从站 */
+                                ec_datagram_t *datagram  /**< 数据报 */
 )
 {
     int ret = ec_datagram_fprd(datagram, slave->station_address, 0x808, 8);
@@ -119,24 +127,31 @@ int ec_slave_mbox_prepare_check(const ec_slave_t *slave, /**< slave */
 /*****************************************************************************/
 
 /**
-   Processes a mailbox state checking datagram.
-   \return 0 in case of success, else < 0
-*/
-
-int ec_slave_mbox_check(const ec_datagram_t *datagram /**< datagram */)
+ * @brief 处理检查邮箱状态的数据报
+ *
+ * @param datagram 数据报
+ * @return 成功返回0，否则返回小于0的值
+ */
+int ec_slave_mbox_check(const ec_datagram_t *datagram /**< 数据报 */)
 {
     return EC_READ_U8(datagram->data + 5) & 8 ? 1 : 0;
 }
 
+
 /*****************************************************************************/
 
 /**
-   Prepares a datagram to fetch mailbox data.
-   \return 0 in case of success, else < 0
-*/
-
-int ec_slave_mbox_prepare_fetch(const ec_slave_t *slave, /**< slave */
-                                ec_datagram_t *datagram  /**< datagram */
+ * @brief 准备获取邮箱数据的数据报
+ *
+ * @param slave 从站
+ * @param datagram 数据报
+ * @return 成功返回0，否则返回小于0的值
+ *
+ * @details 此函数用于准备获取邮箱数据的数据报。它通过从站的站地址、配置的发送邮箱偏移量和大小，
+ * 从主站中读取邮箱数据，并将数据报清零。如果读取和清零操作成功，则返回0；否则返回小于0的值。
+ */
+int ec_slave_mbox_prepare_fetch(const ec_slave_t *slave, /**< 从站 */
+                                ec_datagram_t *datagram  /**< 数据报 */
 )
 {
     int ret = ec_datagram_fprd(datagram, slave->station_address,
@@ -149,40 +164,53 @@ int ec_slave_mbox_prepare_fetch(const ec_slave_t *slave, /**< slave */
     return 0;
 }
 
+
 /*****************************************************************************/
 
 /**
-   Mailbox error codes.
+   邮箱错误代码。
 */
 
 const ec_code_msg_t mbox_error_messages[] = {
-    {0x00000001, "MBXERR_SYNTAX"},
-    {0x00000002, "MBXERR_UNSUPPORTEDPROTOCOL"},
-    {0x00000003, "MBXERR_INVAILDCHANNEL"},
-    {0x00000004, "MBXERR_SERVICENOTSUPPORTED"},
-    {0x00000005, "MBXERR_INVALIDHEADER"},
-    {0x00000006, "MBXERR_SIZETOOSHORT"},
-    {0x00000007, "MBXERR_NOMOREMEMORY"},
-    {0x00000008, "MBXERR_INVALIDSIZE"},
+    {0x00000001, "MBXERR_SYNTAX（语法错误）"},
+    {0x00000002, "MBXERR_UNSUPPORTEDPROTOCOL（不支持的协议）"},
+    {0x00000003, "MBXERR_INVAILDCHANNEL（无效的通道）"},
+    {0x00000004, "MBXERR_SERVICENOTSUPPORTED（不支持的服务）"},
+    {0x00000005, "MBXERR_INVALIDHEADER（无效的头部）"},
+    {0x00000006, "MBXERR_SIZETOOSHORT（大小太短）"},
+    {0x00000007, "MBXERR_NOMOREMEMORY（内存不足）"},
+    {0x00000008, "MBXERR_INVALIDSIZE（无效的大小）"},
     {}};
+
 
 /*****************************************************************************/
 
-/** Processes received mailbox data.
+/**
+ * @brief 处理接收到的邮箱数据
  *
- * \return Pointer to the received data, or ERR_PTR() code.
+ * @param slave 从站
+ * @param response_data 响应数据
+ * @param type 预期的邮箱协议
+ * @param size 接收到的数据大小
+ * @return 指向接收到的数据的指针，或者ERR_PTR()代码
+ *
+ * @details 此函数用于处理接收到的邮箱数据。它首先检查是否接收到了有效的响应数据，
+ * 如果没有接收到数据，则返回一个错误代码。然后，它检查接收到的数据的大小是否正确，
+ * 如果数据大小与配置的发送邮箱大小不匹配，则返回一个错误代码。接下来，它从数据中解析出邮箱协议类型和数据大小，
+ * 并将其存储在相应的参数中。如果接收到的数据是一个邮箱错误响应，则打印错误信息并返回一个错误代码。
+ * 否则，它返回指向接收到的数据的指针。
  */
-uint8_t *ec_slave_mbox_fetch(const ec_slave_t *slave,       /**< slave */
-                             ec_mbox_data_t *response_data, /**< response data */
-                             uint8_t *type,                 /**< expected mailbox protocol */
-                             size_t *size                   /**< size of the received data */
+uint8_t *ec_slave_mbox_fetch(const ec_slave_t *slave,       /**< 从站 */
+                             ec_mbox_data_t *response_data, /**< 响应数据 */
+                             uint8_t *type,                 /**< 预期的邮箱协议 */
+                             size_t *size                   /**< 接收到的数据大小 */
 )
 {
     size_t data_size;
 
     if (!response_data->data)
     {
-        EC_SLAVE_ERR(slave, "No mailbox response data received!\n");
+        EC_SLAVE_ERR(slave, "未接收到邮箱响应数据！\n");
         return ERR_PTR(-EPROTO);
     }
 
@@ -190,14 +218,14 @@ uint8_t *ec_slave_mbox_fetch(const ec_slave_t *slave,       /**< slave */
 
     if (data_size + EC_MBOX_HEADER_SIZE > slave->configured_tx_mailbox_size)
     {
-        EC_SLAVE_ERR(slave, "Corrupt mailbox response received!\n");
+        EC_SLAVE_ERR(slave, "接收到的邮箱响应数据损坏！\n");
         ec_print_data(response_data->data, slave->configured_tx_mailbox_size);
         return ERR_PTR(-EPROTO);
     }
 
 #if 0
     if (slave->master->debug_level) {
-        EC_SLAVE_DBG(slave, 1, "Mailbox data:\n");
+        EC_SLAVE_DBG(slave, 1, "邮箱数据:\n");
         ec_print_data(datagram->data, EC_MBOX_HEADER_SIZE + data_size);
     }
 #endif
@@ -210,7 +238,7 @@ uint8_t *ec_slave_mbox_fetch(const ec_slave_t *slave,       /**< slave */
         const ec_code_msg_t *mbox_msg;
         uint16_t code = EC_READ_U16(response_data->data + 8);
 
-        EC_SLAVE_ERR(slave, "Mailbox error response received - ");
+        EC_SLAVE_ERR(slave, "接收到邮箱错误响应 - ");
 
         for (mbox_msg = mbox_error_messages; mbox_msg->code; mbox_msg++)
         {
@@ -223,7 +251,7 @@ uint8_t *ec_slave_mbox_fetch(const ec_slave_t *slave,       /**< slave */
 
         if (!mbox_msg->code)
         {
-            printk(KERN_CONT "Unknown error reply code 0x%04X.\n", code);
+            printk(KERN_CONT "未知的错误回复代码 0x%04X。\n", code);
         }
 
         if (slave->master->debug_level && data_size > 0)
@@ -236,5 +264,6 @@ uint8_t *ec_slave_mbox_fetch(const ec_slave_t *slave,       /**< slave */
 
     return response_data->data + EC_MBOX_HEADER_SIZE;
 }
+
 
 /*****************************************************************************/

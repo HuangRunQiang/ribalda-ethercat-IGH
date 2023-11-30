@@ -41,13 +41,13 @@
 
 /*****************************************************************************/
 
-/** Size of the mailbox header.
+/** 邮箱头的大小。
  */
 #define EC_MBOX_HEADER_SIZE 6
 
-/** Mailbox types.
+/** 邮箱类型。
  *
- * These are used in the 'Type' field of the mailbox header.
+ * 这些类型用于邮箱头的 'Type' 字段中。
  */
 enum
 {
@@ -62,7 +62,7 @@ enum
 /*****************************************************************************/
 
 /**
-   Mailbox error codes.
+   邮箱错误代码。
 */
 
 extern const ec_code_msg_t mbox_error_messages[];

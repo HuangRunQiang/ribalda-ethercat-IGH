@@ -29,7 +29,7 @@
 
 /**
    \file
-   EtherCAT master character device.
+   EtherCAT主站字符设备。
 */
 
 /*****************************************************************************/
@@ -44,11 +44,11 @@
 
 /*****************************************************************************/
 
-/** EtherCAT master character device.
+/** EtherCAT主站字符设备。
 */
 typedef struct {
-    ec_master_t *master; /**< Master owning the device. */
-    struct cdev cdev; /**< Character device. */
+    ec_master_t *master; /**< 拥有该设备的主站。 */
+    struct cdev cdev; /**< 字符设备。 */
 } ec_cdev_t;
 
 /*****************************************************************************/

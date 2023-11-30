@@ -44,13 +44,13 @@
 /*****************************************************************************/
 
 /**
-   Mode of the change state machine.
+   状态更改状态机的模式。
 */
 
 typedef enum
 {
-   EC_FSM_CHANGE_MODE_FULL,    /**< full state change */
-   EC_FSM_CHANGE_MODE_ACK_ONLY /**< only state acknowledgement */
+   EC_FSM_CHANGE_MODE_FULL,    /**< 完全状态更改 */
+   EC_FSM_CHANGE_MODE_ACK_ONLY /**< 仅状态确认 */
 } ec_fsm_change_mode_t;
 
 /*****************************************************************************/
@@ -58,22 +58,22 @@ typedef enum
 typedef struct ec_fsm_change ec_fsm_change_t; /**< \see ec_fsm_change */
 
 /**
-   EtherCAT state change FSM.
+   EtherCAT状态更改状态机。
 */
 
 struct ec_fsm_change
 {
-   ec_slave_t *slave;       /**< slave the FSM runs on */
-   ec_datagram_t *datagram; /**< datagram used in the state machine */
-   unsigned int retries;    /**< retries upon datagram timeout */
+   ec_slave_t *slave;       /**< 运行该状态机的从站 */
+   ec_datagram_t *datagram; /**< 在状态机中使用的数据报 */
+   unsigned int retries;    /**< 数据报超时时的重试次数 */
 
-   void (*state)(ec_fsm_change_t *, ec_datagram_t *); /**< slave state change state function */
-   ec_fsm_change_mode_t mode;                         /**< full state change, or ack only. */
-   ec_slave_state_t requested_state;                  /**< input: state */
-   ec_slave_state_t old_state;                        /**< prior slave state */
-   unsigned long jiffies_start;                       /**< change timer */
-   uint8_t take_time;                                 /**< take sending timestamp */
-   uint8_t spontaneous_change;                        /**< spontaneous state change detected */
+   void (*state)(ec_fsm_change_t *, ec_datagram_t *); /**< 从站状态更改状态函数 */
+   ec_fsm_change_mode_t mode;                         /**< 完全状态更改或仅确认。 */
+   ec_slave_state_t requested_state;                  /**< 输入：状态 */
+   ec_slave_state_t old_state;                        /**< 先前的从站状态 */
+   unsigned long jiffies_start;                       /**< 更改计时器 */
+   uint8_t take_time;                                 /**< 使用发送时间戳 */
+   uint8_t spontaneous_change;                        /**< 检测到自发状态更改 */
 };
 
 /*****************************************************************************/
