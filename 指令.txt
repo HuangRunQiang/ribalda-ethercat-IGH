@@ -1,0 +1,43 @@
+"/**
+ * @brief 执行有限状态机的当前状态。
+ *
+ * @param fsm 有限状态机对象。
+ * @param datagram 要使用的数据报。
+ * @return 如果有限状态机仍在进行中，则返回1；否则返回0。
+ *
+ * @details 此函数用于执行有限状态机的当前状态。
+ * 它根据有限状态机对象的状态成员调用相应的状态函数。
+ * 如果有限状态机的状态为结束状态或错误状态，则返回0表示执行完成。
+ * 如果有限状态机的状态为其他状态，则返回1表示仍在进行中。
+ */"
+注意!请用上面的格式汉化并注释，我接下来给你的代码:
+
+/** Constructor.
+ */
+void ec_datagram_init(ec_datagram_t *datagram /**< EtherCAT datagram. */)
+{
+    INIT_LIST_HEAD(&datagram->queue); // mark as unqueued
+    datagram->device_index = EC_DEVICE_MAIN;
+    datagram->type = EC_DATAGRAM_NONE;
+    memset(datagram->address, 0x00, EC_ADDR_LEN);
+    datagram->data = NULL;
+    datagram->data_origin = EC_ORIG_INTERNAL;
+    datagram->mem_size = 0;
+    datagram->data_size = 0;
+    datagram->index = 0x00;
+    datagram->working_counter = 0x0000;
+    datagram->state = EC_DATAGRAM_INIT;
+#ifdef EC_HAVE_CYCLES
+    datagram->cycles_sent = 0;
+#endif
+    datagram->jiffies_sent = 0;
+    datagram->app_time_sent = 0;
+#ifdef EC_HAVE_CYCLES
+    datagram->cycles_received = 0;
+#endif
+    datagram->jiffies_received = 0;
+    datagram->skip_count = 0;
+    datagram->stats_output_jiffies = 0;
+    memset(datagram->name, 0x00, EC_DATAGRAM_NAME_SIZE);
+}
+

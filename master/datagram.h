@@ -45,87 +45,79 @@
 
 /*****************************************************************************/
 
-/** EtherCAT datagram type.
- */
+/** EtherCAT数据报类型 */
 typedef enum
 {
-    EC_DATAGRAM_NONE = 0x00, /**< Dummy. */
-    EC_DATAGRAM_APRD = 0x01, /**< Auto Increment Physical Read. */
-    EC_DATAGRAM_APWR = 0x02, /**< Auto Increment Physical Write. */
-    EC_DATAGRAM_APRW = 0x03, /**< Auto Increment Physical ReadWrite. */
-    EC_DATAGRAM_FPRD = 0x04, /**< Configured Address Physical Read. */
-    EC_DATAGRAM_FPWR = 0x05, /**< Configured Address Physical Write. */
-    EC_DATAGRAM_FPRW = 0x06, /**< Configured Address Physical ReadWrite. */
-    EC_DATAGRAM_BRD = 0x07,  /**< Broadcast Read. */
-    EC_DATAGRAM_BWR = 0x08,  /**< Broadcast Write. */
-    EC_DATAGRAM_BRW = 0x09,  /**< Broadcast ReadWrite. */
-    EC_DATAGRAM_LRD = 0x0A,  /**< Logical Read. */
-    EC_DATAGRAM_LWR = 0x0B,  /**< Logical Write. */
-    EC_DATAGRAM_LRW = 0x0C,  /**< Logical ReadWrite. */
-    EC_DATAGRAM_ARMW = 0x0D, /**< Auto Increment Physical Read Multiple
-                               Write.  */
-    EC_DATAGRAM_FRMW = 0x0E, /**< Configured Address Physical Read Multiple
-                               Write. */
+    EC_DATAGRAM_NONE = 0x00, /**< 无效 */
+    EC_DATAGRAM_APRD = 0x01, /**< 自动递增物理读取 */
+    EC_DATAGRAM_APWR = 0x02, /**< 自动递增物理写入 */
+    EC_DATAGRAM_APRW = 0x03, /**< 自动递增物理读写 */
+    EC_DATAGRAM_FPRD = 0x04, /**< 配置地址物理读取 */
+    EC_DATAGRAM_FPWR = 0x05, /**< 配置地址物理写入 */
+    EC_DATAGRAM_FPRW = 0x06, /**< 配置地址物理读写 */
+    EC_DATAGRAM_BRD = 0x07,  /**< 广播读取 */
+    EC_DATAGRAM_BWR = 0x08,  /**< 广播写入 */
+    EC_DATAGRAM_BRW = 0x09,  /**< 广播读写 */
+    EC_DATAGRAM_LRD = 0x0A,  /**< 逻辑读取 */
+    EC_DATAGRAM_LWR = 0x0B,  /**< 逻辑写入 */
+    EC_DATAGRAM_LRW = 0x0C,  /**< 逻辑读写 */
+    EC_DATAGRAM_ARMW = 0x0D, /**< 自动递增物理读取多次写入 */
+    EC_DATAGRAM_FRMW = 0x0E, /**< 配置地址物理读取多次写入 */
 } ec_datagram_type_t;
 
 /*****************************************************************************/
 
-/** EtherCAT datagram state.
- */
+/** EtherCAT数据报状态 */
 typedef enum
 {
-    EC_DATAGRAM_INIT,      /**< Initial state of a new datagram. */
-    EC_DATAGRAM_QUEUED,    /**< Queued for sending. */
-    EC_DATAGRAM_SENT,      /**< Sent (still in the queue). */
-    EC_DATAGRAM_RECEIVED,  /**< Received (dequeued). */
-    EC_DATAGRAM_TIMED_OUT, /**< Timed out (dequeued). */
-    EC_DATAGRAM_ERROR,     /**< Error while sending/receiving (dequeued). */
-    EC_DATAGRAM_INVALID    /**< Unused and should not be queued (dequeued). */
+    EC_DATAGRAM_INIT,      /**< 新数据报的初始状态 */
+    EC_DATAGRAM_QUEUED,    /**< 已排队等待发送 */
+    EC_DATAGRAM_SENT,      /**< 已发送（仍在队列中） */
+    EC_DATAGRAM_RECEIVED,  /**< 已接收（已出队列） */
+    EC_DATAGRAM_TIMED_OUT, /**< 超时（已出队列） */
+    EC_DATAGRAM_ERROR,     /**< 发送/接收时出错（已出队列） */
+    EC_DATAGRAM_INVALID    /**< 未使用，不应排队（已出队列） */
 } ec_datagram_state_t;
 
 /*****************************************************************************/
 
-/** EtherCAT datagram.
- */
+/** EtherCAT数据报 */
 typedef struct
 {
-    struct list_head queue;         /**< Master datagram queue item. */
-    struct list_head sent;          /**< Master list item for sent datagrams. */
-    ec_device_index_t device_index; /**< Device via which the datagram shall
-                                      be / was sent. */
-    ec_datagram_type_t type;        /**< Datagram type (APRD, BWR, etc.). */
-    uint8_t address[EC_ADDR_LEN];   /**< Recipient address. */
-    uint8_t *data;                  /**< Datagram payload. */
-    ec_origin_t data_origin;        /**< Origin of the \a data memory. */
-    size_t mem_size;                /**< Datagram \a data memory size. */
-    size_t data_size;               /**< Size of the data in \a data. */
-    uint8_t index;                  /**< Index (set by master). */
-    uint16_t working_counter;       /**< Working counter. */
-    ec_datagram_state_t state;      /**< State. */
+    struct list_head queue;         /**< 主数据报队列项 */
+    struct list_head sent;          /**< 已发送数据报的主列表项 */
+    ec_device_index_t device_index; /**< 发送/已发送数据报的设备 */
+    ec_datagram_type_t type;        /**< 数据报类型（APRD，BWR等） */
+    uint8_t address[EC_ADDR_LEN];   /**< 接收方地址 */
+    uint8_t *data;                  /**< 数据报有效载荷 */
+    ec_origin_t data_origin;        /**< 数据的来源 */
+    size_t mem_size;                /**< 数据报数据内存大小 */
+    size_t data_size;               /**< 数据报数据的大小 */
+    uint8_t index;                  /**< 索引（由主控制器设置） */
+    uint16_t working_counter;       /**< 工作计数器 */
+    ec_datagram_state_t state;      /**< 状态 */
 #ifdef EC_HAVE_CYCLES
-    cycles_t cycles_sent; /**< Time, when the datagram was sent. */
+    cycles_t cycles_sent; /**< 数据报发送时间 */
 #endif
-    unsigned long jiffies_sent; /**< Jiffies, when the datagram was sent. */
-    uint64_t app_time_sent;     /**< App time, when the datagram was sent. */
+    unsigned long jiffies_sent; /**< 数据报发送的jiffies时间 */
+    uint64_t app_time_sent;     /**< 数据报发送的应用时间 */
 #ifdef EC_HAVE_CYCLES
-    cycles_t cycles_received; /**< Time, when the datagram was received. */
+    cycles_t cycles_received; /**< 数据报接收时间 */
 #endif
-    unsigned long jiffies_received;     /**< Jiffies, when the datagram was
-                                          received. */
-    unsigned int skip_count;            /**< Number of requeues when not yet received. */
-    unsigned long stats_output_jiffies; /**< Last statistics output. */
-    char name[EC_DATAGRAM_NAME_SIZE];   /**< Description of the datagram. */
+    unsigned long jiffies_received;     /**< 数据报接收的jiffies时间 */
+    unsigned int skip_count;            /**< 尚未接收时的重新排队次数 */
+    unsigned long stats_output_jiffies; /**< 上次统计输出时间 */
+    char name[EC_DATAGRAM_NAME_SIZE];   /**< 数据报描述 */
 } ec_datagram_t;
 
 /*****************************************************************************/
 
-/** EtherCAT mailbox response data.
- */
+/** EtherCAT邮箱响应数据 */
 typedef struct
 {
-    uint8_t *data;       /**< Mailbox response data. */
-    size_t data_size;    /**< Size of the mailbox response data buffer. */
-    size_t payload_size; /**< Size of the mailbox response payload data. */
+    uint8_t *data;       /**< 邮箱响应数据 */
+    size_t data_size;    /**< 邮箱响应数据缓冲区的大小 */
+    size_t payload_size; /**< 邮箱响应有效载荷数据的大小 */
 } ec_mbox_data_t;
 
 /*****************************************************************************/
@@ -163,6 +155,7 @@ const char *ec_datagram_type_string(const ec_datagram_t *);
 void ec_mbox_data_init(ec_mbox_data_t *);
 void ec_mbox_data_clear(ec_mbox_data_t *);
 void ec_mbox_prot_data_prealloc(ec_slave_t *, uint16_t, size_t);
+
 
 /*****************************************************************************/
 

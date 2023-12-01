@@ -29,7 +29,7 @@
 
 /**
    \file
-   EtherCAT datagram pair structure.
+   EtherCAT数据报对结构体。
 */
 
 /*****************************************************************************/
@@ -44,18 +44,20 @@
 
 /*****************************************************************************/
 
-/** Domain datagram pair.
+/** 域数据报对。
  */
 typedef struct
 {
-    struct list_head list;                       /**< List header. */
-    ec_domain_t *domain;                         /**< Parent domain. */
-    ec_datagram_t datagrams[EC_MAX_NUM_DEVICES]; /**< Datagrams.  */
+    struct list_head list;                       /**< 链表头。 */
+    ec_domain_t *domain;                         /**< 父域。 */
+    ec_datagram_t datagrams[EC_MAX_NUM_DEVICES]; /**< 数据报。  */
 #if EC_MAX_NUM_DEVICES > 1
     uint8_t *send_buffer;
 #endif
-    unsigned int expected_working_counter; /**< Expectord working conter. */
+    unsigned int expected_working_counter; /**< 预期工作计数器。 */
 } ec_datagram_pair_t;
+
+#endif /* __EC_DATAGRAM_PAIR_H__ */
 
 /*****************************************************************************/
 

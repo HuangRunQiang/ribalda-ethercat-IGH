@@ -29,7 +29,7 @@
 
 /**
    \file
-   EtherCAT CoE emergency ring buffer structure.
+   EtherCAT CoE紧急环形缓冲区结构。
 */
 
 /*****************************************************************************/
@@ -41,27 +41,28 @@
 
 /*****************************************************************************/
 
-/** EtherCAT CoE emergency message record.
- */
+/** EtherCAT CoE紧急消息记录。
+*/
 typedef struct
 {
-    u8 data[EC_COE_EMERGENCY_MSG_SIZE]; /**< Message data. */
+u8 data[EC_COE_EMERGENCY_MSG_SIZE]; /**< 消息数据。 */
 } ec_coe_emerg_msg_t;
 
 /*****************************************************************************/
 
-/** EtherCAT CoE emergency ring buffer.
- */
+/** EtherCAT CoE紧急环形缓冲区。
+*/
 typedef struct
 {
-    ec_slave_config_t *sc; /**< Slave configuration  owning the ring. */
+ec_slave_config_t *sc; /**< 拥有该环形缓冲区的从设备配置。 */
 
-    ec_coe_emerg_msg_t *msgs; /**< Message ring. */
-    size_t size;              /**< Ring size. */
+ec_coe_emerg_msg_t *msgs; /**< 消息环形缓冲区。 */
+size_t size;              /**< 环形缓冲区大小。 */
 
-    unsigned int read_index;  /**< Read index. */
-    unsigned int write_index; /**< Write index. */
-    unsigned int overruns;    /**< Number of overruns since last reset. */
+unsigned int read_index;  /**< 读索引。 */
+unsigned int write_index; /**< 写索引。 */
+unsigned int overruns;    /**< 上次重置以来的溢出次数。 */
+
 } ec_coe_emerg_ring_t;
 
 /*****************************************************************************/

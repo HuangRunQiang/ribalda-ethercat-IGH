@@ -59,9 +59,9 @@
 
 /*****************************************************************************/
 
-/** Array of datagram type strings used in ec_datagram_type_string().
+/** 用于ec_datagram_type_string()的数据报类型字符串数组。
  *
- * \attention This is indexed by ec_datagram_type_t.
+ * \attention 这是按照ec_datagram_type_t的索引进行排序的。
  */
 static const char *type_strings[] = {
     "?",
@@ -79,6 +79,7 @@ static const char *type_strings[] = {
     "LRW",
     "ARMW",
     "FRMW"};
+
 
 /*****************************************************************************/
 
