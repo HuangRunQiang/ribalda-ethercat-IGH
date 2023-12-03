@@ -29,7 +29,7 @@
 
 /**
    \file
-   EtherCAT FoE request structure.
+   EtherCAT FoE请求结构体。
 */
 
 /*****************************************************************************/
@@ -45,32 +45,28 @@
 
 /*****************************************************************************/
 
-/** FoE request.
+/** FoE请求。
  */
 struct ec_foe_request
 {
-    struct list_head list; /**< List item. */
-    uint8_t *buffer;       /**< Pointer to FoE data. */
-    size_t buffer_size;    /**< Size of FoE data memory. */
-    size_t data_size;      /**< Size of FoE data. */
-    size_t progress;       /**< Current position of a BUSY request. */
+    struct list_head list; /**< 列表项。 */
+    uint8_t *buffer;       /**< 指向FoE数据的指针。 */
+    size_t buffer_size;    /**< FoE数据内存的大小。 */
+    size_t data_size;      /**< FoE数据的大小。 */
+    size_t progress;       /**< BUSY请求的当前位置。 */
 
-    uint32_t issue_timeout;            /**< Maximum time in ms, the processing of the
-                                         request may take. */
-    uint32_t response_timeout;         /**< Maximum time in ms, the transfer is
-                                         retried, if the slave does not respond. */
-    ec_direction_t dir;                /**< Direction. EC_DIR_OUTPUT means downloading to
-                                         the slave, EC_DIR_INPUT means uploading from the
-                                         slave. */
-    ec_internal_request_state_t state; /**< FoE request state. */
-    unsigned long jiffies_start;       /**< Jiffies, when the request was issued. */
-    unsigned long jiffies_sent;        /**< Jiffies, when the upload/download
-                                            request was sent. */
-    uint32_t password;                 /**< FoE password. */
-    ec_foe_error_t result;             /**< FoE request abort code. Zero on success. */
-    uint32_t error_code;               /**< Error code from an FoE Error Request. */
-    uint8_t file_name[255];            /**< FoE filename. */
+    uint32_t issue_timeout;            /**< 处理请求可能花费的最长时间（以毫秒为单位）。 */
+    uint32_t response_timeout;         /**< 如果从站没有响应，重试传输的最长时间（以毫秒为单位）。 */
+    ec_direction_t dir;                /**< 方向。EC_DIR_OUTPUT表示向从站下载，EC_DIR_INPUT表示从从站上传。 */
+    ec_internal_request_state_t state; /**< FoE请求状态。 */
+    unsigned long jiffies_start;       /**< 发出请求时的节拍数。 */
+    unsigned long jiffies_sent;        /**< 上传/下载请求发送时的节拍数。 */
+    uint32_t password;                 /**< FoE密码。 */
+    ec_foe_error_t result;             /**< FoE请求中止代码。成功时为零。 */
+    uint32_t error_code;               /**< 来自FoE错误请求的错误代码。 */
+    uint8_t file_name[255];            /**< FoE文件名。 */
 };
+
 
 /*****************************************************************************/
 

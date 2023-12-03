@@ -1,43 +1,91 @@
-"/**
- * @brief 执行有限状态机的当前状态。
- *
- * @param fsm 有限状态机对象。
- * @param datagram 要使用的数据报。
- * @return 如果有限状态机仍在进行中，则返回1；否则返回0。
- *
- * @details 此函数用于执行有限状态机的当前状态。
- * 它根据有限状态机对象的状态成员调用相应的状态函数。
- * 如果有限状态机的状态为结束状态或错误状态，则返回0表示执行完成。
- * 如果有限状态机的状态为其他状态，则返回1表示仍在进行中。
- */"
-注意!请用上面的格式汉化并注释，我接下来给你的代码:
+/**
+@brief ：函数作用，是干嘛的
+@param ：函数参数
+@return ：函数返回值
+@details ：分点换行概括函数的逻辑
+*/
+把下面的代码,按照上面的doxygen格式，添加函数头注释并汉化代码。要有函数作用，函数参数，函数返回值，分点换行概括函数的逻辑，给出完整代码
 
-/** Constructor.
+/** Sent an acknowledge.
  */
-void ec_datagram_init(ec_datagram_t *datagram /**< EtherCAT datagram. */)
+void ec_fsm_foe_state_sent_ack(
+    ec_fsm_foe_t *fsm,      /**< FoE statemachine. */
+    ec_datagram_t *datagram /**< Datagram to use. */
+)
 {
-    INIT_LIST_HEAD(&datagram->queue); // mark as unqueued
-    datagram->device_index = EC_DEVICE_MAIN;
-    datagram->type = EC_DATAGRAM_NONE;
-    memset(datagram->address, 0x00, EC_ADDR_LEN);
-    datagram->data = NULL;
-    datagram->data_origin = EC_ORIG_INTERNAL;
-    datagram->mem_size = 0;
-    datagram->data_size = 0;
-    datagram->index = 0x00;
-    datagram->working_counter = 0x0000;
-    datagram->state = EC_DATAGRAM_INIT;
-#ifdef EC_HAVE_CYCLES
-    datagram->cycles_sent = 0;
+    ec_slave_t *slave = fsm->slave;
+
+#ifdef DEBUG_FOE
+    EC_SLAVE_DBG(fsm->slave, 0, "%s()\n", __func__);
 #endif
-    datagram->jiffies_sent = 0;
-    datagram->app_time_sent = 0;
-#ifdef EC_HAVE_CYCLES
-    datagram->cycles_received = 0;
-#endif
-    datagram->jiffies_received = 0;
-    datagram->skip_count = 0;
-    datagram->stats_output_jiffies = 0;
-    memset(datagram->name, 0x00, EC_DATAGRAM_NAME_SIZE);
+
+    if (fsm->datagram->state != EC_DATAGRAM_RECEIVED)
+    {
+        ec_foe_set_rx_error(fsm, FOE_RECEIVE_ERROR);
+        EC_SLAVE_ERR(slave, "Failed to send FoE ACK: ");
+        ec_datagram_print_state(fsm->datagram);
+        return;
+    }
+
+    if (fsm->datagram->working_counter != 1)
+    {
+        // slave did not put anything into the mailbox yet
+        ec_foe_set_rx_error(fsm, FOE_WC_ERROR);
+        EC_SLAVE_ERR(slave, "Reception of FoE ACK failed: ");
+        ec_datagram_print_wc_error(fsm->datagram);
+        return;
+    }
+
+    fsm->jiffies_start = fsm->datagram->jiffies_sent;
+
+    if (fsm->last_packet)
+    {
+        fsm->packet_no = 0;
+        fsm->request->data_size = fsm->buffer_offset;
+        fsm->state = ec_fsm_foe_end;
+    }
+    else
+    {
+        fsm->packet_no++;
+
+        // mailbox read check is skipped if a read request is already ongoing
+        if (ec_read_mbox_locked(slave))
+        {
+            fsm->state = ec_fsm_foe_state_data_read_data;
+            // the datagram is not used and marked as invalid
+            datagram->state = EC_DATAGRAM_INVALID;
+        }
+        else
+        {
+            ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+            fsm->retries = EC_FSM_RETRIES;
+            fsm->state = ec_fsm_foe_state_data_check;
+        }
+    }
 }
 
+/*****************************************************************************/
+
+/** Set an error code and go to the send error state.
+ */
+void ec_foe_set_tx_error(
+    ec_fsm_foe_t *fsm, /**< FoE statemachine. */
+    uint32_t errorcode /**< FoE error code. */
+)
+{
+    fsm->request->result = errorcode;
+    fsm->state = ec_fsm_foe_error;
+}
+
+/*****************************************************************************/
+
+/** Set an error code and go to the receive error state.
+ */
+void ec_foe_set_rx_error(
+    ec_fsm_foe_t *fsm, /**< FoE statemachine. */
+    uint32_t errorcode /**< FoE error code. */
+)
+{
+    fsm->request->result = errorcode;
+    fsm->state = ec_fsm_foe_error;
+}

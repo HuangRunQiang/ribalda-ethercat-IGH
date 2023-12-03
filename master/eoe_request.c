@@ -41,10 +41,13 @@
 
 /*****************************************************************************/
 
-/** EoE request constructor.
+/**
+ * @brief 初始化EoE请求。
+ * @param req EoE请求。
+ * @details 该函数用于初始化EoE请求。它会初始化请求的各个字段，并将状态设置为初始状态。
  */
 void ec_eoe_request_init(
-    ec_eoe_request_t *req /**< EoE request. */
+    ec_eoe_request_t *req /**< EoE请求。 */
 )
 {
     INIT_LIST_HEAD(&req->list);

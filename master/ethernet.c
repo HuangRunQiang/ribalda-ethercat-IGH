@@ -46,20 +46,20 @@
 
 /*****************************************************************************/
 
-/** Defines the debug level of EoE processing.
+/** 定义EoE处理的调试级别。
  *
- * 0 = No debug messages.
- * 1 = Output warnings.
- * 2 = Output actions.
- * 3 = Output actions and frame data.
+ * 0 = 无调试消息。
+ * 1 = 输出警告。
+ * 2 = 输出动作。
+ * 3 = 输出动作和帧数据。
  */
 #define EOE_DEBUG_LEVEL 1
 
-/** Size of the EoE tx ring.
+/** EoE发送环的大小。
  */
 #define EC_EOE_TX_RING_SIZE 100
 
-/** Number of tries.
+/** 尝试次数。
  */
 #define EC_EOE_TRIES 100
 
@@ -68,7 +68,7 @@
 void ec_eoe_flush(ec_eoe_t *);
 static unsigned int eoe_tx_unused_frames(ec_eoe_t *);
 
-// state functions
+// 状态函数
 void ec_eoe_state_rx_start(ec_eoe_t *);
 void ec_eoe_state_rx_check(ec_eoe_t *);
 void ec_eoe_state_rx_fetch(ec_eoe_t *);
@@ -76,38 +76,40 @@ void ec_eoe_state_rx_fetch_data(ec_eoe_t *);
 void ec_eoe_state_tx_start(ec_eoe_t *);
 void ec_eoe_state_tx_sent(ec_eoe_t *);
 
-// net_device functions
+// net_device函数
 int ec_eoedev_open(struct net_device *);
 int ec_eoedev_stop(struct net_device *);
 int ec_eoedev_tx(struct sk_buff *, struct net_device *);
 struct net_device_stats *ec_eoedev_stats(struct net_device *);
 static int ec_eoedev_set_mac(struct net_device *netdev, void *p);
 
+
 /*****************************************************************************/
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
-/** Device operations for EoE interfaces.
+/**
+ * @brief EoE接口的设备操作。
+ * @details 该结构定义了EoE接口的设备操作函数。
  */
 static const struct net_device_ops ec_eoedev_ops = {
-    .ndo_open = ec_eoedev_open,
-    .ndo_stop = ec_eoedev_stop,
-    .ndo_start_xmit = ec_eoedev_tx,
-    .ndo_get_stats = ec_eoedev_stats,
-    .ndo_set_mac_address = ec_eoedev_set_mac,
+    .ndo_open = ec_eoedev_open,                /**< 打开设备的操作函数。 */
+    .ndo_stop = ec_eoedev_stop,                /**< 停止设备的操作函数。 */
+    .ndo_start_xmit = ec_eoedev_tx,            /**< 发送数据的操作函数。 */
+    .ndo_get_stats = ec_eoedev_stats,          /**< 获取统计信息的操作函数。 */
+    .ndo_set_mac_address = ec_eoedev_set_mac,  /**< 设置MAC地址的操作函数。 */
 };
 #endif
 
 /*****************************************************************************/
 
 /**
- * ec_eoedev_set_mac - Change the Ethernet Address of the NIC
- * @netdev: network interface device structure
- * @p: pointer to an address structure
- *
- * Returns 0 on success, negative on failure
- **/
-static int
-ec_eoedev_set_mac(struct net_device *netdev, void *p)
+ * @brief 更改网络接口设备的以太网地址。
+ * @param netdev 网络接口设备结构。
+ * @param p 指向地址结构的指针。
+ * @return 成功返回0，失败返回负值。
+ * @details 该函数用于更改网络接口设备的以太网地址。它会将传入地址结构中的地址复制到设备的地址中。
+ */
+static int ec_eoedev_set_mac(struct net_device *netdev, void *p)
 {
     struct sockaddr *addr = p;
 
@@ -123,12 +125,14 @@ ec_eoedev_set_mac(struct net_device *netdev, void *p)
 
 /*****************************************************************************/
 
-/** Parse an eoe interface from a string.
- *
- * The eoe interface must match the regular expression
- * "eoe([0-9]*)([as])([0-9]*)".
- *
- * \return 0 on success, else < 0
+/**
+ * @brief 从字符串中解析EOE接口。
+ * @param eoe EOE接口字符串。
+ * @param master_idx 主站索引。
+ * @param alias 别名。
+ * @param posn 位置。
+ * @return 成功返回0，否则返回小于0的值。
+ * @details 该函数从字符串中解析EOE接口。EOE接口必须与正则表达式"eoe([0-9]*)([as])([0-9]*)"匹配。
  */
 int ec_eoe_parse(const char *eoe, int *master_idx,
                  uint16_t *alias, uint16_t *posn)
@@ -139,37 +143,36 @@ int ec_eoe_parse(const char *eoe, int *master_idx,
 
     if (!strlen(eoe))
     {
-        EC_ERR("EOE interface may not be empty.\n");
+        EC_ERR("EOE接口不能为空。\n");
         return -EINVAL;
     }
 
-    // must start with "eoe"
+    // 必须以"eoe"开头
     if (strncmp(eoe, "eoe", 3) != 0)
     {
-        EC_ERR("Invalid EOE interface \"%s\".\n", orig);
+        EC_ERR("无效的EOE接口\"%s\"。\n", orig);
         return -EINVAL;
     }
     eoe += 3;
 
-    // get master index, this does not check if the master index
-    // is valid beyond checking that it is not negative
+    // 获取主站索引，此处仅检查主站索引不为负数
     value = simple_strtoul(eoe, &rem, 10);
     if (value < 0)
     {
-        EC_ERR("Invalid EOE interface \"%s\", master index: %d\n", orig, value);
+        EC_ERR("无效的EOE接口\"%s\"，主站索引：%d\n", orig, value);
         return -EINVAL;
     }
     *master_idx = value;
     eoe = rem;
 
-    // get alias or position specifier
+    // 获取别名或位置指示器
     if (eoe[0] == 'a')
     {
         eoe++;
         value = simple_strtoul(eoe, &rem, 10);
         if ((value <= 0) || (value >= 0xFFFF))
         {
-            EC_ERR("Invalid EOE interface \"%s\", invalid alias: %d\n",
+            EC_ERR("无效的EOE接口\"%s\"，无效的别名：%d\n",
                    orig, value);
             return -EINVAL;
         }
@@ -182,7 +185,7 @@ int ec_eoe_parse(const char *eoe, int *master_idx,
         value = simple_strtoul(eoe, &rem, 10);
         if ((value < 0) || (value >= 0xFFFF))
         {
-            EC_ERR("Invalid EOE interface \"%s\", invalid ring position: %d\n",
+            EC_ERR("无效的EOE接口\"%s\"，无效的环位置：%d\n",
                    orig, value);
             return -EINVAL;
         }
@@ -191,15 +194,15 @@ int ec_eoe_parse(const char *eoe, int *master_idx,
     }
     else
     {
-        EC_ERR("Invalid EOE interface \"%s\", invalid alias/position specifier: %c\n",
+        EC_ERR("无效的EOE接口\"%s\"，无效的别名/位置指示器：%c\n",
                orig, eoe[0]);
         return -EINVAL;
     }
 
-    // check no remainder
+    // 检查无剩余字符
     if (rem[0] != '\0')
     {
-        EC_ERR("Invalid EOE interface \"%s\", unexpected end characters: %s\n",
+        EC_ERR("无效的EOE接口\"%s\"，意外的结尾字符：%s\n",
                orig, rem);
         return -EINVAL;
     }
@@ -207,20 +210,26 @@ int ec_eoe_parse(const char *eoe, int *master_idx,
     return 0;
 }
 
+
 /*****************************************************************************/
 
-/** EoE explicit init constructor.
+/**
+ * @brief EoE显式初始化构造函数。
  *
- * Initializes the EoE handler before a slave is configured, creates a
- * net_device and registers it.
+ * 在配置从站之前初始化EoE处理程序，创建net_device并注册它。
  *
- * \return Zero on success, otherwise a negative error code.
+ * @param master EtherCAT主站
+ * @param eoe EoE处理程序
+ * @param alias EtherCAT从站别名
+ * @param ring_position EtherCAT从站环位置
+ * @return 成功返回零，否则返回负错误代码。
+ * @details 该函数用于在配置从站之前初始化EoE处理程序，包括初始化各种参数和创建net_device，并将其注册。同时会设置设备的MAC地址，最后将设备注册到内核中。
  */
 int ec_eoe_init(
-    ec_master_t *master,   /**< EtherCAT master */
-    ec_eoe_t *eoe,         /**< EoE handler */
-    uint16_t alias,        /**< EtherCAT slave alias */
-    uint16_t ring_position /**< EtherCAT slave ring position */
+    ec_master_t *master,   /**< EtherCAT主站 */
+    ec_eoe_t *eoe,         /**< EoE处理程序 */
+    uint16_t alias,        /**< EtherCAT从站别名 */
+    uint16_t ring_position /**< EtherCAT从站环位置 */
 )
 {
     ec_eoe_t **priv;
@@ -263,8 +272,7 @@ int ec_eoe_init(
     eoe->rx_idle = 1;
     eoe->tx_idle = 1;
 
-    /* device name eoe<MASTER>[as]<SLAVE>, because networking scripts don't
-     * like hyphens etc. in interface names. */
+    /* 设备名称为eoe<MASTER>[as]<SLAVE>，因为网络脚本不喜欢在接口名中使用连字符等特殊字符。 */
     if (alias)
     {
         snprintf(name, EC_DATAGRAM_NAME_SIZE, "eoe%ua%u", master->index, alias);
@@ -284,14 +292,13 @@ int ec_eoe_init(
 #endif
     if (!eoe->dev)
     {
-        EC_MASTER_ERR(master, "Unable to allocate net_device %s"
-                              " for EoE handler!\n",
+        EC_MASTER_ERR(master, "无法为EoE处理程序分配net_device %s！\n",
                       name);
         ret = -ENODEV;
         goto out_return;
     }
 
-    // initialize net_device
+    // 初始化net_device
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
     eoe->dev->netdev_ops = &ec_eoedev_ops;
 #else
@@ -301,31 +308,27 @@ int ec_eoe_init(
     eoe->dev->get_stats = ec_eoedev_stats;
 #endif
 
-    // First check if the MAC address assigned to the master is globally
-    // unique
+    // 首先检查分配给主站的MAC地址是否是全球唯一的
     if ((master->devices[EC_DEVICE_MAIN].dev->dev_addr[0] & 0x02) !=
         0x02)
     {
-        // The master MAC is unique and the NIC part can be used for the EoE
-        // interface MAC
+        // 主站MAC地址是唯一的，可以使用NIC部分作为EoE接口的MAC地址
         use_master_mac = 1;
     }
     else
     {
-        // The master MAC is not unique, so we check for unique MAC in other
-        // interfaces
+        // 主站MAC地址不是唯一的，因此我们检查其他接口中是否有唯一的MAC地址
         dev = first_net_device(&init_net);
         while (dev)
         {
-            // Check if globally unique MAC address
+            // 检查是否是全球唯一的MAC地址
             if (dev->addr_len == ETH_ALEN)
             {
                 if (memcmp(dev->dev_addr, lo_mac, ETH_ALEN) != 0)
                 {
                     if ((dev->dev_addr[0] & 0x02) != 0x02)
                     {
-                        // The first globally unique MAC address has been
-                        // identified
+                        // 找到了第一个全球唯一的MAC地址
                         break;
                     }
                 }
@@ -336,11 +339,8 @@ int ec_eoe_init(
         {
             if (dev)
             {
-                // A unique MAC were identified in one of the other network
-                // interfaces and the NIC part can be used for the EoE
-                // interface MAC.
-                EC_MASTER_INFO(master, "%s MAC address derived from"
-                                       " NIC part of %s MAC address\n",
+                // 在其他网络接口中找到了一个唯一的MAC地址，可以使用NIC部分作为EoE接口的MAC地址。
+                EC_MASTER_INFO(master, "%s MAC地址派生自%s MAC地址的NIC部分\n",
                                eoe->dev->name, dev->name);
                 eoe->dev->dev_addr[1] = dev->dev_addr[3];
                 eoe->dev->dev_addr[2] = dev->dev_addr[4];
@@ -356,8 +356,7 @@ int ec_eoe_init(
     {
         if (use_master_mac)
         {
-            EC_MASTER_INFO(master, "%s MAC address derived"
-                                   " from NIC part of %s MAC address\n",
+            EC_MASTER_INFO(master, "%s MAC地址派生自%s MAC地址的NIC部分\n",
                            eoe->dev->name,
                            master->devices[EC_DEVICE_MAIN].dev->name);
             eoe->dev->dev_addr[1] =
@@ -380,22 +379,21 @@ int ec_eoe_init(
         }
     }
 
-    // initialize private data
+    // 初始化私有数据
     priv = netdev_priv(eoe->dev);
     *priv = eoe;
 
-    // connect the net_device to the kernel
+    // 将net_device连接到内核
     ret = register_netdev(eoe->dev);
     if (ret)
     {
-        EC_MASTER_ERR(master, "Unable to register net_device for %s:"
-                              " error %i\n",
+        EC_MASTER_ERR(master, "无法注册net_device %s：错误 %i\n",
                       eoe->dev->name, ret);
         goto out_free;
     }
 
-    // set carrier off status BEFORE open */
-    EC_MASTER_DBG(eoe->master, 1, "%s: carrier off.\n", eoe->dev->name);
+    // 在打开之前设置carrier off状态
+    EC_MASTER_DBG(eoe->master, 1, "%s：carrier off。\n", eoe->dev->name);
     netif_carrier_off(eoe->dev);
 
     return 0;
@@ -409,15 +407,18 @@ out_return:
 
 /*****************************************************************************/
 
-/** EoE auto constructor for slave.
+/** EoE从站自动初始化构造函数。
  *
- * Initializes the EoE handler, creates a net_device and registers it.
+ * 初始化EoE处理程序，创建net_device并注册它。
  *
- * \return Zero on success, otherwise a negative error code.
+ * \return 成功返回零，否则返回负错误代码。
+ * @param eoe EoE处理程序
+ * @param slave EtherCAT从站
+ * @details 该函数用于自动初始化EoE处理程序，调用ec_eoe_init函数初始化EoE处理程序并设置自动创建标志，然后连接EoE处理程序和从站。
  */
 int ec_eoe_auto_init(
-    ec_eoe_t *eoe,    /**< EoE handler */
-    ec_slave_t *slave /**< EtherCAT slave */
+    ec_eoe_t *eoe,    /**< EoE处理程序 */
+    ec_slave_t *slave /**< EtherCAT从站 */
 )
 {
     int ret = 0;
@@ -428,7 +429,7 @@ int ec_eoe_auto_init(
         return ret;
     }
 
-    // set auto created flag
+    // 设置自动创建标志
     eoe->auto_created = 1;
 
     ec_eoe_link_slave(eoe, slave);
@@ -436,62 +437,71 @@ int ec_eoe_auto_init(
     return ret;
 }
 
+
 /*****************************************************************************/
 
-/** EoE link slave.
+/**
+ * @brief EoE链接从站。
  *
- * links a slave to a handler after a slave is connected or reconfigured
- * during a rescan.
+ * 在从站连接或重新配置后，将从站链接到处理程序。
+ *
+ * @param eoe EoE处理程序
+ * @param slave EtherCAT从站
+ * @return 无
+ * @details 该函数用于将从站链接到EoE处理程序，设置EoE处理程序的从站指针，并根据情况设置MTU和carrier状态。
  */
 void ec_eoe_link_slave(
-    ec_eoe_t *eoe,    /**< EoE handler */
-    ec_slave_t *slave /**< EtherCAT slave */
+    ec_eoe_t *eoe,    /**< EoE处理程序 */
+    ec_slave_t *slave /**< EtherCAT从站 */
 )
 {
     eoe->slave = slave;
 
     if (eoe->slave)
     {
-        EC_SLAVE_INFO(slave, "Linked to EoE handler %s\n",
+        EC_SLAVE_INFO(slave, "链接到EoE处理程序 %s\n",
                       eoe->dev->name);
 
-        // Usually setting the MTU appropriately makes the upper layers
-        // do the frame fragmenting. In some cases this doesn't work
-        // so the MTU is left on the Ethernet standard value and fragmenting
-        // is done "manually".
+        // 通常，适当设置MTU会使上层进行帧分段。在某些情况下，这种方法不起作用，因此MTU保持在以太网标准值上，并进行“手动”分段。
 #if 0
         eoe->dev->mtu = slave->configured_rx_mailbox_size - ETH_HLEN - 10;
 #endif
 
-        EC_MASTER_DBG(eoe->master, 1, "%s: carrier on.\n", eoe->dev->name);
+        EC_MASTER_DBG(eoe->master, 1, "%s：carrier on。\n", eoe->dev->name);
         netif_carrier_on(eoe->dev);
     }
     else
     {
-        EC_MASTER_ERR(eoe->master, "%s : slave not supplied to ec_eoe_link_slave().\n",
+        EC_MASTER_ERR(eoe->master, "%s：未提供从站给ec_eoe_link_slave()。\n",
                       eoe->dev->name);
-        EC_MASTER_DBG(eoe->master, 1, "%s: carrier off.\n", eoe->dev->name);
+        EC_MASTER_DBG(eoe->master, 1, "%s：carrier off。\n", eoe->dev->name);
         netif_carrier_off(eoe->dev);
     }
 }
 
 /*****************************************************************************/
 
-/** EoE clear slave.
+/** EoE清除从站。
  *
- * delinks slave from the handler so that the EoE interface is kept if a
- * slave get disconnected.
+ * 将从站与处理程序解除链接，以便在从站断开连接时保留EoE接口。
+ *
+ * @param eoe EoE处理程序
+ * @return 无
+ * @details 该函数用于清除EoE处理程序中的从站。关闭carrier状态，并清空发送队列。
+ * 如果存在待发送的skb（套接字缓冲区），则释放该skb并增加tx_errors统计值。如果存在待接收的skb，同样释放该skb并增加rx_errors统计值。
+ * 将EoE处理程序的state状态设置为ec_eoe_state_rx_start，表示接收状态。
+ * 最后，将EoE处理程序的slave成员设置为NULL，并根据需要打印调试信息表示从站链接已清除。
  */
-void ec_eoe_clear_slave(ec_eoe_t *eoe /**< EoE handler */)
+void ec_eoe_clear_slave(ec_eoe_t *eoe /**< EoE处理程序 */)
 {
 #if EOE_DEBUG_LEVEL >= 1
     ec_slave_t *slave = eoe->slave;
 #endif
 
-    EC_MASTER_DBG(eoe->master, 1, "%s: carrier off.\n", eoe->dev->name);
+    EC_MASTER_DBG(eoe->master, 1, "%s：carrier off。\n", eoe->dev->name);
     netif_carrier_off(eoe->dev);
 
-    // empty transmit queue
+    // 清空发送队列
     ec_eoe_flush(eoe);
 
     if (eoe->tx_skb)
@@ -515,22 +525,30 @@ void ec_eoe_clear_slave(ec_eoe_t *eoe /**< EoE handler */)
 #if EOE_DEBUG_LEVEL >= 1
     if (slave)
     {
-        EC_MASTER_DBG(eoe->master, 0, "%s slave link cleared.\n", eoe->dev->name);
+        EC_MASTER_DBG(eoe->master, 0, "%s从站链接已清除。\n", eoe->dev->name);
     }
 #endif
 }
 
 /*****************************************************************************/
 
-/** EoE destructor.
+/** EoE析构函数。
  *
- * Unregisteres the net_device and frees allocated memory.
+ * 注销net_device并释放分配的内存。
+ *
+ * @param eoe EoE处理程序
+ * @return 无
+ * @details 该函数用于释放EoE处理程序的资源。
+ * 注销net_device，并可能调用关闭回调函数。
+ * 然后，清空发送队列。
+ * 如果存在待发送的skb（套接字缓冲区），则释放该skb。如果存在待接收的skb，同样释放该skb。
+ * 释放EoE处理程序的tx_ring内存，并释放net_device。最后，清除EoE处理程序的datagram数据结构。
  */
-void ec_eoe_clear(ec_eoe_t *eoe /**< EoE handler */)
+void ec_eoe_clear(ec_eoe_t *eoe /**< EoE处理程序 */)
 {
-    unregister_netdev(eoe->dev); // possibly calls close callback
+    unregister_netdev(eoe->dev); // 可能会调用关闭回调函数
 
-    // empty transmit queue
+    // 清空发送队列
     ec_eoe_flush(eoe);
 
     if (eoe->tx_skb)
@@ -548,9 +566,18 @@ void ec_eoe_clear(ec_eoe_t *eoe /**< EoE handler */)
 
 /*****************************************************************************/
 
-/** Empties the transmit queue.
+/** 清空发送队列。
+ *
+ * @param eoe EoE处理程序
+ * @return 无
+ * @details 该函数用于清空EoE处理程序的发送队列。
+ * 首先检查是否存在mbox锁，如果存在则清除该锁。
+ * 然后，循环遍历发送队列，释放每个skb（套接字缓冲区），并将对应的tx_ring元素设置为NULL。
+ * 同时，增加tx_dropped统计值。
+ * 如果tx_next_to_clean加1后的值等于tx_ring_count，则将tx_next_to_clean设置为0，以实现循环队列的效果。
+ * 最后，将tx_next_to_use和tx_next_to_clean都设置为0，表示发送队列已清空。
  */
-void ec_eoe_flush(ec_eoe_t *eoe /**< EoE handler */)
+void ec_eoe_flush(ec_eoe_t *eoe /**< EoE处理程序 */)
 {
     struct sk_buff *skb;
 
@@ -580,7 +607,17 @@ void ec_eoe_flush(ec_eoe_t *eoe /**< EoE handler */)
 
 /*****************************************************************************/
 
-unsigned int ec_eoe_tx_queued_frames(const ec_eoe_t *eoe /**< EoE handler */)
+/**
+ * @brief 获取EoE处理程序中待发送的帧数。
+ * 
+ * @param eoe EoE处理程序
+ * @return 待发送的帧数
+ * @details 该函数用于获取EoE处理程序中待发送的帧数。
+ * 通过比较tx_next_to_use和tx_next_to_clean的值来计算待发送的帧数。
+ * 如果tx_next_to_use大于或等于tx_next_to_clean，则返回它们之间的差值。
+ * 否则，返回tx_ring_count加上tx_next_to_use和tx_next_to_clean之间的差值。
+ */
+unsigned int ec_eoe_tx_queued_frames(const ec_eoe_t *eoe /**< EoE处理程序 */)
 {
     unsigned int next_to_use = eoe->tx_next_to_use;
     unsigned int next_to_clean = eoe->tx_next_to_clean;
@@ -597,12 +634,23 @@ unsigned int ec_eoe_tx_queued_frames(const ec_eoe_t *eoe /**< EoE handler */)
 
 /*****************************************************************************/
 
-static unsigned int eoe_tx_unused_frames(ec_eoe_t *eoe /**< EoE handler */)
+/**
+ * @brief 获取EoE处理程序中未使用的帧数。
+ * 
+ * @param eoe EoE处理程序
+ * @return 未使用的帧数
+ * @details 该函数用于获取EoE处理程序中未使用的帧数。
+ * 通过比较tx_next_to_clean和tx_next_to_use的值来计算未使用的帧数。
+ * 如果tx_next_to_clean大于tx_next_to_use，则返回它们之间的差值减1。
+ * 否则，返回tx_ring_count加上tx_next_to_clean和tx_next_to_use之间的差值减1。
+ * 注意，减1是为了避免尾部接触头部的情况。
+ */
+static unsigned int eoe_tx_unused_frames(ec_eoe_t *eoe /**< EoE处理程序 */)
 {
     unsigned int next_to_use = eoe->tx_next_to_use;
     unsigned int next_to_clean = eoe->tx_next_to_clean;
 
-    // Note: -1 to avoid tail touching head
+    // 注意：-1是为了避免尾部接触头部
     if (next_to_clean > next_to_use)
     {
         return next_to_clean - next_to_use - 1;
@@ -615,11 +663,14 @@ static unsigned int eoe_tx_unused_frames(ec_eoe_t *eoe /**< EoE handler */)
 
 /*****************************************************************************/
 
-/** Sends a frame or the next fragment.
- *
- * \return Zero on success, otherwise a negative error code.
+/**
+ * @brief 发送帧或下一个片段。
+ * 
+ * @param eoe EoE处理器
+ * @return 成功时返回零，否则返回负错误代码。
+ * @details 该函数根据当前的传输进度发送帧或下一个片段。它首先计算剩余数据的大小和当前片段的大小，然后确定是否为最后一个片段。接下来，根据片段的序号和偏移量构造消息头，并将数据拷贝到消息体中。最后，更新传输进度并返回结果。
  */
-int ec_eoe_send(ec_eoe_t *eoe /**< EoE handler */)
+int ec_eoe_send(ec_eoe_t *eoe /**< EoE处理器 */)
 {
     size_t remaining_size, current_size, complete_offset;
     unsigned int last_fragment;
@@ -702,9 +753,13 @@ int ec_eoe_send(ec_eoe_t *eoe /**< EoE handler */)
 
 /*****************************************************************************/
 
-/** Runs the EoE state machine.
+/**
+ * @brief 运行EoE状态机。
+ * 
+ * @param eoe EoE处理器
+ * @details 该函数运行EoE状态机。首先检查EoE处理器的状态，如果处理器未打开、未关联从站或网络接口不可用，则直接返回。然后检查是否需要发送数据报文或已收到数据报文，如果是则跳过当前循环。接下来调用状态函数执行状态转换逻辑。最后更新统计信息并输出数据报文的统计信息。
  */
-void ec_eoe_run(ec_eoe_t *eoe /**< EoE handler */)
+void ec_eoe_run(ec_eoe_t *eoe /**< EoE处理器 */)
 {
     if (!eoe->opened || !eoe->slave || !netif_carrier_ok(eoe->dev))
     {
@@ -735,9 +790,13 @@ void ec_eoe_run(ec_eoe_t *eoe /**< EoE handler */)
 
 /*****************************************************************************/
 
-/** Queues the datagram, if necessary.
+/**
+ * @brief 如果需要，将数据报文加入队列。
+ * 
+ * @param eoe EoE处理器
+ * @details 该函数将数据报文加入队列，如果需要且从站已关联。它通过调用ec_master_queue_datagram_ext函数将数据报文加入主站队列，并将eoe->queue_datagram标志位清零。
  */
-void ec_eoe_queue(ec_eoe_t *eoe /**< EoE handler */)
+void ec_eoe_queue(ec_eoe_t *eoe /**< EoE处理器 */)
 {
     if (eoe->queue_datagram && eoe->slave)
     {
@@ -748,50 +807,60 @@ void ec_eoe_queue(ec_eoe_t *eoe /**< EoE handler */)
 
 /*****************************************************************************/
 
-/** Returns the state of the device.
- *
- * \return 1 if the device is "up", 0 if it is "down"
+/**
+ * @brief 返回设备的状态。
+ * 
+ * @param eoe EoE处理器
+ * @return 如果设备处于"up"状态则返回1，如果设备处于"down"状态则返回0。
  */
-int ec_eoe_is_open(const ec_eoe_t *eoe /**< EoE handler */)
+int ec_eoe_is_open(const ec_eoe_t *eoe /**< EoE处理器 */)
 {
     return eoe->opened;
 }
 
 /*****************************************************************************/
 
-/** Returns the idle state.
- *
- * \retval 1 The device is idle.
- * \retval 0 The device is busy.
+/**
+ * @brief 返回设备的空闲状态。
+ * 
+ * @param eoe EoE处理器
+ * @retval 1 设备处于空闲状态。
+ * @retval 0 设备正在忙碌。
  */
-int ec_eoe_is_idle(const ec_eoe_t *eoe /**< EoE handler */)
+int ec_eoe_is_idle(const ec_eoe_t *eoe /**< EoE处理器 */)
 {
     return eoe->rx_idle && eoe->tx_idle;
 }
 
 /*****************************************************************************/
 
-/** Returns the eoe device name.
- *
- * \retval the device name.
+/**
+ * @brief 返回EoE设备的名称。
+ * 
+ * @param eoe EoE处理器
+ * @return 设备名称。
  */
-char *ec_eoe_name(const ec_eoe_t *eoe /**< EoE handler */)
+char *ec_eoe_name(const ec_eoe_t *eoe /**< EoE处理器 */)
 {
     return eoe->dev->name;
 }
+
 
 /******************************************************************************
  *  STATE PROCESSING FUNCTIONS
  *****************************************************************************/
 
-/** State: RX_START.
+/**
+ * @brief 状态处理函数：RX_START。
  *
- * Starts a new receiving sequence by queueing a datagram that checks the
- * slave's mailbox for a new EoE datagram.
- *
- * \todo Use both devices.
+ * @param eoe EoE处理器
+ * @details 该函数在接收状态机的"RX_START"状态下执行。
+ * 它通过将一个用于检查从站邮箱中是否有新的EoE数据报文的数据报文加入队列来启动新的接收序列。
+ * 如果从站未关联或存在错误标志，或者主站设备的链路状态未连接，则将接收和发送空闲标志设置为1并返回。
+ * 如果已经存在进行中的邮箱读取请求，则跳过邮箱读取检查。
+ * 否则，准备一个用于检查邮箱的数据报文，将其加入队列，并将状态设置为"RX_CHECK"。
  */
-void ec_eoe_state_rx_start(ec_eoe_t *eoe /**< EoE handler */)
+void ec_eoe_state_rx_start(ec_eoe_t *eoe /**< EoE处理器 */)
 {
     if (!eoe->slave || eoe->slave->error_flag ||
         !eoe->slave->master->devices[EC_DEVICE_MAIN].link_state)
@@ -801,7 +870,7 @@ void ec_eoe_state_rx_start(ec_eoe_t *eoe /**< EoE handler */)
         return;
     }
 
-    // mailbox read check is skipped if a read request is already ongoing
+    // 如果已经存在进行中的邮箱读取请求，则跳过邮箱读取检查
     if (ec_read_mbox_locked(eoe->slave))
     {
         eoe->state = ec_eoe_state_rx_fetch_data;
@@ -817,18 +886,18 @@ void ec_eoe_state_rx_start(ec_eoe_t *eoe /**< EoE handler */)
 
 /*****************************************************************************/
 
-/** State: RX_CHECK.
+/**
+ * @brief 状态处理函数：RX_CHECK。
  *
- * Processes the checking datagram sent in RX_START and issues a receive
- * datagram, if new data is available.
+ * @param eoe EoE处理器
+ * @details 该函数在接收状态机的"RX_CHECK"状态下执行。它处理在"RX_START"状态中发送的检查数据报文，并在有新数据可用时发起接收数据报文。
  */
-void ec_eoe_state_rx_check(ec_eoe_t *eoe /**< EoE handler */)
+void ec_eoe_state_rx_check(ec_eoe_t *eoe /**< EoE处理器 */)
 {
     if (eoe->datagram.state != EC_DATAGRAM_RECEIVED)
     {
 #if EOE_DEBUG_LEVEL >= 1
-        EC_SLAVE_WARN(eoe->slave, "Failed to receive mbox"
-                                  " check datagram for %s.\n",
+        EC_SLAVE_WARN(eoe->slave, "无法接收来自%s的邮箱检查数据报文。\n",
                       eoe->dev->name);
         eoe->stats.rx_errors++;
 #endif
@@ -843,7 +912,7 @@ void ec_eoe_state_rx_check(ec_eoe_t *eoe /**< EoE handler */)
         eoe->rx_idle = 1;
         eoe->have_mbox_lock = 0;
         ec_read_mbox_lock_clear(eoe->slave);
-        // check that data is not already received by another read request
+        // 检查数据是否已经被其他读取请求接收
         if (eoe->slave->mbox_eoe_frag_data.payload_size > 0)
         {
             eoe->state = ec_eoe_state_rx_fetch_data;
@@ -864,19 +933,19 @@ void ec_eoe_state_rx_check(ec_eoe_t *eoe /**< EoE handler */)
 
 /*****************************************************************************/
 
-/** State: RX_FETCH.
+/**
+ * @brief 状态处理函数：RX_FETCH。
  *
- * Checks if the requested data of RX_CHECK was received and processes the EoE
- * datagram.
+ * @param eoe EoE处理器
+ * @details 该函数在接收状态机的"RX_FETCH"状态下执行。它检查是否接收到了RX_CHECK请求的数据，并处理EoE数据报文。
  */
-void ec_eoe_state_rx_fetch(ec_eoe_t *eoe /**< EoE handler */)
+void ec_eoe_state_rx_fetch(ec_eoe_t *eoe /**< EoE处理器 */)
 {
     if (eoe->datagram.state != EC_DATAGRAM_RECEIVED)
     {
         eoe->stats.rx_errors++;
 #if EOE_DEBUG_LEVEL >= 1
-        EC_SLAVE_WARN(eoe->slave, "Failed to receive mbox"
-                                  " fetch datagram for %s.\n",
+        EC_SLAVE_WARN(eoe->slave, "无法接收来自%s的邮箱获取数据报文。\n",
                       eoe->dev->name);
 #endif
         eoe->state = ec_eoe_state_tx_start;
@@ -892,11 +961,13 @@ void ec_eoe_state_rx_fetch(ec_eoe_t *eoe /**< EoE handler */)
 
 /*****************************************************************************/
 
-/** State: RX_FETCH DATA.
+/**
+ * @brief 状态处理函数：RX_FETCH DATA。
  *
- * Processes the EoE data.
+ * @param eoe EoE处理器
+ * @details 该函数在接收状态机的"RX_FETCH DATA"状态下执行。它处理EoE数据。
  */
-void ec_eoe_state_rx_fetch_data(ec_eoe_t *eoe /**< EoE handler */)
+void ec_eoe_state_rx_fetch_data(ec_eoe_t *eoe /**< EoE处理器 */)
 {
     size_t rec_size, data_size;
     uint8_t *data, eoe_type, last_fragment, time_appended, mbox_prot;
@@ -915,7 +986,7 @@ void ec_eoe_state_rx_fetch_data(ec_eoe_t *eoe /**< EoE handler */)
     }
     else
     {
-        // initiate a new mailbox read check if required data is not available
+        // 如果所需数据不可用，则发起新的邮箱读取检查
         if (!ec_read_mbox_locked(eoe->slave))
         {
             eoe->have_mbox_lock = 1;
@@ -932,7 +1003,7 @@ void ec_eoe_state_rx_fetch_data(ec_eoe_t *eoe /**< EoE handler */)
     {
         eoe->stats.rx_errors++;
 #if EOE_DEBUG_LEVEL >= 1
-        EC_SLAVE_WARN(eoe->slave, "Invalid mailbox response for %s.\n",
+        EC_SLAVE_WARN(eoe->slave, "无效的邮箱响应数据报文：%s。\n",
                       eoe->dev->name);
 #endif
         eoe->state = ec_eoe_state_tx_start;
@@ -940,10 +1011,10 @@ void ec_eoe_state_rx_fetch_data(ec_eoe_t *eoe /**< EoE handler */)
     }
 
     if (mbox_prot != EC_MBOX_TYPE_EOE)
-    { // FIXME mailbox handler necessary
+    { // FIXME 需要邮箱处理器
         eoe->stats.rx_errors++;
 #if EOE_DEBUG_LEVEL >= 1
-        EC_SLAVE_WARN(eoe->slave, "Other mailbox protocol response for %s.\n",
+        EC_SLAVE_WARN(eoe->slave, "其他邮箱协议响应数据报文：%s。\n",
                       eoe->dev->name);
 #endif
         eoe->state = ec_eoe_state_tx_start;
@@ -954,15 +1025,14 @@ void ec_eoe_state_rx_fetch_data(ec_eoe_t *eoe /**< EoE handler */)
 
     if (eoe_type != EC_EOE_TYPE_FRAME_FRAG)
     {
-        EC_SLAVE_ERR(eoe->slave, "%s: EoE iface handler received other EoE type"
-                                 " response (type %x). Dropping.\n",
+        EC_SLAVE_ERR(eoe->slave, "%s：EoE接口处理器接收到其他的EoE类型响应数据报文（类型：%x）。丢弃。\n",
                      eoe->dev->name, eoe_type);
         eoe->stats.rx_dropped++;
         eoe->state = ec_eoe_state_tx_start;
         return;
     }
 
-    // EoE Fragment Request received
+    // 接收到EoE Fragment请求
 
     last_fragment = (EC_READ_U16(data) >> 8) & 0x0001;
     time_appended = (EC_READ_U16(data) >> 9) & 0x0001;
@@ -973,11 +1043,10 @@ void ec_eoe_state_rx_fetch_data(ec_eoe_t *eoe /**< EoE handler */)
 #endif
 
 #if EOE_DEBUG_LEVEL >= 2
-    EC_SLAVE_DBG(eoe->slave, 0, "EoE %s RX fragment %u%s, offset %u,"
-                                " frame %u%s, %zu octets\n",
+    EC_SLAVE_DBG(eoe->slave, 0, "EoE %s 接收到分片 %u%s，偏移 %u，帧 %u%s，%zu字节\n",
                  eoe->dev->name, fragment_number,
                  last_fragment ? "" : "+", fragment_offset, frame_number,
-                 time_appended ? ", + timestamp" : "",
+                 time_appended ? "，带时间戳" : "",
                  time_appended ? rec_size - 8 : rec_size - 4);
 #endif
 
@@ -1001,16 +1070,15 @@ void ec_eoe_state_rx_fetch_data(ec_eoe_t *eoe /**< EoE handler */)
     {
         if (eoe->rx_skb)
         {
-            EC_SLAVE_WARN(eoe->slave, "EoE RX freeing old socket buffer.\n");
+            EC_SLAVE_WARN(eoe->slave, "EoE RX 释放旧的套接字缓冲区。\n");
             dev_kfree_skb(eoe->rx_skb);
         }
 
-        // new socket buffer
+        // 新的套接字缓冲区
         if (!(eoe->rx_skb = dev_alloc_skb(fragment_offset * 32)))
         {
             if (printk_ratelimit())
-                EC_SLAVE_WARN(eoe->slave, "EoE RX low on mem,"
-                                          " frame dropped.\n");
+                EC_SLAVE_WARN(eoe->slave, "EoE RX 内存不足，丢弃帧。\n");
             eoe->stats.rx_dropped++;
             eoe->state = ec_eoe_state_tx_start;
             return;
@@ -1038,7 +1106,7 @@ void ec_eoe_state_rx_fetch_data(ec_eoe_t *eoe /**< EoE handler */)
             eoe->rx_skb = NULL;
             eoe->stats.rx_errors++;
 #if EOE_DEBUG_LEVEL >= 1
-            EC_SLAVE_WARN(eoe->slave, "Fragmenting error at %s.\n",
+            EC_SLAVE_WARN(eoe->slave, "在%s处发生分片错误。\n",
                           eoe->dev->name);
 #endif
             eoe->state = ec_eoe_state_tx_start;
@@ -1046,30 +1114,29 @@ void ec_eoe_state_rx_fetch_data(ec_eoe_t *eoe /**< EoE handler */)
         }
     }
 
-    // copy fragment into socket buffer
+    // 将分片复制到套接字缓冲区
     memcpy(skb_put(eoe->rx_skb, data_size), data + 4, data_size);
     eoe->rx_skb_offset += data_size;
 
     if (last_fragment)
     {
-        // update statistics
+        // 更新统计信息
         eoe->stats.rx_packets++;
         eoe->stats.rx_bytes += eoe->rx_skb->len;
         eoe->rx_counter += eoe->rx_skb->len;
 
 #if EOE_DEBUG_LEVEL >= 2
-        EC_SLAVE_DBG(eoe->slave, 0, "EoE %s RX frame completed"
-                                    " with %u octets.\n",
+        EC_SLAVE_DBG(eoe->slave, 0, "EoE %s 接收到完整帧，长度为 %u 字节。\n",
                      eoe->dev->name, eoe->rx_skb->len);
 #endif
 
-        // pass socket buffer to network stack
+        // 将套接字缓冲区传递给网络堆栈
         eoe->rx_skb->dev = eoe->dev;
         eoe->rx_skb->protocol = eth_type_trans(eoe->rx_skb, eoe->dev);
         eoe->rx_skb->ip_summed = CHECKSUM_UNNECESSARY;
         if (netif_rx_ni(eoe->rx_skb))
         {
-            EC_SLAVE_WARN(eoe->slave, "EoE RX netif_rx failed.\n");
+            EC_SLAVE_WARN(eoe->slave, "EoE RX netif_rx 失败。\n");
         }
         eoe->rx_skb = NULL;
 
@@ -1079,7 +1146,7 @@ void ec_eoe_state_rx_fetch_data(ec_eoe_t *eoe /**< EoE handler */)
     {
         eoe->rx_expected_fragment++;
 #if EOE_DEBUG_LEVEL >= 2
-        EC_SLAVE_DBG(eoe->slave, 0, "EoE %s RX expecting fragment %u\n",
+        EC_SLAVE_DBG(eoe->slave, 0, "EoE %s 接收到分片 %u\n",
                      eoe->dev->name, eoe->rx_expected_fragment);
 #endif
         eoe->state = ec_eoe_state_rx_start;
@@ -1088,14 +1155,19 @@ void ec_eoe_state_rx_fetch_data(ec_eoe_t *eoe /**< EoE handler */)
 
 /*****************************************************************************/
 
-/** State: TX START.
- *
- * Starts a new transmit sequence. If no data is available, a new receive
- * sequence is started instead.
- *
- * \todo Use both devices.
+/**
+ * @brief 启动新的传输序列。如果没有可用的数据，则启动新的接收序列。
+ * 
+ * @param eoe EoE处理程序
+ * @return 无
+ * @details 此函数用于启动新的传输序列。如果没有可用的数据，则会启动新的接收序列。
+ * 如果从设备未连接、从设备存在错误标志或主设备的链路状态未连接，将设置接收和传输空闲标志，并直接返回。
+ * 如果传输队列为空，将检查是否需要重新启动队列，并设置传输空闲标志。如果有可用的数据帧，则从环形缓冲区中获取帧并将其移出。
+ * 如果需要重新启动队列，则唤醒网络接口队列。设置传输空闲标志为非空闲状态。更新帧号、片段号和偏移量。调用ec_eoe_send函数发送数据帧。
+ * 如果发送出错，释放数据帧并更新统计信息，并设置状态为启动新的接收序列。
+ * 如果需要唤醒队列，则输出调试信息。设置尝试次数和状态为已发送状态。
  */
-void ec_eoe_state_tx_start(ec_eoe_t *eoe /**< EoE handler */)
+void ec_eoe_state_tx_start(ec_eoe_t *eoe /**< EoE处理程序 */)
 {
 #if EOE_DEBUG_LEVEL >= 2
     unsigned int wakeup = 0;
@@ -1158,7 +1230,7 @@ void ec_eoe_state_tx_start(ec_eoe_t *eoe /**< EoE handler */)
         eoe->stats.tx_errors++;
         eoe->state = ec_eoe_state_rx_start;
 #if EOE_DEBUG_LEVEL >= 1
-        EC_SLAVE_WARN(eoe->slave, "Send error at %s.\n", eoe->dev->name);
+        EC_SLAVE_WARN(eoe->slave, "发送错误：%s。\n", eoe->dev->name);
 #endif
         return;
     }
@@ -1166,7 +1238,7 @@ void ec_eoe_state_tx_start(ec_eoe_t *eoe /**< EoE handler */)
 #if EOE_DEBUG_LEVEL >= 2
     if (wakeup)
     {
-        EC_SLAVE_DBG(eoe->slave, 0, "EoE %s waking up TX queue...\n",
+        EC_SLAVE_DBG(eoe->slave, 0, "EoE %s 唤醒传输队列...\n",
                      eoe->dev->name);
     }
 #endif
@@ -1177,28 +1249,41 @@ void ec_eoe_state_tx_start(ec_eoe_t *eoe /**< EoE handler */)
 
 /*****************************************************************************/
 
-/** State: TX SENT.
+/** 状态: TX SENT.
  *
- * Checks is the previous transmit datagram succeded and sends the next
- * fragment, if necessary.
+ * 检查前一个传输数据报是否成功，并在必要时发送下一个分片。
+ *
+ * @param eoe EoE处理程序
+ *
+ * @return 无
+ *
+ * @details 此函数检查前一个传输的数据报的状态。如果数据报的状态不是EC_DATAGRAM_RECEIVED，
+ * 则检查尝试次数。如果尝试次数不为零，则减少尝试次数并将queue_datagram标志设置为1。
+ * 如果尝试次数为零，则增加tx_errors统计计数并将状态设置为ec_eoe_state_rx_start。
+ * 
+ * 如果数据报的working_counter不等于1，则检查尝试次数。如果尝试次数不为零，则减少尝试次数并将queue_datagram标志设置为1。
+ * 如果尝试次数为零，则增加tx_errors统计计数，并根据EOE_DEBUG_LEVEL的设置，记录日志信息，并将状态设置为ec_eoe_state_rx_start。
+ * 
+ * 如果已完全发送帧，则增加tx_packets统计计数、tx_bytes统计计数和tx_counter统计计数，并释放tx_skb缓冲区，将其设置为NULL，并将状态设置为ec_eoe_state_rx_start。
+ * 
+ * 否则，发送下一个分片。如果发送失败，则释放tx_skb缓冲区，将其设置为NULL，并根据EOE_DEBUG_LEVEL的设置，记录日志信息，并将状态设置为ec_eoe_state_rx_start。
  */
-void ec_eoe_state_tx_sent(ec_eoe_t *eoe /**< EoE handler */)
+void ec_eoe_state_tx_sent(ec_eoe_t *eoe /**< EoE处理程序 */)
 {
     if (eoe->datagram.state != EC_DATAGRAM_RECEIVED)
     {
         if (eoe->tries)
         {
-            eoe->tries--; // try again
+            eoe->tries--; // 再次尝试
             eoe->queue_datagram = 1;
         }
         else
         {
 #if EOE_DEBUG_LEVEL >= 1
-            /* only log every 1000th */
+            /* 仅记录每1000次 */
             if (eoe->stats.tx_errors++ % 1000 == 0)
             {
-                EC_SLAVE_WARN(eoe->slave, "Failed to receive send"
-                                          " datagram for %s after %u tries.\n",
+                EC_SLAVE_WARN(eoe->slave, "失败：在 %s 的 %u 次尝试后未能接收发送的数据报。\n",
                               eoe->dev->name, EC_EOE_TRIES);
             }
 #else
@@ -1213,15 +1298,14 @@ void ec_eoe_state_tx_sent(ec_eoe_t *eoe /**< EoE handler */)
     {
         if (eoe->tries)
         {
-            eoe->tries--; // try again
+            eoe->tries--; // 再次尝试
             eoe->queue_datagram = 1;
         }
         else
         {
             eoe->stats.tx_errors++;
 #if EOE_DEBUG_LEVEL >= 1
-            EC_SLAVE_WARN(eoe->slave, "No sending response"
-                                      " for %s after %u tries.\n",
+            EC_SLAVE_WARN(eoe->slave, "未发送响应：在 %s 的 %u 次尝试后。\n",
                           eoe->dev->name, EC_EOE_TRIES);
 #endif
             eoe->state = ec_eoe_state_rx_start;
@@ -1229,7 +1313,7 @@ void ec_eoe_state_tx_sent(ec_eoe_t *eoe /**< EoE handler */)
         return;
     }
 
-    // frame completely sent
+    // 帧完全发送
     if (eoe->tx_offset >= eoe->tx_skb->len)
     {
         eoe->stats.tx_packets++;
@@ -1240,14 +1324,14 @@ void ec_eoe_state_tx_sent(ec_eoe_t *eoe /**< EoE handler */)
         eoe->state = ec_eoe_state_rx_start;
     }
     else
-    { // send next fragment
+    { // 发送下一个分片
         if (ec_eoe_send(eoe))
         {
             dev_kfree_skb(eoe->tx_skb);
             eoe->tx_skb = NULL;
             eoe->stats.tx_errors++;
 #if EOE_DEBUG_LEVEL >= 1
-            EC_SLAVE_WARN(eoe->slave, "Send error at %s.\n", eoe->dev->name);
+            EC_SLAVE_WARN(eoe->slave, "在 %s 发送错误。\n", eoe->dev->name);
 #endif
             eoe->state = ec_eoe_state_rx_start;
         }
@@ -1255,18 +1339,26 @@ void ec_eoe_state_tx_sent(ec_eoe_t *eoe /**< EoE handler */)
 }
 
 /******************************************************************************
- *  NET_DEVICE functions
+ *  NET_DEVICE函数
  *****************************************************************************/
 
-/** Opens the virtual network device.
+/** 打开虚拟网络设备。
  *
- * \return Always zero (success).
+ * @param dev EoE net_device
+ *
+ * @return 始终返回零（成功）。
+ *
+ * @details 此函数打开虚拟网络设备。它将carrier设置为关闭状态，直到我们知道链路状态。
+ * 然后，刷新EoE处理程序，并设置opened、rx_idle、tx_idle和tx_queue_active标志。
+ * 启动网络设备队列，并根据EOE_DEBUG_LEVEL的设置，记录日志信息。
+ * 
+ * 如果EoE处理程序关联了从站，则更新carrier链路状态，并根据EOE_DEBUG_LEVEL的设置，记录日志信息。
  */
 int ec_eoedev_open(struct net_device *dev /**< EoE net_device */)
 {
     ec_eoe_t *eoe = *((ec_eoe_t **)netdev_priv(dev));
 
-    // set carrier to off until we know link status
+    // 设置carrier为关闭状态，直到我们知道链路状态
     EC_MASTER_DBG(eoe->master, 1, "%s: carrier off.\n", dev->name);
     netif_carrier_off(dev);
 
@@ -1277,10 +1369,10 @@ int ec_eoedev_open(struct net_device *dev /**< EoE net_device */)
     eoe->tx_queue_active = 1;
     netif_start_queue(dev);
 #if EOE_DEBUG_LEVEL >= 2
-    EC_MASTER_DBG(eoe->master, 0, "%s opened.\n", dev->name);
+    EC_MASTER_DBG(eoe->master, 0, "%s 已打开。\n", dev->name);
 #endif
 
-    // update carrier link status
+    // 更新carrier链路状态
     if (eoe->slave)
     {
         EC_MASTER_DBG(eoe->master, 1, "%s: carrier on.\n", dev->name);
@@ -1292,9 +1384,14 @@ int ec_eoedev_open(struct net_device *dev /**< EoE net_device */)
 
 /*****************************************************************************/
 
-/** Stops the virtual network device.
+/** 停止虚拟网络设备。
  *
- * \return Always zero (success).
+ * @param dev EoE net_device
+ *
+ * @return 始终返回零（成功）。
+ *
+ * @details 此函数停止虚拟网络设备。它将carrier设置为关闭状态，停止网络设备队列，并根据EOE_DEBUG_LEVEL的设置，记录日志信息。
+ * 同时，将tx_queue_active、rx_idle和tx_idle标志设置为相应的值，并刷新EoE处理程序。
  */
 int ec_eoedev_stop(struct net_device *dev /**< EoE net_device */)
 {
@@ -1309,16 +1406,29 @@ int ec_eoedev_stop(struct net_device *dev /**< EoE net_device */)
     eoe->opened = 0;
     ec_eoe_flush(eoe);
 #if EOE_DEBUG_LEVEL >= 2
-    EC_MASTER_DBG(eoe->master, 0, "%s stopped.\n", dev->name);
+    EC_MASTER_DBG(eoe->master, 0, "%s 已停止。\n", dev->name);
 #endif
     return 0;
 }
 
 /*****************************************************************************/
 
-/** Transmits data via the virtual network device.
+/** 通过虚拟网络设备传输数据。
  *
- * \return Zero on success, non-zero on failure.
+ * @param skb 要传输的套接字缓冲区
+ * @param dev EoE net_device
+ *
+ * @return 成功返回零，失败返回非零值。
+ *
+ * @details 此函数通过虚拟网络设备传输数据。如果EoE处理程序未关联从站，则释放skb并增加tx_dropped统计计数，
+ * 然后返回NETDEV_TX_OK。
+ * 
+ * 如果skb的长度超过从站配置的tx_mailbox_size减去10，则释放skb并增加tx_dropped统计计数，然后返回0。
+ * 
+ * 将skb设置在环形缓冲区中，并递增tx_next_to_use索引。如果tx_next_to_use等于tx_ring_count，则将其设置为0。
+ * 如果未使用的帧数为0，则停止队列，并将tx_queue_active标志设置为0。
+ * 
+ * 根据EOE_DEBUG_LEVEL的设置，记录日志信息。
  */
 int ec_eoedev_tx(struct sk_buff *skb,   /**< transmit socket buffer */
                  struct net_device *dev /**< EoE net_device */
@@ -1347,16 +1457,16 @@ int ec_eoedev_tx(struct sk_buff *skb,   /**< transmit socket buffer */
     }
 #endif
 
-    // set the skb in the ring
+    // 将skb设置在环形缓冲区中
     eoe->tx_ring[eoe->tx_next_to_use] = skb;
 
-    // increment index
+    // 递增索引
     if (unlikely(++eoe->tx_next_to_use == eoe->tx_ring_count))
     {
         eoe->tx_next_to_use = 0;
     }
 
-    // stop the queue?
+    // 停止队列？
     if (eoe_tx_unused_frames(eoe) == 0)
     {
         netif_stop_queue(dev);
@@ -1378,9 +1488,13 @@ int ec_eoedev_tx(struct sk_buff *skb,   /**< transmit socket buffer */
 
 /*****************************************************************************/
 
-/** Gets statistics about the virtual network device.
+/** 获取虚拟网络设备的统计信息。
  *
- * \return Statistics.
+ * @param dev EoE net_device
+ *
+ * @return 统计信息。
+ *
+ * @details 此函数返回虚拟网络设备的统计信息。
  */
 struct net_device_stats *ec_eoedev_stats(
     struct net_device *dev /**< EoE net_device */

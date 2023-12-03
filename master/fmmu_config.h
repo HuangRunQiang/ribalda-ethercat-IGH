@@ -28,7 +28,7 @@
  *****************************************************************************/
 
 /** \file
- * EtherCAT FMMU configuration structure.
+ * EtherCAT FMMU配置结构体。
  */
 
 /*****************************************************************************/
@@ -41,18 +41,16 @@
 
 /*****************************************************************************/
 
-/** FMMU configuration.
- */
+/** FMMU配置 */
 typedef struct
 {
-        struct list_head list;          /**< List node used by domain. */
-        const ec_slave_config_t *sc;    /**< EtherCAT slave config. */
-        const ec_domain_t *domain;      /**< Domain. */
-        uint8_t sync_index;             /**< Index of sync manager to use. */
-        ec_direction_t dir;             /**< FMMU direction. */
-        uint32_t logical_domain_offset; /**< Logical offset address relative to
-                    domain->logical_base_address. */
-        unsigned int data_size;         /**< Covered PDO size. */
+    struct list_head list;          /**< 域使用的列表节点。 */
+    const ec_slave_config_t *sc;    /**< EtherCAT从站配置。 */
+    const ec_domain_t *domain;      /**< 域。 */
+    uint8_t sync_index;             /**< 要使用的同步管理器的索引。 */
+    ec_direction_t dir;             /**< FMMU方向。 */
+    uint32_t logical_domain_offset; /**< 相对于domain->logical_base_address的逻辑偏移地址。 */
+    unsigned int data_size;         /**< 覆盖的PDO大小。 */
 } ec_fmmu_config_t;
 
 /*****************************************************************************/
@@ -61,10 +59,9 @@ void ec_fmmu_config_init(ec_fmmu_config_t *, ec_slave_config_t *,
                          ec_domain_t *, uint8_t, ec_direction_t);
 
 /**
- * @param fmmu EtherCAT FMMU configuration.
- * @param logical_domain_offset Logical offset address
-        relative to domain->logical_base_address.
- * @param data_size Covered PDO size.
+ * @param fmmu EtherCAT FMMU配置。
+ * @param logical_domain_offset 相对于domain->logical_base_address的逻辑偏移地址。
+ * @param data_size 覆盖的PDO大小。
 */
 void ec_fmmu_set_domain_offset_size(ec_fmmu_config_t *fmmu,
                                     uint32_t logical_domain_offset, unsigned data_size);

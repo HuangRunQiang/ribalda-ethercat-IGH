@@ -28,7 +28,7 @@
  *****************************************************************************/
 
 /** \file
- * EtherCAT CoE state machines.
+ * EtherCAT CoE状态机。
  */
 
 /*****************************************************************************/
@@ -41,29 +41,30 @@
 
 /*****************************************************************************/
 
-/** Maximum time in ms to wait for responses when reading out the dictionary.
+/** 读取字典时等待响应的最长时间（以毫秒为单位）。
  */
 #define EC_FSM_COE_DICT_TIMEOUT 1000
 
-/** CoE download request header size.
+/** CoE下载请求头大小。
  */
 #define EC_COE_DOWN_REQ_HEADER_SIZE 10
 
-/** CoE download segment request header size.
+/** CoE下载段请求头大小。
  */
 #define EC_COE_DOWN_SEG_REQ_HEADER_SIZE 3
 
-/** Minimum size of download segment.
+/** 下载段的最小大小。
  */
 #define EC_COE_DOWN_SEG_MIN_DATA_SIZE 7
 
-/** Enable debug output for CoE retries.
+/** 启用CoE重试的调试输出。
  */
 #define DEBUG_RETRIES 0
 
-/** Enable warning output if transfers take too long.
+/** 如果传输时间过长，启用警告输出。
  */
 #define DEBUG_LONG 0
+
 
 /*****************************************************************************/
 
@@ -1055,13 +1056,19 @@ void ec_fsm_coe_dict_desc_check(
 
 /*****************************************************************************/
 
-/** Prepare an entry description request.
+/** 准备一个条目描述请求。
  *
- * \return Zero on success, otherwise a negative error code.
+ * \return 成功返回零，否则返回负错误代码。
+ * \details 该函数用于准备一个条目描述请求。它接受一个有限状态机和一个数据报作为参数。函数首先根据有限状态机和数据报准备发送的邮箱数据，并返回一个指向数据的指针。如果准备发送邮箱数据时发生错误，函数将返回一个指向错误代码的指针。
+ * 函数接下来使用EC_WRITE宏将SDO信息、请求类型、索引、子索引和值信息写入邮箱数据。最后，函数将有限状态机的状态设置为条目请求状态，并返回零表示成功。
+ *
+ * \param fsm 有限状态机
+ * \param datagram 使用的数据报
+ * \return 返回零表示成功，否则返回负错误代码。
  */
 int ec_fsm_coe_dict_prepare_entry(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机 */
+    ec_datagram_t *datagram /**< 使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -1072,13 +1079,13 @@ int ec_fsm_coe_dict_prepare_entry(
         return PTR_ERR(data);
     }
 
-    EC_WRITE_U16(data, 0x8 << 12); // SDO information
-    EC_WRITE_U8(data + 2, 0x05);   // Get entry description request
+    EC_WRITE_U16(data, 0x8 << 12); // SDO信息
+    EC_WRITE_U8(data + 2, 0x05);   // 获取条目描述请求
     EC_WRITE_U8(data + 3, 0x00);
     EC_WRITE_U16(data + 4, 0x0000);
-    EC_WRITE_U16(data + 6, fsm->sdo->index); // SDO index
-    EC_WRITE_U8(data + 8, fsm->subindex);    // SDO subindex
-    EC_WRITE_U8(data + 9, 0x01);             // value info (access rights only)
+    EC_WRITE_U16(data + 6, fsm->sdo->index); // SDO索引
+    EC_WRITE_U8(data + 8, fsm->subindex);    // SDO子索引
+    EC_WRITE_U8(data + 9, 0x01);             // 值信息（仅访问权限）
 
     fsm->state = ec_fsm_coe_dict_entry_request;
     return 0;
@@ -1087,20 +1094,27 @@ int ec_fsm_coe_dict_prepare_entry(
 /*****************************************************************************/
 
 /**
-   CoE state: DICT DESC RESPONSE.
-   \todo Timeout behavior
-*/
-
+ * @brief CoE状态: 字典描述响应
+ * @param fsm 有限状态机
+ * @param datagram 使用的数据报
+ * @return 无
+ * @details 该函数用于处理CoE字典描述响应的逻辑。
+ *          - 如果数据报的状态为EC_DATAGRAM_TIMED_OUT且重试次数不为0，则准备获取从站邮箱中的数据报并返回。
+ *          - 如果数据报的状态不为EC_DATAGRAM_RECEIVED，则将状态设置为ec_fsm_coe_error，并打印错误信息。
+ *          - 如果数据报的工作计数器不为1：
+ *            - 如果从站邮箱中的数据还未被其他读取请求读取，则将状态设置为ec_fsm_coe_error，并打印错误信息。
+ *          - 清除从站邮箱的读取锁定，并将状态设置为ec_fsm_coe_dict_desc_response_data，然后调用相应的状态函数。
+ */
 void ec_fsm_coe_dict_desc_response(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机 */
+    ec_datagram_t *datagram /**< 使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
 
     if (fsm->datagram->state == EC_DATAGRAM_TIMED_OUT && fsm->retries--)
     {
-        ec_slave_mbox_prepare_fetch(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_fetch(slave, datagram); // 不会失败
         return;
     }
 
@@ -1108,21 +1122,19 @@ void ec_fsm_coe_dict_desc_response(
     {
         fsm->state = ec_fsm_coe_error;
         ec_read_mbox_lock_clear(slave);
-        EC_SLAVE_ERR(slave, "Failed to receive CoE SDO description"
-                            " response datagram: ");
+        EC_SLAVE_ERR(slave, "未能接收到CoE SDO描述响应数据报: ");
         ec_datagram_print_state(fsm->datagram);
         return;
     }
 
     if (fsm->datagram->working_counter != 1)
     {
-        // only an error if data has not already been read by another read request
+        // 只有在数据尚未被其他读取请求读取时才会出错
         if (slave->mbox_coe_data.payload_size == 0)
         {
             fsm->state = ec_fsm_coe_error;
             ec_read_mbox_lock_clear(slave);
-            EC_SLAVE_ERR(slave, "Reception of CoE SDO description"
-                                " response failed: ");
+            EC_SLAVE_ERR(slave, "接收CoE SDO描述响应失败: ");
             ec_datagram_print_wc_error(fsm->datagram);
             return;
         }
@@ -1135,13 +1147,32 @@ void ec_fsm_coe_dict_desc_response(
 /*****************************************************************************/
 
 /**
-   CoE state: DICT DESC RESPONSE DATA.
-
-*/
-
+ * @brief CoE状态: 字典描述响应数据
+ * @param fsm 有限状态机
+ * @param datagram 使用的数据报
+ * @return 无
+ * @details 该函数用于处理CoE字典描述响应数据的逻辑。
+ *          - 如果从站邮箱中有可用的数据，则清除邮箱中的数据，并重置数据大小。
+ *          - 否则，如果从站邮箱被锁定，则将数据报状态设置为EC_DATAGRAM_INVALID。
+ *          - 否则，准备检查从站邮箱，并将状态设置为ec_fsm_coe_dict_desc_check。
+ *          - 如果数据获取失败，则将状态设置为ec_fsm_coe_error并返回。
+ *          - 如果收到的邮箱协议不是EC_MBOX_TYPE_COE，则将状态设置为ec_fsm_coe_error并返回。
+ *          - 如果检测到紧急情况，则重新检查CoE响应，并将状态设置为ec_fsm_coe_dict_desc_check。
+ *          - 如果收到的数据大小小于3，则将状态设置为ec_fsm_coe_error并返回。
+ *          - 如果收到的数据是SDO信息且为错误响应，则将状态设置为ec_fsm_coe_error，并打印错误信息。
+ *          - 如果收到的数据大小小于8，则将状态设置为ec_fsm_coe_error并返回。
+ *          - 如果收到的数据不是SDO信息或对象描述响应或SDO索引不匹配，则重新检查CoE响应，并将状态设置为ec_fsm_coe_dict_desc_check。
+ *          - 如果数据大小小于12，则将状态设置为ec_fsm_coe_error并返回。
+ *          - 设置SDO的最大子索引和对象代码。
+ *          - 如果存在名称，则分配内存并将名称复制到SDO中。
+ *          - 如果收到的数据中存在分段，则将状态设置为ec_fsm_coe_error并返回。
+ *          - 开始获取条目。
+ *          - 设置子索引为0，并重置重试次数。
+ *          - 如果准备条目失败，则将状态设置为ec_fsm_coe_error。
+ */
 void ec_fsm_coe_dict_desc_response_data(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机 */
+    ec_datagram_t *datagram /**< 使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -1149,22 +1180,22 @@ void ec_fsm_coe_dict_desc_response_data(
     uint8_t *data, mbox_prot;
     size_t rec_size, name_size;
 
-    // process the data available or initiate a new mailbox read check
+    // 处理可用的数据或启动新的邮箱读取检查
     if (slave->mbox_coe_data.payload_size > 0)
     {
         slave->mbox_coe_data.payload_size = 0;
     }
     else
     {
-        // initiate a new mailbox read check if required data is not available
+        // 如果需要的数据不可用，则启动新的邮箱读取检查
         if (ec_read_mbox_locked(slave))
         {
-            // await current read request and mark the datagram as invalid
+            // 等待当前读取请求，并将数据报标记为无效
             datagram->state = EC_DATAGRAM_INVALID;
         }
         else
         {
-            ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+            ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
             fsm->state = ec_fsm_coe_dict_desc_check;
         }
         return;
@@ -1179,7 +1210,7 @@ void ec_fsm_coe_dict_desc_response_data(
 
     if (mbox_prot != EC_MBOX_TYPE_COE)
     {
-        EC_SLAVE_ERR(slave, "Received mailbox protocol 0x%02X as response.\n",
+        EC_SLAVE_ERR(slave, "接收到的邮箱协议为0x%02X。\n",
                      mbox_prot);
         fsm->state = ec_fsm_coe_error;
         return;
@@ -1187,8 +1218,8 @@ void ec_fsm_coe_dict_desc_response_data(
 
     if (ec_fsm_coe_check_emergency(fsm, data, rec_size))
     {
-        // check for CoE response again
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        // 再次检查CoE响应
+        ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
         fsm->retries = EC_FSM_RETRIES;
         fsm->state = ec_fsm_coe_dict_desc_check;
         return;
@@ -1196,18 +1227,16 @@ void ec_fsm_coe_dict_desc_response_data(
 
     if (rec_size < 3)
     {
-        EC_SLAVE_ERR(slave, "Received corrupted SDO description response"
-                            " (size %zu).\n",
+        EC_SLAVE_ERR(slave, "接收到的SDO描述响应数据损坏（大小为%zu）。\n",
                      rec_size);
         fsm->state = ec_fsm_coe_error;
         return;
     }
 
-    if (EC_READ_U16(data) >> 12 == 0x8 && // SDO information
+    if (EC_READ_U16(data) >> 12 == 0x8 && // SDO信息
         (EC_READ_U8(data + 2) & 0x7F) == 0x07)
-    { // error response
-        EC_SLAVE_ERR(slave, "SDO information error response while"
-                            " fetching SDO 0x%04X!\n",
+    { // 错误响应
+        EC_SLAVE_ERR(slave, "在获取SDO 0x%04X时收到SDO信息错误响应！\n",
                      sdo->index);
         ec_canopen_abort_msg(slave, EC_READ_U32(data + 6));
         fsm->state = ec_fsm_coe_error;
@@ -1216,26 +1245,24 @@ void ec_fsm_coe_dict_desc_response_data(
 
     if (rec_size < 8)
     {
-        EC_SLAVE_ERR(slave, "Received corrupted SDO"
-                            " description response (size %zu).\n",
+        EC_SLAVE_ERR(slave, "接收到的SDO描述响应数据损坏（大小为%zu）。\n",
                      rec_size);
         fsm->state = ec_fsm_coe_error;
         return;
     }
 
-    if (EC_READ_U16(data) >> 12 != 0x8 ||        // SDO information
-        (EC_READ_U8(data + 2) & 0x7F) != 0x04 || // Object desc. response
+    if (EC_READ_U16(data) >> 12 != 0x8 ||        // SDO信息
+        (EC_READ_U8(data + 2) & 0x7F) != 0x04 || // 对象描述响应
         EC_READ_U16(data + 6) != sdo->index)
-    { // SDO index
+    { // SDO索引
         if (fsm->slave->master->debug_level)
         {
-            EC_SLAVE_DBG(slave, 1, "Invalid object description response while"
-                                   " fetching SDO 0x%04X!\n",
+            EC_SLAVE_DBG(slave, 1, "在获取SDO 0x%04X时收到无效的对象描述响应！\n",
                          sdo->index);
             ec_print_data(data, rec_size);
         }
-        // check for CoE response again
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        // 再次检查CoE响应
+        ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
         fsm->retries = EC_FSM_RETRIES;
         fsm->state = ec_fsm_coe_dict_desc_check;
         return;
@@ -1243,7 +1270,7 @@ void ec_fsm_coe_dict_desc_response_data(
 
     if (rec_size < 12)
     {
-        EC_SLAVE_ERR(slave, "Invalid data size!\n");
+        EC_SLAVE_ERR(slave, "无效的数据大小！\n");
         ec_print_data(data, rec_size);
         fsm->state = ec_fsm_coe_error;
         return;
@@ -1257,7 +1284,7 @@ void ec_fsm_coe_dict_desc_response_data(
     {
         if (!(sdo->name = kmalloc(name_size + 1, GFP_KERNEL)))
         {
-            EC_SLAVE_ERR(slave, "Failed to allocate SDO name!\n");
+            EC_SLAVE_ERR(slave, "分配SDO名称失败！\n");
             fsm->state = ec_fsm_coe_error;
             return;
         }
@@ -1268,12 +1295,12 @@ void ec_fsm_coe_dict_desc_response_data(
 
     if (EC_READ_U8(data + 2) & 0x80)
     {
-        EC_SLAVE_ERR(slave, "Fragment follows (not implemented)!\n");
+        EC_SLAVE_ERR(slave, "存在分段（未实现）！\n");
         fsm->state = ec_fsm_coe_error;
         return;
     }
 
-    // start fetching entries
+    // 开始获取条目
 
     fsm->subindex = 0;
     fsm->retries = EC_FSM_RETRIES;
@@ -1287,13 +1314,21 @@ void ec_fsm_coe_dict_desc_response_data(
 /*****************************************************************************/
 
 /**
-   CoE state: DICT ENTRY REQUEST.
-   \todo Timeout behavior
-*/
-
+ * @brief CoE状态: 字典条目请求
+ * @param fsm 有限状态机
+ * @param datagram 使用的数据报
+ * @return 无
+ * @details 该函数用于处理CoE字典条目请求的逻辑。
+ *          - 如果数据报的状态为EC_DATAGRAM_TIMED_OUT且重试次数不为0，则准备获取条目并返回。
+ *          - 如果数据报的状态不为EC_DATAGRAM_RECEIVED，则将状态设置为ec_fsm_coe_error，并打印错误信息。
+ *          - 如果数据报的工作计数器不为1，则将状态设置为ec_fsm_coe_error，并打印错误信息。
+ *          - 设置起始时间为数据报发送的时间。
+ *          - 如果从站邮箱被锁定，则将状态设置为ec_fsm_coe_dict_entry_response_data，并将数据报状态设置为EC_DATAGRAM_INVALID。
+ *          - 否则，准备检查从站邮箱，并将状态设置为ec_fsm_coe_dict_entry_check。
+ */
 void ec_fsm_coe_dict_entry_request(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机 */
+    ec_datagram_t *datagram /**< 使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -1310,8 +1345,7 @@ void ec_fsm_coe_dict_entry_request(
     if (fsm->datagram->state != EC_DATAGRAM_RECEIVED)
     {
         fsm->state = ec_fsm_coe_error;
-        EC_SLAVE_ERR(slave, "Failed to receive CoE SDO entry"
-                            " request datagram: ");
+        EC_SLAVE_ERR(slave, "未能接收到CoE SDO条目请求数据报: ");
         ec_datagram_print_state(fsm->datagram);
         return;
     }
@@ -1319,23 +1353,23 @@ void ec_fsm_coe_dict_entry_request(
     if (fsm->datagram->working_counter != 1)
     {
         fsm->state = ec_fsm_coe_error;
-        EC_SLAVE_ERR(slave, "Reception of CoE SDO entry request failed: ");
+        EC_SLAVE_ERR(slave, "接收CoE SDO条目请求失败: ");
         ec_datagram_print_wc_error(fsm->datagram);
         return;
     }
 
     fsm->jiffies_start = fsm->datagram->jiffies_sent;
 
-    // mailbox read check is skipped if a read request is already ongoing
+    // 如果已经有读取请求正在进行中，则跳过邮箱读取检查
     if (ec_read_mbox_locked(slave))
     {
         fsm->state = ec_fsm_coe_dict_entry_response_data;
-        // the datagram is not used and marked as invalid
+        // 不使用数据报并将其标记为无效
         datagram->state = EC_DATAGRAM_INVALID;
     }
     else
     {
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
         fsm->retries = EC_FSM_RETRIES;
         fsm->state = ec_fsm_coe_dict_entry_check;
     }
@@ -1344,19 +1378,30 @@ void ec_fsm_coe_dict_entry_request(
 /*****************************************************************************/
 
 /**
-   CoE state: DICT ENTRY CHECK.
-*/
-
+ * @brief CoE状态: 字典条目检查
+ * @param fsm 有限状态机
+ * @param datagram 使用的数据报
+ * @return 无
+ * @details 该函数用于处理CoE字典条目检查的逻辑。
+ *          - 如果数据报的状态为EC_DATAGRAM_TIMED_OUT且重试次数不为0，则准备检查条目并返回。
+ *          - 如果数据报的状态不为EC_DATAGRAM_RECEIVED，则将状态设置为ec_fsm_coe_error，并打印错误信息。
+ *          - 如果数据报的工作计数器不为1，则将状态设置为ec_fsm_coe_error，并打印错误信息。
+ *          - 如果邮箱检查未通过，则检查数据是否已经被其他读取请求接收到。
+ *            - 如果是，则清除邮箱读取锁定，将状态设置为ec_fsm_coe_dict_entry_response_data，并调用相应的状态函数。
+ *          - 计算时间差。
+ *            - 如果时间差超过EC_FSM_COE_DICT_TIMEOUT，则将状态设置为ec_fsm_coe_error，并打印超时错误信息。
+ *          - 准备检查从站邮箱，并将状态设置为ec_fsm_coe_dict_entry_check。
+ */
 void ec_fsm_coe_dict_entry_check(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机 */
+    ec_datagram_t *datagram /**< 使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
 
     if (fsm->datagram->state == EC_DATAGRAM_TIMED_OUT && fsm->retries--)
     {
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail
+        ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
         return;
     }
 
@@ -1364,7 +1409,7 @@ void ec_fsm_coe_dict_entry_check(
     {
         fsm->state = ec_fsm_coe_error;
         ec_read_mbox_lock_clear(slave);
-        EC_SLAVE_ERR(slave, "Failed to receive CoE mailbox check datagram: ");
+        EC_SLAVE_ERR(slave, "未能接收到CoE邮箱检查数据报: ");
         ec_datagram_print_state(fsm->datagram);
         return;
     }
@@ -1373,8 +1418,7 @@ void ec_fsm_coe_dict_entry_check(
     {
         fsm->state = ec_fsm_coe_error;
         ec_read_mbox_lock_clear(slave);
-        EC_SLAVE_ERR(slave, "Reception of CoE mailbox check"
-                            " datagram failed: ");
+        EC_SLAVE_ERR(slave, "接收CoE邮箱检查数据报失败: ");
         ec_datagram_print_wc_error(fsm->datagram);
         return;
     }
@@ -1383,7 +1427,7 @@ void ec_fsm_coe_dict_entry_check(
     {
         unsigned long diff_ms = 0;
 
-        // check that data is not already received by another read request
+        // 检查数据是否已经被其他读取请求接收到
         if (slave->mbox_coe_data.payload_size > 0)
         {
             ec_read_mbox_lock_clear(slave);
@@ -1399,19 +1443,18 @@ void ec_fsm_coe_dict_entry_check(
         {
             fsm->state = ec_fsm_coe_error;
             ec_read_mbox_lock_clear(slave);
-            EC_SLAVE_ERR(slave, "Timeout while waiting for"
-                                " SDO entry 0x%04x:%x description response.\n",
+            EC_SLAVE_ERR(slave, "等待SDO条目0x%04x:%x描述响应超时。\n",
                          fsm->sdo->index, fsm->subindex);
             return;
         }
 
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
         fsm->retries = EC_FSM_RETRIES;
         return;
     }
 
-    // Fetch response
-    ec_slave_mbox_prepare_fetch(slave, datagram); // can not fail.
+    // 获取响应
+    ec_slave_mbox_prepare_fetch(slave, datagram); // 不会失败
     fsm->retries = EC_FSM_RETRIES;
     fsm->state = ec_fsm_coe_dict_entry_response;
 }
@@ -1419,20 +1462,29 @@ void ec_fsm_coe_dict_entry_check(
 /*****************************************************************************/
 
 /**
-   CoE state: DICT ENTRY RESPONSE.
-   \todo Timeout behavior
-*/
-
+ * @brief CoE状态: 字典条目响应
+ * @param fsm 有限状态机
+ * @param datagram 使用的数据报
+ * @return 无
+ * @details 该函数用于处理CoE字典条目响应的逻辑。
+ *          - 如果数据报的状态为EC_DATAGRAM_TIMED_OUT且重试次数不为0，则准备获取条目并返回。
+ *          - 如果数据报的状态不为EC_DATAGRAM_RECEIVED，则将状态设置为ec_fsm_coe_error，并打印错误信息。
+ *          - 如果数据报的工作计数器不为1，则将状态设置为ec_fsm_coe_error，并打印错误信息。
+ *          - 只有在数据尚未被其他读取请求读取时才会出错。
+ *            - 如果是，则将状态设置为ec_fsm_coe_error，并打印错误信息。
+ *          - 清除从站邮箱的读取锁定，并将状态设置为ec_fsm_coe_dict_entry_response_data。
+ *          - 调用相应的状态函数。
+ */
 void ec_fsm_coe_dict_entry_response(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机 */
+    ec_datagram_t *datagram /**< 使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
 
     if (fsm->datagram->state == EC_DATAGRAM_TIMED_OUT && fsm->retries--)
     {
-        ec_slave_mbox_prepare_fetch(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_fetch(slave, datagram); // 不会失败
         return;
     }
 
@@ -1440,21 +1492,19 @@ void ec_fsm_coe_dict_entry_response(
     {
         fsm->state = ec_fsm_coe_error;
         ec_read_mbox_lock_clear(slave);
-        EC_SLAVE_ERR(slave, "Failed to receive CoE SDO"
-                            " description response datagram: ");
+        EC_SLAVE_ERR(slave, "未能接收到CoE SDO描述响应数据报: ");
         ec_datagram_print_state(fsm->datagram);
         return;
     }
 
     if (fsm->datagram->working_counter != 1)
     {
-        // only an error if data has not already been read by another read request
+        // 只有在数据尚未被其他读取请求读取时才会出错
         if (slave->mbox_coe_data.payload_size == 0)
         {
             fsm->state = ec_fsm_coe_error;
             ec_read_mbox_lock_clear(slave);
-            EC_SLAVE_ERR(slave, "Reception of CoE SDO description"
-                                " response failed: ");
+            EC_SLAVE_ERR(slave, "接收CoE SDO描述响应失败: ");
             ec_datagram_print_wc_error(fsm->datagram);
             return;
         }
@@ -1467,13 +1517,34 @@ void ec_fsm_coe_dict_entry_response(
 /*****************************************************************************/
 
 /**
-   CoE state: DICT ENTRY RESPONSE DATA.
-
-*/
-
+ * @brief CoE状态: 字典条目响应数据
+ * @param fsm 有限状态机
+ * @param datagram 使用的数据报
+ * @return 无
+ * @details 该函数用于处理CoE字典条目响应数据的逻辑。
+ *          - 如果从站邮箱中有可用的数据，则清除邮箱中的数据，并重置数据大小。
+ *          - 否则，如果从站邮箱被锁定，则将数据报状态设置为EC_DATAGRAM_INVALID。
+ *          - 否则，准备检查从站邮箱，并将状态设置为ec_fsm_coe_dict_entry_check。
+ *          - 如果数据获取失败，则将状态设置为ec_fsm_coe_error并返回。
+ *          - 如果收到的邮箱协议不是EC_MBOX_TYPE_COE，则将状态设置为ec_fsm_coe_error并返回。
+ *          - 如果检测到紧急情况，则重新检查CoE响应，并将状态设置为ec_fsm_coe_dict_entry_check。
+ *          - 如果收到的数据大小小于3，则将状态设置为ec_fsm_coe_error并返回。
+ *          - 如果收到的数据是SDO信息且为错误响应，则将状态设置为ec_fsm_coe_error，并打印错误信息。
+ *          - 如果收到的数据大小小于9，则将状态设置为ec_fsm_coe_error并返回。
+ *          - 如果收到的数据不是SDO信息或条目描述响应或SDO索引或子索引不匹配，则重新检查CoE响应，并将状态设置为ec_fsm_coe_dict_entry_check。
+ *          - 如果数据大小小于16，则将状态设置为ec_fsm_coe_error并返回。
+ *          - 计算数据大小。
+ *          - 分配内存并初始化条目。
+ *          - 读取访问权限。
+ *          - 如果数据大小不为0，则分配内存并将描述复制到条目中。
+ *          - 将条目添加到SDO的条目列表中。
+ *          - 如果子索引小于最大子索引，则增加子索引，重置重试次数，并准备获取条目。
+ *          - 如果还有其他SDO描述需要获取，则将SDO指向下一个描述，重置重试次数，并准备获取描述。
+ *          - 否则，将状态设置为ec_fsm_coe_end。
+ */
 void ec_fsm_coe_dict_entry_response_data(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机 */
+    ec_datagram_t *datagram /**< 使用的数据报 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -1483,22 +1554,22 @@ void ec_fsm_coe_dict_entry_response_data(
     ec_sdo_entry_t *entry;
     u16 word;
 
-    // process the data available or initiate a new mailbox read check
+    // 处理可用的数据或启动新的邮箱读取检查
     if (slave->mbox_coe_data.payload_size > 0)
     {
         slave->mbox_coe_data.payload_size = 0;
     }
     else
     {
-        // initiate a new mailbox read check if required data is not available
+        // 如果需要的数据不可用，则启动新的邮箱读取检查
         if (ec_read_mbox_locked(slave))
         {
-            // await current read request and mark the datagram as invalid
+            // 等待当前读取请求，并将数据报标记为无效
             datagram->state = EC_DATAGRAM_INVALID;
         }
         else
         {
-            ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+            ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
             fsm->state = ec_fsm_coe_dict_entry_check;
         }
         return;
@@ -1513,8 +1584,7 @@ void ec_fsm_coe_dict_entry_response_data(
 
     if (mbox_prot != EC_MBOX_TYPE_COE)
     {
-        EC_SLAVE_ERR(slave, "Received mailbox protocol"
-                            " 0x%02X as response.\n",
+        EC_SLAVE_ERR(slave, "接收到的邮箱协议为0x%02X。\n",
                      mbox_prot);
         fsm->state = ec_fsm_coe_error;
         return;
@@ -1522,8 +1592,8 @@ void ec_fsm_coe_dict_entry_response_data(
 
     if (ec_fsm_coe_check_emergency(fsm, data, rec_size))
     {
-        // check for CoE response again
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        // 再次检查CoE响应
+        ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
         fsm->retries = EC_FSM_RETRIES;
         fsm->state = ec_fsm_coe_dict_entry_check;
         return;
@@ -1531,50 +1601,45 @@ void ec_fsm_coe_dict_entry_response_data(
 
     if (rec_size < 3)
     {
-        EC_SLAVE_ERR(slave, "Received corrupted SDO entry"
-                            " description response (size %zu).\n",
+        EC_SLAVE_ERR(slave, "接收到的SDO条目描述响应数据损坏（大小为%zu）。\n",
                      rec_size);
         fsm->state = ec_fsm_coe_error;
         return;
     }
 
-    if (EC_READ_U16(data) >> 12 == 0x8 && // SDO information
+    if (EC_READ_U16(data) >> 12 == 0x8 && // SDO信息
         (EC_READ_U8(data + 2) & 0x7F) == 0x07)
-    { // error response
-        EC_SLAVE_WARN(slave, "SDO information error response while"
-                             " fetching SDO entry 0x%04X:%02X!\n",
+    { // 错误响应
+        EC_SLAVE_WARN(slave, "在获取SDO条目0x%04X:%02X时收到SDO信息错误响应！\n",
                       sdo->index, fsm->subindex);
         ec_canopen_abort_msg(slave, EC_READ_U32(data + 6));
 
-        /* There may be gaps in the subindices, so try to continue with next
-         * subindex. */
+        /* 子索引可能存在间隙，因此尝试继续下一个子索引。 */
     }
     else
     {
 
         if (rec_size < 9)
         {
-            EC_SLAVE_ERR(slave, "Received corrupted SDO entry"
-                                " description response (size %zu).\n",
+            EC_SLAVE_ERR(slave, "接收到的SDO条目描述响应数据损坏（大小为%zu）。\n",
                          rec_size);
             fsm->state = ec_fsm_coe_error;
             return;
         }
 
-        if (EC_READ_U16(data) >> 12 != 0x8 ||        // SDO information
-            (EC_READ_U8(data + 2) & 0x7F) != 0x06 || // Entry desc. response
-            EC_READ_U16(data + 6) != sdo->index ||   // SDO index
+        if (EC_READ_U16(data) >> 12 != 0x8 ||        // SDO信息
+            (EC_READ_U8(data + 2) & 0x7F) != 0x06 || // 条目描述响应
+            EC_READ_U16(data + 6) != sdo->index ||   // SDO索引
             EC_READ_U8(data + 8) != fsm->subindex)
-        { // SDO subindex
+        { // SDO子索引
             if (fsm->slave->master->debug_level)
             {
-                EC_SLAVE_DBG(slave, 1, "Invalid entry description response"
-                                       " while fetching SDO entry 0x%04X:%02X!\n",
+                EC_SLAVE_DBG(slave, 1, "在获取SDO条目0x%04X:%02X时收到无效的条目描述响应！\n",
                              sdo->index, fsm->subindex);
                 ec_print_data(data, rec_size);
             }
-            // check for CoE response again
-            ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+            // 再次检查CoE响应
+            ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
             fsm->retries = EC_FSM_RETRIES;
             fsm->state = ec_fsm_coe_dict_entry_check;
             return;
@@ -1582,7 +1647,7 @@ void ec_fsm_coe_dict_entry_response_data(
 
         if (rec_size < 16)
         {
-            EC_SLAVE_ERR(slave, "Invalid data size %zu!\n", rec_size);
+            EC_SLAVE_ERR(slave, "数据大小%zu无效！\n", rec_size);
             ec_print_data(data, rec_size);
             fsm->state = ec_fsm_coe_error;
             return;
@@ -1593,7 +1658,7 @@ void ec_fsm_coe_dict_entry_response_data(
         if (!(entry = (ec_sdo_entry_t *)
                   kmalloc(sizeof(ec_sdo_entry_t), GFP_KERNEL)))
         {
-            EC_SLAVE_ERR(slave, "Failed to allocate entry!\n");
+            EC_SLAVE_ERR(slave, "分配条目失败！\n");
             fsm->state = ec_fsm_coe_error;
             return;
         }
@@ -1602,7 +1667,7 @@ void ec_fsm_coe_dict_entry_response_data(
         entry->data_type = EC_READ_U16(data + 10);
         entry->bit_length = EC_READ_U16(data + 12);
 
-        // read access rights
+        // 读取访问权限
         word = EC_READ_U16(data + 14);
         entry->read_access[EC_SDO_ENTRY_ACCESS_PREOP] = word & 0x0001;
         entry->read_access[EC_SDO_ENTRY_ACCESS_SAFEOP] =
@@ -1618,7 +1683,7 @@ void ec_fsm_coe_dict_entry_response_data(
             uint8_t *desc;
             if (!(desc = kmalloc(data_size + 1, GFP_KERNEL)))
             {
-                EC_SLAVE_ERR(slave, "Failed to allocate SDO entry name!\n");
+                EC_SLAVE_ERR(slave, "分配SDO条目名称失败！\n");
                 fsm->state = ec_fsm_coe_error;
                 return;
             }
@@ -1644,7 +1709,7 @@ void ec_fsm_coe_dict_entry_response_data(
         return;
     }
 
-    // another SDO description to fetch?
+    // 还有其他SDO描述需要获取吗？
     if (fsm->sdo->list.next != &slave->sdo_dictionary)
     {
 
@@ -1666,13 +1731,23 @@ void ec_fsm_coe_dict_entry_response_data(
  *  CoE state machine
  *****************************************************************************/
 
-/** Prepare a donwnload request.
+/** 准备下载请求。
  *
- * \return Zero on success, otherwise a negative error code.
+ * \return 成功返回零，否则返回负错误代码。
+ * @details
+ * 1. 如果请求的数据大小小于等于4，使用迅速传输类型。
+ * 2. 如果请求的数据大小大于4，使用普通传输类型。
+ * 3. 在迅速传输类型下，准备发送数据并填充数据帧。
+ * 4. 在普通传输类型下，根据数据大小和邮箱大小决定是否需要分段发送数据。
+ * 5. 设置状态为ec_fsm_coe_down_request。
+ *
+ * @param fsm 有限状态机。
+ * @param datagram 要使用的数据报。
+ * @return 成功返回零，否则返回负错误代码。
  */
 int ec_fsm_coe_prepare_down_start(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 要使用的数据报。 */
 )
 {
     u8 *data;
@@ -1681,7 +1756,7 @@ int ec_fsm_coe_prepare_down_start(
     uint8_t data_set_size;
 
     if (request->data_size <= 4)
-    { // use expedited transfer type
+    { // 使用迅速传输类型
         data = ec_slave_mbox_prepare_send(slave, datagram, EC_MBOX_TYPE_COE,
                                           EC_COE_DOWN_REQ_HEADER_SIZE);
         if (IS_ERR(data))
@@ -1694,9 +1769,9 @@ int ec_fsm_coe_prepare_down_start(
 
         data_set_size = 4 - request->data_size;
 
-        EC_WRITE_U16(data, 0x2 << 12);                                                                        // SDO request
-        EC_WRITE_U8(data + 2, (0x3                                                                            // size specified, expedited
-                               | data_set_size << 2 | ((request->complete_access ? 1 : 0) << 4) | 0x1 << 5)); // Download request
+        EC_WRITE_U16(data, 0x2 << 12);                                                                        // SDO请求
+        EC_WRITE_U8(data + 2, (0x3                                                                            // 大小指定，迅速传输
+                               | data_set_size << 2 | ((request->complete_access ? 1 : 0) << 4) | 0x1 << 5)); // 下载请求
         EC_WRITE_U16(data + 3, request->index);
         EC_WRITE_U8(data + 5,
                     request->complete_access ? 0x00 : request->subindex);
@@ -1705,12 +1780,12 @@ int ec_fsm_coe_prepare_down_start(
 
         if (slave->master->debug_level)
         {
-            EC_SLAVE_DBG(slave, 1, "Expedited download request:\n");
+            EC_SLAVE_DBG(slave, 1, "迅速下载请求:\n");
             ec_print_data(data, EC_COE_DOWN_REQ_HEADER_SIZE);
         }
     }
     else
-    { // request->data_size > 4, use normal transfer type
+    { // request->data_size > 4，使用普通传输类型
         size_t data_size,
             max_data_size =
                 slave->configured_rx_mailbox_size - EC_MBOX_HEADER_SIZE,
@@ -1719,7 +1794,7 @@ int ec_fsm_coe_prepare_down_start(
 
         if (max_data_size < required_data_size)
         {
-            // segmenting needed
+            // 需要分段
             data_size = max_data_size;
         }
         else
@@ -1738,10 +1813,10 @@ int ec_fsm_coe_prepare_down_start(
         fsm->offset = 0;
         fsm->remaining = request->data_size;
 
-        EC_WRITE_U16(data, 0x2 << 12); // SDO request
+        EC_WRITE_U16(data, 0x2 << 12); // SDO请求
         EC_WRITE_U8(data + 2,
-                    0x1                                                          // size indicator, normal
-                        | ((request->complete_access ? 1 : 0) << 4) | 0x1 << 5); // Download request
+                    0x1                                                          // 大小指示器，普通
+                        | ((request->complete_access ? 1 : 0) << 4) | 0x1 << 5); // 下载请求
         EC_WRITE_U16(data + 3, request->index);
         EC_WRITE_U8(data + 5,
                     request->complete_access ? 0x00 : request->subindex);
@@ -1758,7 +1833,7 @@ int ec_fsm_coe_prepare_down_start(
 
         if (slave->master->debug_level)
         {
-            EC_SLAVE_DBG(slave, 1, "Normal download request:\n");
+            EC_SLAVE_DBG(slave, 1, "普通下载请求:\n");
             ec_print_data(data, data_size);
         }
     }
@@ -1766,14 +1841,25 @@ int ec_fsm_coe_prepare_down_start(
     fsm->state = ec_fsm_coe_down_request;
     return 0;
 }
-
 /****************************************************************************/
 
-/** CoE state: DOWN START.
+/**
+ * @brief CoE状态：DOWN START（下载开始）。
+ * @param fsm 有限状态机。
+ * @param datagram 要使用的数据报。
+ * @return 无返回值。
+ * @details
+ * 详细概述函数的重要逻辑：
+ * - 检查调试级别，如果调试级别非零，则打印正在下载的SDO（Service Data Object）的信息。
+ * - 检查从站是否具有SII（Slave Information Interface）数据，如果没有，则无法处理CoE（CANopen over EtherCAT）下载请求，设置错误号并将状态转换为ec_fsm_coe_error。
+ * - 检查从站是否支持CoE协议，如果不支持，则设置错误号并将状态转换为ec_fsm_coe_error。
+ * - 检查接收邮箱的大小是否足够容纳CoE下载请求的头部信息，如果不够大，则设置错误号并将状态转换为ec_fsm_coe_error。
+ * - 设置发送时间戳和重试次数。
+ * - 调用ec_fsm_coe_prepare_down_start函数准备下载开始。
  */
 void ec_fsm_coe_down_start(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 要使用的数据报。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -1790,15 +1876,14 @@ void ec_fsm_coe_down_start(
         {
             sprintf(subidxstr, ":%02X", request->subindex);
         }
-        EC_SLAVE_DBG(slave, 1, "Downloading SDO 0x%04X%s.\n",
+        EC_SLAVE_DBG(slave, 1, "正在下载 SDO 0x%04X%s。\n",
                      request->index, subidxstr);
         ec_print_data(request->data, request->data_size);
     }
 
     if (!slave->sii_image)
     {
-        EC_SLAVE_ERR(slave, "Slave cannot process CoE download request."
-                            " SII data not available.\n");
+        EC_SLAVE_ERR(slave, "从站无法处理CoE下载请求。SII数据不可用。\n");
         request->errno = EAGAIN;
         fsm->state = ec_fsm_coe_error;
         return;
@@ -1806,7 +1891,7 @@ void ec_fsm_coe_down_start(
 
     if (!(slave->sii_image->sii.mailbox_protocols & EC_MBOX_COE))
     {
-        EC_SLAVE_ERR(slave, "Slave does not support CoE!\n");
+        EC_SLAVE_ERR(slave, "从站不支持CoE！\n");
         request->errno = EPROTONOSUPPORT;
         fsm->state = ec_fsm_coe_error;
         return;
@@ -1815,7 +1900,7 @@ void ec_fsm_coe_down_start(
     if (slave->configured_rx_mailbox_size <
         EC_MBOX_HEADER_SIZE + EC_COE_DOWN_REQ_HEADER_SIZE)
     {
-        EC_SLAVE_ERR(slave, "Mailbox too small!\n");
+        EC_SLAVE_ERR(slave, "邮箱太小！\n");
         request->errno = EOVERFLOW;
         fsm->state = ec_fsm_coe_error;
         return;
@@ -1833,13 +1918,24 @@ void ec_fsm_coe_down_start(
 /*****************************************************************************/
 
 /**
-   CoE state: DOWN REQUEST.
-   \todo Timeout behavior
-*/
-
+ * @brief CoE状态：下载请求。
+ * @todo 超时行为
+ * @details 该函数处理CoE下载请求的有限状态机逻辑。
+ *          详细概括函数的重要逻辑如下：
+ *          - 如果上一个数据报的状态是超时且重试次数未用尽，则准备下载开始并切换到错误状态。
+ *          - 如果数据报的状态不是接收到，则设置错误码、切换到错误状态，并打印错误信息和数据报状态。
+ *          - 计算时间差，并根据工作计数器的值进行不同的处理：
+ *              - 如果工作计数器为0且时间差小于响应超时时间，则重新发送请求数据报。
+ *              - 如果工作计数器不为1，则设置错误码、切换到错误状态，并打印超时错误信息和工作计数器错误信息。
+ *          - 如果时间差大于200毫秒，则打印下载时间信息。
+ *          - 判断是否需要进行邮箱读取检查，如果已经有读取请求正在进行，则切换到下载响应数据状态，并将数据报标记为无效。
+ *          - 否则，准备邮箱检查并设置重试次数，并切换到下载检查状态。
+ * @param fsm 有限状态机。
+ * @param datagram 使用的数据报。
+ */
 void ec_fsm_coe_down_request(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 要使用的数据报。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -1858,8 +1954,7 @@ void ec_fsm_coe_down_request(
     {
         fsm->request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
-        EC_SLAVE_ERR(slave, "Failed to receive CoE download"
-                            " request datagram: ");
+        EC_SLAVE_ERR(slave, "接收CoE下载请求数据报失败：");
         ec_datagram_print_state(fsm->datagram);
         return;
     }
@@ -1873,11 +1968,10 @@ void ec_fsm_coe_down_request(
             if (diff_ms < fsm->request->response_timeout)
             {
 #if DEBUG_RETRIES
-                EC_SLAVE_DBG(slave, 1, "Slave did not respond to SDO"
-                                       " download request. Retrying after %lu ms...\n",
+                EC_SLAVE_DBG(slave, 1, "从站未响应SDO下载请求。%lu毫秒后重试...\n",
                              diff_ms);
 #endif
-                // no response; send request datagram again
+                // 无响应；重新发送请求数据报
                 if (ec_fsm_coe_prepare_down_start(fsm, datagram))
                 {
                     fsm->state = ec_fsm_coe_error;
@@ -1887,8 +1981,7 @@ void ec_fsm_coe_down_request(
         }
         fsm->request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
-        EC_SLAVE_ERR(slave, "Reception of CoE download request"
-                            " for SDO 0x%04x:%x failed with timeout after %lu ms: ",
+        EC_SLAVE_ERR(slave, "接收CoE下载请求超时：0x%04x:%x，%lu毫秒后超时：",
                      fsm->request->index, fsm->request->subindex, diff_ms);
         ec_datagram_print_wc_error(fsm->datagram);
         return;
@@ -1897,23 +1990,23 @@ void ec_fsm_coe_down_request(
 #if DEBUG_LONG
     if (diff_ms > 200)
     {
-        EC_SLAVE_WARN(slave, "SDO 0x%04x:%x download took %lu ms.\n",
+        EC_SLAVE_WARN(slave, "SDO 0x%04x:%x下载耗时%lu毫秒。\n",
                       fsm->request->index, fsm->request->subindex, diff_ms);
     }
 #endif
 
     fsm->jiffies_start = fsm->datagram->jiffies_sent;
 
-    // mailbox read check is skipped if a read request is already ongoing
+    // 如果已经有读取邮箱请求正在进行，则跳过邮箱读取检查
     if (ec_read_mbox_locked(slave))
     {
         fsm->state = ec_fsm_coe_down_response_data;
-        // the datagram is not used and marked as invalid
+        // 数据报不使用，标记为无效
         datagram->state = EC_DATAGRAM_INVALID;
     }
     else
     {
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
         fsm->retries = EC_FSM_RETRIES;
         fsm->state = ec_fsm_coe_down_check;
     }
@@ -1921,18 +2014,33 @@ void ec_fsm_coe_down_request(
 
 /*****************************************************************************/
 
-/** CoE state: DOWN CHECK.
+/**
+ * @brief CoE状态：下载检查。
+ * @param fsm 有限状态机。
+ * @param datagram 要使用的数据报。
+ * @return 无。
+ * @details 检查CoE状态机的下载检查逻辑：
+ * - 如果数据报的状态为EC_DATAGRAM_TIMED_OUT且重试次数不为零，则准备检查从站邮箱，并返回。
+ * - 如果数据报的状态不是EC_DATAGRAM_RECEIVED，则设置请求的错误码为EIO，将状态机状态设置为ec_fsm_coe_error，清除读邮箱锁定，打印错误信息并返回。
+ * - 如果数据报的工作计数器不为1，则设置请求的错误码为EIO，将状态机状态设置为ec_fsm_coe_error，清除读邮箱锁定，打印错误信息并返回。
+ * - 如果数据报未通过邮箱检查（ec_slave_mbox_check），则进行以下操作：
+ *   - 检查数据是否已被其他读请求接收。
+ *   - 如果是，则清除读邮箱锁定，将状态机状态设置为ec_fsm_coe_down_response_data，并调用该状态的处理函数并返回。
+ *   - 计算时间差（以毫秒为单位），如果超过响应超时时间，则设置请求的错误码为EIO，将状态机状态设置为ec_fsm_coe_error，清除读邮箱锁定，打印错误信息并返回。
+ *   - 准备检查从站邮箱，重置重试次数并返回。
+ * - 获取响应数据。
+ * - 准备获取从站邮箱数据，重置重试次数，将状态机状态设置为ec_fsm_coe_down_response。
  */
 void ec_fsm_coe_down_check(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 要使用的数据报。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
 
     if (fsm->datagram->state == EC_DATAGRAM_TIMED_OUT && fsm->retries--)
     {
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_check(slave, datagram); // 不能失败。
         return;
     }
 
@@ -1941,8 +2049,7 @@ void ec_fsm_coe_down_check(
         fsm->request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
         ec_read_mbox_lock_clear(slave);
-        EC_SLAVE_ERR(slave, "Failed to receive CoE mailbox check"
-                            " datagram: ");
+        EC_SLAVE_ERR(slave, "无法接收CoE邮箱检查数据报：");
         ec_datagram_print_state(fsm->datagram);
         return;
     }
@@ -1952,8 +2059,7 @@ void ec_fsm_coe_down_check(
         fsm->request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
         ec_read_mbox_lock_clear(slave);
-        EC_SLAVE_ERR(slave, "Reception of CoE mailbox check"
-                            " datagram failed: ");
+        EC_SLAVE_ERR(slave, "接收CoE邮箱检查数据报失败：");
         ec_datagram_print_wc_error(fsm->datagram);
         return;
     }
@@ -1962,7 +2068,7 @@ void ec_fsm_coe_down_check(
     {
         unsigned long diff_ms = 0;
 
-        // check that data is not already received by another read request
+        // 检查数据是否已由其他读请求接收
         if (slave->mbox_coe_data.payload_size > 0)
         {
             ec_read_mbox_lock_clear(slave);
@@ -1979,39 +2085,52 @@ void ec_fsm_coe_down_check(
             fsm->request->errno = EIO;
             fsm->state = ec_fsm_coe_error;
             ec_read_mbox_lock_clear(slave);
-            EC_SLAVE_ERR(slave, "Timeout after %lu ms while waiting"
-                                " for SDO 0x%04x:%x download response.\n",
-                         diff_ms,
-                         fsm->request->index, fsm->request->subindex);
+            EC_SLAVE_ERR(slave, "等待SDO 0x%04x:%x下载响应超时，已等待%lu毫秒。\n",
+                         fsm->request->index, fsm->request->subindex, diff_ms);
             return;
         }
 
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_check(slave, datagram); // 不能失败。
         fsm->retries = EC_FSM_RETRIES;
         return;
     }
 
-    // Fetch response
-    ec_slave_mbox_prepare_fetch(slave, datagram); // can not fail.
+    // 获取响应数据
+    ec_slave_mbox_prepare_fetch(slave, datagram); // 不能失败。
     fsm->retries = EC_FSM_RETRIES;
     fsm->state = ec_fsm_coe_down_response;
 }
 
 /*****************************************************************************/
 
-/** Prepare a download segment request.
- */
+/**
+@brief 准备下载段请求。
+@param fsm 有限状态机。
+@param datagram 使用的数据报。
+@return 无
+@details 
+- 获取从站和请求的指针。
+- 计算最大段大小。
+- 根据剩余数据大小确定段大小和最后一个段的标志。
+- 根据段大小确定数据大小和段数据大小。
+- 准备发送数据的缓冲区。
+- 写入SDO请求和下载段请求的头部。
+- 复制请求数据到缓冲区。
+- 如果段大小小于最小数据大小，填充缓冲区。
+- 如果调试级别大于0，打印下载段请求的数据。
+- 设置状态为检查下载段。
+*/
 void ec_fsm_coe_down_prepare_segment_request(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 使用的数据报。 */
 )
 {
-    ec_slave_t *slave = fsm->slave;
-    ec_sdo_request_t *request = fsm->request;
-    size_t max_segment_size =
+    ec_slave_t *slave = fsm->slave;                /**< 从站。 */
+    ec_sdo_request_t *request = fsm->request;      /**< 请求。 */
+    size_t max_segment_size =                      /**< 最大段大小。 */
         slave->configured_rx_mailbox_size - EC_MBOX_HEADER_SIZE - EC_COE_DOWN_SEG_REQ_HEADER_SIZE;
-    size_t data_size;
-    uint8_t last_segment, seg_data_size, *data;
+    size_t data_size;                              /**< 数据大小。 */
+    uint8_t last_segment, seg_data_size, *data;    /**< 最后一个段、段数据大小、数据缓冲区。 */
 
     if (fsm->remaining > max_segment_size)
     {
@@ -2044,8 +2163,8 @@ void ec_fsm_coe_down_prepare_segment_request(
         return;
     }
 
-    EC_WRITE_U16(data, 0x2 << 12);                                                                           // SDO request
-    EC_WRITE_U8(data + 2, (last_segment ? 1 : 0) | (seg_data_size << 1) | (fsm->toggle << 4) | (0x00 << 5)); // Download segment request
+    EC_WRITE_U16(data, 0x2 << 12);                                                                           // SDO请求
+    EC_WRITE_U8(data + 2, (last_segment ? 1 : 0) | (seg_data_size << 1) | (fsm->toggle << 4) | (0x00 << 5)); // 下载段请求
     memcpy(data + EC_COE_DOWN_SEG_REQ_HEADER_SIZE,
            request->data + fsm->offset, fsm->segment_size);
     if (fsm->segment_size < EC_COE_DOWN_SEG_MIN_DATA_SIZE)
@@ -2056,7 +2175,7 @@ void ec_fsm_coe_down_prepare_segment_request(
 
     if (slave->master->debug_level)
     {
-        EC_SLAVE_DBG(slave, 1, "Download segment request:\n");
+        EC_SLAVE_DBG(slave, 1, "下载段请求:\n");
         ec_print_data(data, data_size);
     }
 
@@ -2066,21 +2185,28 @@ void ec_fsm_coe_down_prepare_segment_request(
 /*****************************************************************************/
 
 /**
-   CoE state: DOWN RESPONSE.
-   \todo Timeout behavior
+@brief CoE状态：下载响应。
+@param fsm 有限状态机。
+@param datagram 使用的数据报。
+@return 无
+@details 
+- 如果数据报的状态为超时且重试次数不为零，则准备获取数据报并返回。
+- 如果数据报的状态不是接收到，则设置请求的错误号，将状态设置为错误，并打印错误信息。
+- 如果数据报的工作计数器不为1，则判断是否已经通过其他读取请求读取了数据，如果没有，则设置请求的错误号，将状态设置为错误，并打印错误信息。
+- 清除邮箱的读取锁定，并将状态设置为下载响应数据。
+- 调用下载响应数据的状态函数。
 */
-
 void ec_fsm_coe_down_response(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 使用的数据报。 */
 )
 {
-    ec_slave_t *slave = fsm->slave;
-    ec_sdo_request_t *request = fsm->request;
+    ec_slave_t *slave = fsm->slave;                /**< 从站。 */
+    ec_sdo_request_t *request = fsm->request;      /**< 请求。 */
 
     if (fsm->datagram->state == EC_DATAGRAM_TIMED_OUT && fsm->retries--)
     {
-        ec_slave_mbox_prepare_fetch(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_fetch(slave, datagram); // 不能失败。
         return;
     }
 
@@ -2088,21 +2214,20 @@ void ec_fsm_coe_down_response(
     {
         request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
-        EC_SLAVE_ERR(slave, "Failed to receive CoE download"
-                            " response datagram: ");
+        EC_SLAVE_ERR(slave, "接收CoE下载响应数据报失败：");
         ec_datagram_print_state(fsm->datagram);
         return;
     }
 
     if (fsm->datagram->working_counter != 1)
     {
-        // only an error if data has not already been read by another read request
+        // 只有在数据尚未被其他读取请求读取时才会出错
         if (slave->mbox_coe_data.payload_size == 0)
         {
             request->errno = EIO;
             fsm->state = ec_fsm_coe_error;
             ec_read_mbox_lock_clear(slave);
-            EC_SLAVE_ERR(slave, "Reception of CoE download response failed: ");
+            EC_SLAVE_ERR(slave, "接收CoE下载响应失败：");
             ec_datagram_print_wc_error(fsm->datagram);
             return;
         }
@@ -2115,36 +2240,53 @@ void ec_fsm_coe_down_response(
 /*****************************************************************************/
 
 /**
-   CoE state: DOWN RESPONSE DATA.
+@brief CoE状态：下行响应数据。
+@param fsm 有限状态机。
+@param datagram 使用的数据报。
+@return 无
+@details 
+- 如果从站的邮箱中的CoE数据有效且大小大于0，则清除CoE数据的大小。
+- 否则，如果邮箱读取被锁定，则标记数据报为无效状态，等待当前读取请求完成。
+- 否则，准备检查邮箱并将状态设置为下行检查。
+- 返回。
+
+- 从从站的邮箱中获取数据、邮箱协议和接收到的数据大小。
+- 如果获取数据失败，则设置请求的错误号，将状态设置为错误。
+- 如果邮箱协议不是CoE类型，则设置请求的错误号，将状态设置为错误，并打印错误信息。
+- 如果检测到紧急情况，则重新检查CoE响应，准备检查邮箱并将状态设置为下行检查。
+- 如果调试级别大于0，则打印下载响应的数据。
+- 如果接收到的数据大小小于6，则设置请求的错误号，将状态设置为错误，并打印错误信息。
+- 如果接收到的数据是SDO请求并且是中止SDO传输请求，则设置请求的错误号，将状态设置为错误，并打印错误信息。
+- 如果接收到的数据是SDO响应并且与请求的索引和子索引匹配，则检查是否还有更多段需要下载，如果是，则准备下一个段的请求，否则将状态设置为CoE结束。
 
 */
-
 void ec_fsm_coe_down_response_data(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 使用的数据报。 */
 )
 {
-    ec_slave_t *slave = fsm->slave;
-    uint8_t *data, mbox_prot;
-    size_t rec_size;
-    ec_sdo_request_t *request = fsm->request;
+    ec_slave_t *slave = fsm->slave;                /**< 从站。 */
+    uint8_t *data, mbox_prot;                      /**< 数据、邮箱协议。 */
+    size_t rec_size;                                /**< 接收到的数据大小。 */
+    ec_sdo_request_t *request = fsm->request;       /**< 请求。 */
 
-    // process the data available or initiate a new mailbox read check
+    // 处理可用的数据或启动新的邮箱读取检查
     if (slave->mbox_coe_data.payload_size > 0)
     {
         slave->mbox_coe_data.payload_size = 0;
     }
     else
     {
-        // initiate a new mailbox read check if required data is not available
+        // 如果需要的数据不可用，则启动新的邮箱读取检查
         if (ec_read_mbox_locked(slave))
         {
-            // await current read request and mark the datagram as invalid
+            // 等待当前读取请求完成，并将数据报标记为无效状态
             datagram->state = EC_DATAGRAM_INVALID;
         }
         else
         {
-            ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+            // 准备检查邮箱，并将状态设置为下行检查
+            ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
             fsm->state = ec_fsm_coe_down_check;
         }
         return;
@@ -2163,15 +2305,15 @@ void ec_fsm_coe_down_response_data(
     {
         request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
-        EC_SLAVE_ERR(slave, "Received mailbox protocol 0x%02X as response.\n",
+        EC_SLAVE_ERR(slave, "接收到的邮箱协议为0x%02X。\n",
                      mbox_prot);
         return;
     }
 
     if (ec_fsm_coe_check_emergency(fsm, data, rec_size))
     {
-        // check for CoE response again
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        // 再次检查CoE响应
+        ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
         fsm->retries = EC_FSM_RETRIES;
         fsm->state = ec_fsm_coe_down_check;
         return;
@@ -2179,7 +2321,7 @@ void ec_fsm_coe_down_response_data(
 
     if (slave->master->debug_level)
     {
-        EC_SLAVE_DBG(slave, 1, "Download response:\n");
+        EC_SLAVE_DBG(slave, 1, "下载响应：\n");
         ec_print_data(data, rec_size);
     }
 
@@ -2187,15 +2329,15 @@ void ec_fsm_coe_down_response_data(
     {
         request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
-        EC_SLAVE_ERR(slave, "Received data are too small (%zu bytes):\n",
+        EC_SLAVE_ERR(slave, "接收到的数据太小（%zu字节）：\n",
                      rec_size);
         ec_print_data(data, rec_size);
         return;
     }
 
-    if (EC_READ_U16(data) >> 12 == 0x2 && // SDO request
+    if (EC_READ_U16(data) >> 12 == 0x2 && // SDO请求
         EC_READ_U8(data + 2) >> 5 == 0x4)
-    { // abort SDO transfer request
+    { // 中止SDO传输请求
         char subidxstr[10];
         request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
@@ -2207,11 +2349,11 @@ void ec_fsm_coe_down_response_data(
         {
             sprintf(subidxstr, ":%02X", request->subindex);
         }
-        EC_SLAVE_ERR(slave, "SDO download 0x%04X%s (%zu bytes) aborted.\n",
+        EC_SLAVE_ERR(slave, "SDO下载0x%04X%s（%zu字节）已中止。\n",
                      request->index, subidxstr, request->data_size);
         if (rec_size < 10)
         {
-            EC_SLAVE_ERR(slave, "Incomplete abort command:\n");
+            EC_SLAVE_ERR(slave, "中止命令不完整：\n");
             ec_print_data(data, rec_size);
         }
         else
@@ -2222,44 +2364,58 @@ void ec_fsm_coe_down_response_data(
         return;
     }
 
-    if (EC_READ_U16(data) >> 12 != 0x3 ||          // SDO response
-        EC_READ_U8(data + 2) >> 5 != 0x3 ||        // Download response
-        EC_READ_U16(data + 3) != request->index || // index
+    if (EC_READ_U16(data) >> 12 != 0x3 ||          // SDO响应
+        EC_READ_U8(data + 2) >> 5 != 0x3 ||        // 下载响应
+        EC_READ_U16(data + 3) != request->index || // 索引
         EC_READ_U8(data + 5) != request->subindex)
-    { // subindex
+    { // 子索引
         if (slave->master->debug_level)
         {
-            EC_SLAVE_DBG(slave, 1, "Invalid SDO download response!"
-                                   " Retrying...\n");
+            EC_SLAVE_DBG(slave, 1, "无效的SDO下载响应！正在重试...\n");
             ec_print_data(data, rec_size);
         }
-        // check for CoE response again
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        // 再次检查CoE响应
+        ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
         fsm->retries = EC_FSM_RETRIES;
         fsm->state = ec_fsm_coe_down_check;
         return;
     }
 
     if (fsm->remaining)
-    { // more segments to download
+    { // 还有更多段需要下载
         fsm->toggle = 0;
         ec_fsm_coe_down_prepare_segment_request(fsm, datagram);
     }
     else
     {
-        fsm->state = ec_fsm_coe_end; // success
+        fsm->state = ec_fsm_coe_end; // 成功
     }
 }
 
 /*****************************************************************************/
 
 /**
-   CoE state: DOWN SEG CHECK.
-*/
+@brief CoE状态：下行段检查。
+@param fsm 有限状态机。
+@param datagram 使用的数据报。
+@return 无
+@details 
+- 如果数据报的状态为超时并且重试次数大于0，则返回。
+- 如果数据报的状态不是接收到，则设置请求的错误号，将状态设置为错误，并打印错误信息。
+- 如果数据报的工作计数器不为1，则设置请求的错误号，将状态设置为错误，并打印错误信息。
+- 如果邮箱中的数据不是由另一个读取请求接收到的，则准备检查邮箱，并将状态设置为下行段响应数据。
+- 否则，如果超时时间已经超过请求的响应超时时间，则设置请求的错误号，将状态设置为错误，并打印错误信息。
+- 准备检查邮箱，并将状态设置为下行段检查。
 
+- 获取响应数据。
+- 准备获取邮箱中的数据。
+- 设置重试次数。
+- 将状态设置为下行段响应。
+
+*/
 void ec_fsm_coe_down_seg_check(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 使用的数据报。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -2272,7 +2428,7 @@ void ec_fsm_coe_down_seg_check(
         fsm->request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
         ec_read_mbox_lock_clear(slave);
-        EC_SLAVE_ERR(slave, "Failed to receive CoE mailbox check datagram: ");
+        EC_SLAVE_ERR(slave, "未能接收到CoE邮箱检查数据报文：");
         ec_datagram_print_state(fsm->datagram);
         return;
     }
@@ -2282,8 +2438,7 @@ void ec_fsm_coe_down_seg_check(
         fsm->request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
         ec_read_mbox_lock_clear(slave);
-        EC_SLAVE_ERR(slave, "Reception of CoE mailbox segment check"
-                            " datagram failed: ");
+        EC_SLAVE_ERR(slave, "接收CoE邮箱段检查数据报文失败：");
         ec_datagram_print_wc_error(fsm->datagram);
         return;
     }
@@ -2292,7 +2447,7 @@ void ec_fsm_coe_down_seg_check(
     {
         unsigned long diff_ms = 0;
 
-        // check that data is not already received by another read request
+        // 检查数据是否已经被另一个读取请求接收到
         if (slave->mbox_coe_data.payload_size > 0)
         {
             ec_read_mbox_lock_clear(slave);
@@ -2309,18 +2464,17 @@ void ec_fsm_coe_down_seg_check(
             fsm->request->errno = EIO;
             fsm->state = ec_fsm_coe_error;
             ec_read_mbox_lock_clear(slave);
-            EC_SLAVE_ERR(slave, "Timeout while waiting for SDO download"
-                                " segment response.\n");
+            EC_SLAVE_ERR(slave, "等待SDO下载段响应超时。\n");
             return;
         }
 
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
         fsm->retries = EC_FSM_RETRIES;
         return;
     }
 
-    // Fetch response
-    ec_slave_mbox_prepare_fetch(slave, datagram); // can not fail.
+    // 获取响应数据
+    ec_slave_mbox_prepare_fetch(slave, datagram); // 不会失败
     fsm->retries = EC_FSM_RETRIES;
     fsm->state = ec_fsm_coe_down_seg_response;
 }
@@ -2328,13 +2482,22 @@ void ec_fsm_coe_down_seg_check(
 /*****************************************************************************/
 
 /**
-   CoE state: DOWN SEG RESPONSE.
-   \todo Timeout behavior
-*/
+@brief CoE状态：下行段响应。
+@param fsm 有限状态机。
+@param datagram 使用的数据报。
+@return 无
+@details 
+- 如果数据报的状态为超时并且重试次数大于0，则准备获取邮箱中的数据并返回。
+- 如果数据报的状态不是接收到，则设置请求的错误号，将状态设置为错误，并打印错误信息。
+- 如果数据报的工作计数器不为1，则只有在数据尚未被另一个读取请求读取时才表示错误。
+- 清除邮箱读取锁定。
+- 将状态设置为下行段响应数据。
+- 调用下行段响应数据的状态函数。
 
+*/
 void ec_fsm_coe_down_seg_response(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 使用的数据报。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -2342,7 +2505,7 @@ void ec_fsm_coe_down_seg_response(
 
     if (fsm->datagram->state == EC_DATAGRAM_TIMED_OUT && fsm->retries--)
     {
-        ec_slave_mbox_prepare_fetch(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_fetch(slave, datagram); // 不会失败
         return;
     }
 
@@ -2351,21 +2514,20 @@ void ec_fsm_coe_down_seg_response(
         request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
         ec_read_mbox_lock_clear(slave);
-        EC_SLAVE_ERR(slave, "Failed to receive CoE download response"
-                            " datagram: ");
+        EC_SLAVE_ERR(slave, "未能接收到CoE下载响应数据报文：");
         ec_datagram_print_state(fsm->datagram);
         return;
     }
 
     if (fsm->datagram->working_counter != 1)
     {
-        // only an error if data has not already been read by another read request
+        // 只有在数据尚未被另一个读取请求读取时才表示错误
         if (slave->mbox_coe_data.payload_size == 0)
         {
             request->errno = EIO;
             fsm->state = ec_fsm_coe_error;
             ec_read_mbox_lock_clear(slave);
-            EC_SLAVE_ERR(slave, "Reception of CoE download response failed: ");
+            EC_SLAVE_ERR(slave, "接收CoE下载响应失败：");
             ec_datagram_print_wc_error(fsm->datagram);
             return;
         }
@@ -2378,13 +2540,29 @@ void ec_fsm_coe_down_seg_response(
 /*****************************************************************************/
 
 /**
-   CoE state: DOWN SEG RESPONSE DATA.
+@brief CoE状态：下行段响应数据。
+@param fsm 有限状态机。
+@param datagram 使用的数据报。
+@return 无
+@details 
+- 如果邮箱中的数据可用且大小大于0，则清除邮箱中的数据大小。
+- 否则，如果邮箱读取被锁定，则标记数据报为无效状态，等待当前读取请求完成。
+- 否则，准备检查邮箱并将状态设置为下行段检查。
+- 返回。
+
+- 从从站的邮箱中获取数据、邮箱协议和接收到的数据大小。
+- 如果获取数据失败，则设置请求的错误号，将状态设置为错误。
+- 如果邮箱协议不是CoE类型，则设置请求的错误号，将状态设置为错误，并打印错误信息。
+- 如果检测到紧急情况，则重新检查CoE响应，准备检查邮箱并将状态设置为下行段检查。
+- 如果调试级别大于0，则打印下载响应的数据。
+- 如果接收到的数据大小小于6，则设置请求的错误号，将状态设置为错误，并打印错误信息。
+- 如果接收到的数据是SDO请求并且是中止SDO传输请求，则设置请求的错误号，将状态设置为错误，并打印错误信息。
+- 如果接收到的数据是SDO响应并且与请求的索引和子索引匹配，则检查是否还有更多段需要下载，如果是，则准备下一个段的请求，否则将状态设置为CoE结束。
 
 */
-
 void ec_fsm_coe_down_seg_response_data(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 使用的数据报。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -2392,22 +2570,23 @@ void ec_fsm_coe_down_seg_response_data(
     size_t rec_size;
     ec_sdo_request_t *request = fsm->request;
 
-    // process the data available or initiate a new mailbox read check
+    // 处理可用的数据或启动新的邮箱读取检查
     if (slave->mbox_coe_data.payload_size > 0)
     {
         slave->mbox_coe_data.payload_size = 0;
     }
     else
     {
-        // initiate a new mailbox read check if required data is not available
+        // 如果需要的数据不可用，则启动新的邮箱读取检查
         if (ec_read_mbox_locked(slave))
         {
-            // await current read request and mark the datagram as invalid
+            // 等待当前读取请求完成，并将数据报标记为无效状态
             datagram->state = EC_DATAGRAM_INVALID;
         }
         else
         {
-            ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+            // 准备检查邮箱，并将状态设置为下行段检查
+            ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
             fsm->state = ec_fsm_coe_down_seg_check;
         }
         return;
@@ -2425,15 +2604,15 @@ void ec_fsm_coe_down_seg_response_data(
     {
         request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
-        EC_SLAVE_ERR(slave, "Received mailbox protocol 0x%02X as response.\n",
+        EC_SLAVE_ERR(slave, "接收到的邮箱协议为0x%02X。\n",
                      mbox_prot);
         return;
     }
 
     if (ec_fsm_coe_check_emergency(fsm, data, rec_size))
     {
-        // check for CoE response again
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        // 再次检查CoE响应
+        ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
         fsm->retries = EC_FSM_RETRIES;
         fsm->state = ec_fsm_coe_down_check;
         return;
@@ -2441,7 +2620,7 @@ void ec_fsm_coe_down_seg_response_data(
 
     if (slave->master->debug_level)
     {
-        EC_SLAVE_DBG(slave, 1, "Download response:\n");
+        EC_SLAVE_DBG(slave, 1, "下载响应：\n");
         ec_print_data(data, rec_size);
     }
 
@@ -2449,15 +2628,15 @@ void ec_fsm_coe_down_seg_response_data(
     {
         request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
-        EC_SLAVE_ERR(slave, "Received data are too small (%zu bytes):\n",
+        EC_SLAVE_ERR(slave, "接收到的数据太小（%zu字节）：\n",
                      rec_size);
         ec_print_data(data, rec_size);
         return;
     }
 
-    if (EC_READ_U16(data) >> 12 == 0x2 && // SDO request
+    if (EC_READ_U16(data) >> 12 == 0x2 && // SDO请求
         EC_READ_U8(data + 2) >> 5 == 0x4)
-    { // abort SDO transfer request
+    { // 中止SDO传输请求
         char subidxstr[10];
         request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
@@ -2469,11 +2648,11 @@ void ec_fsm_coe_down_seg_response_data(
         {
             sprintf(subidxstr, ":%02X", request->subindex);
         }
-        EC_SLAVE_ERR(slave, "SDO download 0x%04X%s (%zu bytes) aborted.\n",
+        EC_SLAVE_ERR(slave, "SDO下载0x%04X%s（%zu字节）已中止。\n",
                      request->index, subidxstr, request->data_size);
         if (rec_size < 10)
         {
-            EC_SLAVE_ERR(slave, "Incomplete abort command:\n");
+            EC_SLAVE_ERR(slave, "中止命令不完整：\n");
             ec_print_data(data, rec_size);
         }
         else
@@ -2486,15 +2665,14 @@ void ec_fsm_coe_down_seg_response_data(
 
     if (EC_READ_U16(data) >> 12 != 0x3 ||
         ((EC_READ_U8(data + 2) >> 5) != 0x01))
-    { // segment response
+    { // 段响应
         if (slave->master->debug_level)
         {
-            EC_SLAVE_DBG(slave, 1, "Invalid SDO download response!"
-                                   " Retrying...\n");
+            EC_SLAVE_DBG(slave, 1, "无效的SDO下载响应！正在重试...\n");
             ec_print_data(data, rec_size);
         }
-        // check for CoE response again
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        // 再次检查CoE响应
+        ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
         fsm->retries = EC_FSM_RETRIES;
         fsm->state = ec_fsm_coe_down_seg_check;
         return;
@@ -2502,8 +2680,7 @@ void ec_fsm_coe_down_seg_response_data(
 
     if (((EC_READ_U8(data + 2) >> 4) & 0x01) != fsm->toggle)
     {
-        EC_SLAVE_ERR(slave, "Invalid toggle received during"
-                            " segmented download:\n");
+        EC_SLAVE_ERR(slave, "在分段下载过程中接收到无效的切换位：\n");
         ec_print_data(data, rec_size);
         request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
@@ -2514,25 +2691,37 @@ void ec_fsm_coe_down_seg_response_data(
     fsm->remaining -= fsm->segment_size;
 
     if (fsm->remaining)
-    { // more segments to download
+    { // 还有更多段需要下载
         fsm->toggle = !fsm->toggle;
         ec_fsm_coe_down_prepare_segment_request(fsm, datagram);
     }
     else
     {
-        fsm->state = ec_fsm_coe_end; // success
+        fsm->state = ec_fsm_coe_end; // 成功
     }
 }
 
 /*****************************************************************************/
 
-/** Prepare an upload request.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 准备一个上传请求。
+@return 成功返回零，否则返回负错误代码。
+@details 
+- 获取有限状态机、数据报、从站和请求对象的指针。
+- 使用从站和数据报准备发送邮箱数据，邮箱类型为COE，大小为10字节。
+- 如果获取邮箱数据失败，则设置请求的错误号并返回错误代码。
+- 设置邮箱数据的前三个字节为SDO请求。
+- 设置第四个字节为发起上传请求并根据请求的complete_access属性设置第五个字节。
+- 设置第六个字节为请求的索引，第七个字节为请求的子索引（如果complete_access为真，则为0x00）。
+- 将后面的四个字节设置为0x00。
+- 如果调试级别大于0，则打印上传请求的数据。
+- 将状态设置为上传请求状态。
+- 返回0表示成功。
+*/
+
 int ec_fsm_coe_prepare_up(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 使用的数据报。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -2547,8 +2736,8 @@ int ec_fsm_coe_prepare_up(
         return PTR_ERR(data);
     }
 
-    EC_WRITE_U16(data, 0x2 << 12); // SDO request
-    EC_WRITE_U8(data + 2, 0x2 << 5 // initiate upload request
+    EC_WRITE_U16(data, 0x2 << 12); // SDO请求
+    EC_WRITE_U8(data + 2, 0x2 << 5 // 发起上传请求
                               | ((request->complete_access ? 1 : 0) << 4));
     EC_WRITE_U16(data + 3, request->index);
     EC_WRITE_U8(data + 5, request->complete_access ? 0x00 : request->subindex);
@@ -2556,7 +2745,7 @@ int ec_fsm_coe_prepare_up(
 
     if (master->debug_level)
     {
-        EC_SLAVE_DBG(slave, 1, "Upload request:\n");
+        EC_SLAVE_DBG(slave, 1, "上传请求：\n");
         ec_print_data(data, 10);
     }
 
@@ -2567,65 +2756,92 @@ int ec_fsm_coe_prepare_up(
 /*****************************************************************************/
 
 /**
-   CoE state: UP START.
-*/
+@brief CoE状态：上传开始。
+@param fsm 有限状态机。
+@param datagram 使用的数据报。
+@return 无返回值。
+@details
 
+如果请求的complete_access属性为真，则将子索引字符串设置为空。
+否则，将子索引字符串设置为格式化的子索引字符串。
+打印正在上传的SDO的索引和子索引。
+如果从站的SII图像不存在，则设置请求的错误号并将状态设置为错误。
+如果从站不支持CoE协议，则设置请求的错误号并将状态设置为错误。
+设置重试次数和请求的发送时间戳。
+如果准备上传请求失败，则将状态设置为错误。
+否则，将状态设置为上传请求状态。
+*/
 void ec_fsm_coe_up_start(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+ec_fsm_coe_t *fsm, /< 有限状态机。 */
+ec_datagram_t *datagram /< 使用的数据报。 */
 )
 {
-    ec_slave_t *slave = fsm->slave;
-    ec_sdo_request_t *request = fsm->request;
-    char subidxstr[10];
+ec_slave_t *slave = fsm->slave;
+ec_sdo_request_t *request = fsm->request;
+char subidxstr[10];
 
-    if (request->complete_access)
-    {
-        subidxstr[0] = 0x00;
-    }
-    else
-    {
-        sprintf(subidxstr, ":%02X", request->subindex);
-    }
+if (request->complete_access)
+{
+    subidxstr[0] = 0x00;
+}
+else
+{
+    sprintf(subidxstr, ":%02X", request->subindex);
+}
 
-    EC_SLAVE_DBG(slave, 1, "Uploading SDO 0x%04X%s.\n",
-                 request->index, subidxstr);
+EC_SLAVE_DBG(slave, 1, "正在上传SDO 0x%04X%s。\n",
+             request->index, subidxstr);
 
-    if (!slave->sii_image)
-    {
-        EC_SLAVE_ERR(slave, "Slave cannot process CoE upload request."
-                            " SII data not available.\n");
-        request->errno = EAGAIN;
-        fsm->state = ec_fsm_coe_error;
-        return;
-    }
+if (!slave->sii_image)
+{
+    EC_SLAVE_ERR(slave, "从站无法处理CoE上传请求。SII数据不可用。\n");
+    request->errno = EAGAIN;
+    fsm->state = ec_fsm_coe_error;
+    return;
+}
 
-    if (!(slave->sii_image->sii.mailbox_protocols & EC_MBOX_COE))
-    {
-        EC_SLAVE_ERR(slave, "Slave does not support CoE!\n");
-        request->errno = EPROTONOSUPPORT;
-        fsm->state = ec_fsm_coe_error;
-        return;
-    }
+if (!(slave->sii_image->sii.mailbox_protocols & EC_MBOX_COE))
+{
+    EC_SLAVE_ERR(slave, "从站不支持CoE！\n");
+    request->errno = EPROTONOSUPPORT;
+    fsm->state = ec_fsm_coe_error;
+    return;
+}
 
-    fsm->retries = EC_FSM_RETRIES;
-    fsm->request->jiffies_sent = jiffies;
+fsm->retries = EC_FSM_RETRIES;
+fsm->request->jiffies_sent = jiffies;
 
-    if (ec_fsm_coe_prepare_up(fsm, datagram))
-    {
-        fsm->state = ec_fsm_coe_error;
-    }
+if (ec_fsm_coe_prepare_up(fsm, datagram))
+{
+    fsm->state = ec_fsm_coe_error;
+}
 }
 
 /*****************************************************************************/
 /**
-   CoE state: UP REQUEST.
-   \todo Timeout behavior
+@brief CoE状态：上传请求。
+@param fsm 有限状态机。
+@param datagram 使用的数据报。
+@return 无返回值。
+@details 
+- 如果请求的complete_access属性为真，则将子索引字符串设置为空。
+- 否则，将子索引字符串设置为格式化的子索引字符串。
+- 如果数据报的状态为超时并且重试次数不为零，则准备上传请求数据报并返回。
+- 如果数据报的状态不为接收到，则设置请求的错误号并将状态设置为错误。打印CoE上传请求的状态。
+- 计算时间差，单位为毫秒。
+- 如果数据报的工作计数器不为1：
+  - 如果工作计数器为0且时间差小于响应超时时间，则没有响应；再次发送请求数据报并返回。
+  - 否则，设置请求的错误号并将状态设置为错误。打印接收CoE上传请求超时失败的状态。
+- 如果时间差大于200毫秒，则打印上传花费的时间。
+- 设置起始时间戳为数据报的发送时间戳。
+- 如果已经存在读请求，则将状态设置为上传响应数据状态，并将数据报标记为无效状态。
+- 否则，准备邮箱检查，并将重试次数设置为初始值。将状态设置为上传检查状态。
+
 */
 
 void ec_fsm_coe_up_request(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 使用的数据报。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -2654,7 +2870,7 @@ void ec_fsm_coe_up_request(
     {
         fsm->request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
-        EC_SLAVE_ERR(slave, "Failed to receive CoE upload request: ");
+        EC_SLAVE_ERR(slave, "接收CoE上传请求失败：");
         ec_datagram_print_state(fsm->datagram);
         return;
     }
@@ -2668,11 +2884,10 @@ void ec_fsm_coe_up_request(
             if (diff_ms < fsm->request->response_timeout)
             {
 #if DEBUG_RETRIES
-                EC_SLAVE_DBG(slave, 1, "Slave did not respond to"
-                                       " SDO upload request. Retrying after %lu ms...\n",
+                EC_SLAVE_DBG(slave, 1, "从站未响应SDO上传请求。%lu毫秒后重试...\n",
                              diff_ms);
 #endif
-                // no response; send request datagram again
+                // 没有响应；再次发送请求数据报
                 if (ec_fsm_coe_prepare_up(fsm, datagram))
                 {
                     fsm->state = ec_fsm_coe_error;
@@ -2682,8 +2897,7 @@ void ec_fsm_coe_up_request(
         }
         fsm->request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
-        EC_SLAVE_ERR(slave, "Reception of CoE upload request for"
-                            " SDO 0x%04x%s failed with timeout after %lu ms: ",
+        EC_SLAVE_ERR(slave, "接收SDO 0x%04x%s上传请求超时失败，%lu毫秒后：",
                      fsm->request->index, subidxstr, diff_ms);
         ec_datagram_print_wc_error(fsm->datagram);
         return;
@@ -2692,22 +2906,22 @@ void ec_fsm_coe_up_request(
 #if DEBUG_LONG
     if (diff_ms > 200)
     {
-        EC_SLAVE_WARN(slave, "SDO 0x%04x%s upload took %lu ms.\n",
+        EC_SLAVE_WARN(slave, "SDO 0x%04x%s上传花费%lu毫秒。\n",
                       fsm->request->index, subidxstr, diff_ms);
     }
 #endif
 
     fsm->jiffies_start = fsm->datagram->jiffies_sent;
-    // mailbox read check is skipped if a read request is already ongoing
+    // 如果已经存在读请求，则跳过邮箱读取检查
     if (ec_read_mbox_locked(slave))
     {
         fsm->state = ec_fsm_coe_up_response_data;
-        // the datagram is not used and marked as invalid
+        // 数据报不使用，标记为无效状态
         datagram->state = EC_DATAGRAM_INVALID;
     }
     else
     {
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
         fsm->retries = EC_FSM_RETRIES;
         fsm->state = ec_fsm_coe_up_check;
     }
@@ -2716,19 +2930,29 @@ void ec_fsm_coe_up_request(
 /*****************************************************************************/
 
 /**
-   CoE state: UP CHECK.
+@brief CoE状态：上传检查。
+@param fsm 有限状态机。
+@param datagram 使用的数据报。
+@return 无返回值。
+@details 
+- 如果数据报的状态为超时并且重试次数不为零，则准备邮箱检查数据报并返回。
+- 如果数据报的状态不为接收到，则设置请求的错误号并将状态设置为错误。清除邮箱读取锁定。打印接收CoE邮箱检查数据报的状态。
+- 如果数据报的工作计数器不为1，则设置请求的错误号并将状态设置为错误。清除邮箱读取锁定。打印接收CoE邮箱检查数据报失败的状态。
+- 如果邮箱检查未通过，则判断数据是否已经被另一个读请求接收。如果是，则清除邮箱读取锁定，将状态设置为上传响应数据状态，并调用相应的函数。
+- 计算时间差，单位为毫秒。如果时间差大于等于响应超时时间，则设置请求的错误号并将状态设置为错误。清除邮箱读取锁定。打印等待SDO上传响应超时的状态。
+- 准备邮箱检查数据报，并将重试次数设置为初始值。
 */
 
 void ec_fsm_coe_up_check(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 使用的数据报。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
 
     if (fsm->datagram->state == EC_DATAGRAM_TIMED_OUT && fsm->retries--)
     {
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
         return;
     }
 
@@ -2737,7 +2961,7 @@ void ec_fsm_coe_up_check(
         fsm->request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
         ec_read_mbox_lock_clear(slave);
-        EC_SLAVE_ERR(slave, "Failed to receive CoE mailbox check datagram: ");
+        EC_SLAVE_ERR(slave, "接收CoE邮箱检查数据报失败：");
         ec_datagram_print_state(fsm->datagram);
         return;
     }
@@ -2747,8 +2971,7 @@ void ec_fsm_coe_up_check(
         fsm->request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
         ec_read_mbox_lock_clear(slave);
-        EC_SLAVE_ERR(slave, "Reception of CoE mailbox check"
-                            " datagram failed: ");
+        EC_SLAVE_ERR(slave, "接收CoE邮箱检查数据报失败：");
         ec_datagram_print_wc_error(fsm->datagram);
         return;
     }
@@ -2757,7 +2980,7 @@ void ec_fsm_coe_up_check(
     {
         unsigned long diff_ms = 0;
 
-        // check that data is not already received by another read request
+        // 检查数据是否已经被另一个读请求接收
         if (slave->mbox_coe_data.payload_size > 0)
         {
             ec_read_mbox_lock_clear(slave);
@@ -2785,31 +3008,38 @@ void ec_fsm_coe_up_check(
             fsm->request->errno = EIO;
             fsm->state = ec_fsm_coe_error;
             ec_read_mbox_lock_clear(slave);
-            EC_SLAVE_ERR(slave, "Timeout after %lu ms while waiting for"
-                                " SDO 0x%04x%s upload response.\n",
-                         diff_ms,
-                         fsm->request->index, subidxstr);
+            EC_SLAVE_ERR(slave, "等待SDO 0x%04x%s上传响应超时，%lu毫秒后：\n",
+                         fsm->request->index, subidxstr, diff_ms);
             return;
         }
 
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
         fsm->retries = EC_FSM_RETRIES;
         return;
     }
 
-    // Fetch response
-    ec_slave_mbox_prepare_fetch(slave, datagram); // can not fail.
+    // 获取响应
+    ec_slave_mbox_prepare_fetch(slave, datagram); // 不会失败
     fsm->retries = EC_FSM_RETRIES;
     fsm->state = ec_fsm_coe_up_response;
 }
-
 /*****************************************************************************/
 
-/** Prepare an SDO upload segment request.
- */
+/**
+@brief 准备一个SDO上传分段请求。
+@param fsm 有限状态机。
+@param datagram 使用的数据报。
+@return 无返回值。
+@details 
+- 准备发送数据报，使用EC_MBOX_TYPE_COE类型，长度为10字节。
+- 如果准备发送失败，则设置请求的错误号并将状态设置为错误。
+- 设置数据报的内容：SDO请求、toggle和上传分段请求。
+- 如果调试级别大于0，则打印上传分段请求的内容。
+*/
+
 void ec_fsm_coe_up_prepare_segment_request(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 使用的数据报。 */
 )
 {
     uint8_t *data =
@@ -2822,14 +3052,14 @@ void ec_fsm_coe_up_prepare_segment_request(
         return;
     }
 
-    EC_WRITE_U16(data, 0x2 << 12);          // SDO request
+    EC_WRITE_U16(data, 0x2 << 12);          // SDO请求
     EC_WRITE_U8(data + 2, (fsm->toggle << 4 // toggle
-                           | 0x3 << 5));    // upload segment request
+                           | 0x3 << 5));    // 上传分段请求
     memset(data + 3, 0x00, 7);
 
     if (fsm->slave->master->debug_level)
     {
-        EC_SLAVE_DBG(fsm->slave, 1, "Upload segment request:\n");
+        EC_SLAVE_DBG(fsm->slave, 1, "上传分段请求：\n");
         ec_print_data(data, 10);
     }
 }
@@ -2837,13 +3067,20 @@ void ec_fsm_coe_up_prepare_segment_request(
 /*****************************************************************************/
 
 /**
-   CoE state: UP RESPONSE.
-   \todo Timeout behavior
+@brief CoE状态：上传响应。
+@param fsm 有限状态机。
+@param datagram 使用的数据报。
+@return 无返回值。
+@details 
+- 如果数据报的状态为超时并且重试次数不为零，则准备邮箱获取数据报并返回。
+- 如果数据报的状态不为接收到，则设置请求的错误号并将状态设置为错误。清除邮箱读取锁定。打印接收CoE上传响应数据报的状态。
+- 如果数据报的工作计数器不为1，则判断数据是否已经被另一个读请求读取。如果是，则清除邮箱读取锁定，将状态设置为上传响应数据状态，并调用相应的函数。
+- 清除邮箱读取锁定，将状态设置为上传响应数据状态，并调用相应的函数。
 */
 
 void ec_fsm_coe_up_response(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 使用的数据报。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -2851,7 +3088,7 @@ void ec_fsm_coe_up_response(
 
     if (fsm->datagram->state == EC_DATAGRAM_TIMED_OUT && fsm->retries--)
     {
-        ec_slave_mbox_prepare_fetch(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_fetch(slave, datagram); // 不会失败
         return;
     }
 
@@ -2860,21 +3097,20 @@ void ec_fsm_coe_up_response(
         request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
         ec_read_mbox_lock_clear(slave);
-        EC_SLAVE_ERR(slave, "Failed to receive CoE upload response"
-                            " datagram: ");
+        EC_SLAVE_ERR(slave, "接收CoE上传响应数据报失败：");
         ec_datagram_print_state(fsm->datagram);
         return;
     }
 
     if (fsm->datagram->working_counter != 1)
     {
-        // only an error if data has not already been read by another read request
+        // 只有在数据还未被另一个读请求读取时才报错
         if (slave->mbox_coe_data.payload_size == 0)
         {
             request->errno = EIO;
             fsm->state = ec_fsm_coe_error;
             ec_read_mbox_lock_clear(slave);
-            EC_SLAVE_ERR(slave, "Reception of CoE upload response failed: ");
+            EC_SLAVE_ERR(slave, "接收CoE上传响应数据报失败：");
             ec_datagram_print_wc_error(fsm->datagram);
             return;
         }
@@ -2887,13 +3123,36 @@ void ec_fsm_coe_up_response(
 /*****************************************************************************/
 
 /**
-   CoE state: UP RESPONSE DATA.
-
+@brief CoE状态：上传响应数据。
+@param fsm 有限状态机。
+@param datagram 使用的数据报。
+@return 无返回值。
+@details 
+- 获取有限状态机、从站和主站的指针，以及请求的指针和子索引字符串。
+- 如果请求是完全访问，则子索引字符串为空；否则，使用请求的子索引。
+- 检查邮箱中是否有可用数据，如果有，则将payload_size设置为0；否则，如果邮箱已被锁定，则等待当前读请求并将数据报状态设置为无效；否则，准备邮箱检查数据报并返回。
+- 获取数据指针、邮箱协议、接收到的数据大小。
+- 如果获取数据失败，则设置请求的错误号并将状态设置为错误。
+- 如果调试级别大于0，则打印上传响应数据的内容。
+- 如果邮箱协议不是EC_MBOX_TYPE_COE，则设置请求的错误号并将状态设置为错误。打印接收到的邮箱协议。
+- 如果检测到紧急消息，则再次检查CoE响应。准备邮箱检查数据报并返回。
+- 如果接收到的数据大小小于6字节，则设置请求的错误号并将状态设置为错误。打印接收到的SDO上传响应数据报的大小。
+- 如果接收到的数据是SDO请求（0x2）且是终止SDO传输请求（0x4），则打印SDO上传被终止的消息，并根据情况处理终止消息。设置请求的错误号并将状态设置为错误。
+- 如果接收到的数据不是SDO响应（0x3）或者不是上传响应（0x2），则打印接收到未知的响应。设置请求的错误号并将状态设置为错误。
+- 检查接收到的索引和子索引是否与请求的索引和子索引匹配。如果不匹配，则打印接收到错误的SDO响应。再次检查CoE响应。准备邮箱检查数据报并返回。
+- 检查是使用标准方式还是加速方式上传的。
+- 如果是加速方式，则检查数据大小是否足够，如果不足够，则设置请求的错误号并将状态设置为错误。打印接收到的SDO加速上传响应的大小。
+- 如果是加速方式，则将数据拷贝到请求的数据缓冲区中。
+- 如果是标准方式，则检查数据大小是否足够，如果不足够，则设置请求的错误号并将状态设置为错误。打印接收到的SDO标准上传响应的大小。
+- 计算数据的大小和剩余大小。
+- 如果数据大小小于完整大小，则打印数据不完整的消息。准备上传分段请求，设置重试次数，并将状态设置为上传分段请求状态。
+- 如果调试级别大于0，则打印已上传的数据。
+- 将状态设置为上传结束状态。
 */
 
 void ec_fsm_coe_up_response_data(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 使用的数据报。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -2915,22 +3174,22 @@ void ec_fsm_coe_up_response_data(
         sprintf(subidxstr, ":%02X", request->subindex);
     }
 
-    // process the data available or initiate a new mailbox read check
+    // 处理可用数据或启动新的邮箱读取检查
     if (slave->mbox_coe_data.payload_size > 0)
     {
         slave->mbox_coe_data.payload_size = 0;
     }
     else
     {
-        // initiate a new mailbox read check if required data is not available
+        // 如果需要的数据不可用，则启动新的邮箱读取检查
         if (ec_read_mbox_locked(slave))
         {
-            // await current read request and mark the datagram as invalid
+            // 等待当前读请求并将数据报状态设置为无效
             datagram->state = EC_DATAGRAM_INVALID;
         }
         else
         {
-            ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+            ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
             fsm->state = ec_fsm_coe_up_check;
         }
         return;
@@ -2947,7 +3206,7 @@ void ec_fsm_coe_up_response_data(
 
     if (master->debug_level)
     {
-        EC_SLAVE_DBG(slave, 1, "Upload response:\n");
+        EC_SLAVE_DBG(slave, 1, "上传响应数据：\n");
         ec_print_data(data, rec_size);
     }
 
@@ -2955,16 +3214,15 @@ void ec_fsm_coe_up_response_data(
     {
         request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
-        EC_SLAVE_WARN(slave, "Received mailbox protocol 0x%02X"
-                             " as response.\n",
+        EC_SLAVE_WARN(slave, "接收到的邮箱协议 0x%02X 错误。\n",
                       mbox_prot);
         return;
     }
 
     if (ec_fsm_coe_check_emergency(fsm, data, rec_size))
     {
-        // check for CoE response again
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        // 再次检查CoE响应
+        ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
         fsm->retries = EC_FSM_RETRIES;
         fsm->state = ec_fsm_coe_up_check;
         return;
@@ -2974,17 +3232,16 @@ void ec_fsm_coe_up_response_data(
     {
         request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
-        EC_SLAVE_ERR(slave, "Received currupted SDO upload response"
-                            " (%zu bytes)!\n",
+        EC_SLAVE_ERR(slave, "接收到的SDO上传响应数据报损坏（%zu字节）！\n",
                      rec_size);
         ec_print_data(data, rec_size);
         return;
     }
 
-    if (EC_READ_U16(data) >> 12 == 0x2 && // SDO request
+    if (EC_READ_U16(data) >> 12 == 0x2 && // SDO请求
         EC_READ_U8(data + 2) >> 5 == 0x4)
-    { // abort SDO transfer request
-        EC_SLAVE_ERR(slave, "SDO upload 0x%04X%s aborted.\n",
+    { // 终止SDO传输请求
+        EC_SLAVE_ERR(slave, "SDO上传 0x%04X%s 被终止。\n",
                      request->index, subidxstr);
         if (rec_size >= 10)
         {
@@ -2993,18 +3250,17 @@ void ec_fsm_coe_up_response_data(
         }
         else
         {
-            EC_SLAVE_ERR(slave, "No abort message.\n");
+            EC_SLAVE_ERR(slave, "没有终止消息。\n");
         }
         request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
         return;
     }
 
-    if (EC_READ_U16(data) >> 12 != 0x3 || // SDO response
+    if (EC_READ_U16(data) >> 12 != 0x3 || // SDO响应
         EC_READ_U8(data + 2) >> 5 != 0x2)
-    { // upload response
-        EC_SLAVE_ERR(slave, "Received unknown response while"
-                            " uploading SDO 0x%04X%s.\n",
+    { // 上传响应
+        EC_SLAVE_ERR(slave, "接收到未知的响应，正在上传SDO 0x%04X%s。\n",
                      request->index, subidxstr);
         ec_print_data(data, rec_size);
         request->errno = EIO;
@@ -3017,19 +3273,18 @@ void ec_fsm_coe_up_response_data(
 
     if (rec_index != request->index || rec_subindex != request->subindex)
     {
-        EC_SLAVE_ERR(slave, "Received upload response for wrong SDO"
-                            " (0x%04X:%02X, requested: 0x%04X:%02X).\n",
+        EC_SLAVE_ERR(slave, "接收到错误的SDO响应（0x%04X:%02X，请求的：0x%04X:%02X）。\n",
                      rec_index, rec_subindex, request->index, request->subindex);
         ec_print_data(data, rec_size);
 
-        // check for CoE response again
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        // 再次检查CoE响应
+        ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
         fsm->retries = EC_FSM_RETRIES;
         fsm->state = ec_fsm_coe_up_check;
         return;
     }
 
-    // normal or expedited?
+    // 是否使用加速方式
     expedited = EC_READ_U8(data + 2) & 0x02;
 
     if (expedited)
@@ -3048,8 +3303,7 @@ void ec_fsm_coe_up_response_data(
         {
             request->errno = EIO;
             fsm->state = ec_fsm_coe_error;
-            EC_SLAVE_ERR(slave, "Received corrupted SDO expedited upload"
-                                " response (only %zu bytes)!\n",
+            EC_SLAVE_ERR(slave, "接收到的SDO加速上传响应数据损坏（只有%zu字节）！\n",
                          rec_size);
             ec_print_data(data, rec_size);
             return;
@@ -3064,13 +3318,12 @@ void ec_fsm_coe_up_response_data(
         }
     }
     else
-    { // normal
+    { // 标准方式
         if (rec_size < 10)
         {
             request->errno = EIO;
             fsm->state = ec_fsm_coe_error;
-            EC_SLAVE_ERR(slave, "Received currupted SDO normal upload"
-                                " response (only %zu bytes)!\n",
+            EC_SLAVE_ERR(slave, "接收到的SDO标准上传响应数据损坏（只有%zu字节）！\n",
                          rec_size);
             ec_print_data(data, rec_size);
             return;
@@ -3083,7 +3336,7 @@ void ec_fsm_coe_up_response_data(
         {
             request->errno = EIO;
             fsm->state = ec_fsm_coe_error;
-            EC_SLAVE_ERR(slave, "No complete size supplied!\n");
+            EC_SLAVE_ERR(slave, "没有提供完整大小！\n");
             ec_print_data(data, rec_size);
             return;
         }
@@ -3108,8 +3361,7 @@ void ec_fsm_coe_up_response_data(
 
         if (data_size < fsm->complete_size)
         {
-            EC_SLAVE_DBG(slave, 1, "SDO data incomplete (%zu / %u)."
-                                   " Segmenting...\n",
+            EC_SLAVE_DBG(slave, 1, "SDO数据不完整（%zu / %u）。正在分段...\n",
                          data_size, fsm->complete_size);
             ec_fsm_coe_up_prepare_segment_request(fsm, datagram);
             fsm->retries = EC_FSM_RETRIES;
@@ -3120,23 +3372,33 @@ void ec_fsm_coe_up_response_data(
 
     if (master->debug_level)
     {
-        EC_SLAVE_DBG(slave, 1, "Uploaded data:\n");
+        EC_SLAVE_DBG(slave, 1, "已上传数据：\n");
         ec_print_data(request->data, request->data_size);
     }
 
-    fsm->state = ec_fsm_coe_end; // success
+    fsm->state = ec_fsm_coe_end; // 成功
 }
 
 /*****************************************************************************/
 
 /**
-   CoE state: UP REQUEST.
-   \todo Timeout behavior
+@brief CoE状态：上传分段请求。
+@param fsm 有限状态机。
+@param datagram 使用的数据报。
+@return 无返回值。
+@details 
+- 获取从站指针。
+- 如果数据报状态为超时并且重试次数不为0，则准备上传分段请求并返回。
+- 如果数据报状态不是接收到的，则设置请求的错误号并将状态设置为错误。打印接收数据报的状态。
+- 如果数据报的工作计数器不为1，则设置请求的错误号并将状态设置为错误。打印接收数据报的工作计数器错误。
+- 设置有限状态机的起始时间。
+- 如果邮箱已被锁定，则将状态设置为上传分段响应数据状态，并将数据报状态设置为无效。
+- 否则，准备邮箱检查数据报并返回。
 */
 
 void ec_fsm_coe_up_seg_request(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 使用的数据报。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -3151,8 +3413,7 @@ void ec_fsm_coe_up_seg_request(
     {
         fsm->request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
-        EC_SLAVE_ERR(slave, "Failed to receive CoE upload segment"
-                            " request datagram: ");
+        EC_SLAVE_ERR(slave, "接收CoE上传分段请求数据报失败：");
         ec_datagram_print_state(fsm->datagram);
         return;
     }
@@ -3161,23 +3422,22 @@ void ec_fsm_coe_up_seg_request(
     {
         fsm->request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
-        EC_SLAVE_ERR(slave, "Reception of CoE upload segment"
-                            " request failed: ");
+        EC_SLAVE_ERR(slave, "接收CoE上传分段请求失败：");
         ec_datagram_print_wc_error(fsm->datagram);
         return;
     }
 
     fsm->jiffies_start = fsm->datagram->jiffies_sent;
-    // mailbox read check is skipped if a read request is already ongoing
+    // 如果已经有一个读请求正在进行，则跳过邮箱读取检查
     if (ec_read_mbox_locked(slave))
     {
         fsm->state = ec_fsm_coe_up_seg_response_data;
-        // the datagram is not used and marked as invalid
+        // 数据报不使用，标记为无效
         datagram->state = EC_DATAGRAM_INVALID;
     }
     else
     {
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
         fsm->retries = EC_FSM_RETRIES;
         fsm->state = ec_fsm_coe_up_seg_check;
     }
@@ -3186,19 +3446,29 @@ void ec_fsm_coe_up_seg_request(
 /*****************************************************************************/
 
 /**
-   CoE state: UP CHECK.
+@brief CoE状态：上传检查。
+@param fsm 有限状态机。
+@param datagram 使用的数据报。
+@return 无返回值。
+@details 
+- 获取从站指针。
+- 如果数据报状态为超时并且重试次数不为0，则准备邮箱检查数据报并返回。
+- 如果数据报状态不是接收到的，则设置请求的错误号并将状态设置为错误。清除邮箱读取锁定并打印接收数据报的状态。
+- 如果数据报的工作计数器不为1，则设置请求的错误号并将状态设置为错误。清除邮箱读取锁定并打印接收数据报的工作计数器错误。
+- 如果邮箱检查失败，则清除邮箱读取锁定并打印错误消息。
+- 准备邮箱检查数据报并返回。
 */
 
 void ec_fsm_coe_up_seg_check(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 使用的数据报。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
 
     if (fsm->datagram->state == EC_DATAGRAM_TIMED_OUT && fsm->retries--)
     {
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
         return;
     }
 
@@ -3207,8 +3477,7 @@ void ec_fsm_coe_up_seg_check(
         fsm->request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
         ec_read_mbox_lock_clear(slave);
-        EC_SLAVE_ERR(slave, "Failed to receive CoE mailbox check"
-                            " datagram: ");
+        EC_SLAVE_ERR(slave, "接收CoE邮箱检查数据报失败：");
         ec_datagram_print_state(fsm->datagram);
         return;
     }
@@ -3218,8 +3487,7 @@ void ec_fsm_coe_up_seg_check(
         fsm->request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
         ec_read_mbox_lock_clear(slave);
-        EC_SLAVE_ERR(slave, "Reception of CoE mailbox check datagram"
-                            " failed: ");
+        EC_SLAVE_ERR(slave, "接收CoE邮箱检查数据报失败：");
         ec_datagram_print_wc_error(fsm->datagram);
         return;
     }
@@ -3228,7 +3496,7 @@ void ec_fsm_coe_up_seg_check(
     {
         unsigned long diff_ms = 0;
 
-        // check that data is not already received by another read request
+        // 检查数据是否已经被另一个读请求接收
         if (slave->mbox_coe_data.payload_size > 0)
         {
             ec_read_mbox_lock_clear(slave);
@@ -3245,18 +3513,17 @@ void ec_fsm_coe_up_seg_check(
             fsm->request->errno = EIO;
             fsm->state = ec_fsm_coe_error;
             ec_read_mbox_lock_clear(slave);
-            EC_SLAVE_ERR(slave, "Timeout while waiting for SDO upload"
-                                " segment response.\n");
+            EC_SLAVE_ERR(slave, "等待SDO上传分段响应超时。\n");
             return;
         }
 
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
         fsm->retries = EC_FSM_RETRIES;
         return;
     }
 
-    // Fetch response
-    ec_slave_mbox_prepare_fetch(slave, datagram); // can not fail.
+    // 获取响应数据
+    ec_slave_mbox_prepare_fetch(slave, datagram); // 不会失败
     fsm->retries = EC_FSM_RETRIES;
     fsm->state = ec_fsm_coe_up_seg_response;
 }
@@ -3264,13 +3531,24 @@ void ec_fsm_coe_up_seg_check(
 /*****************************************************************************/
 
 /**
-   CoE state: UP RESPONSE.
-   \todo Timeout behavior
+@brief CoE状态：上传响应。
+@param fsm 有限状态机。
+@param datagram 使用的数据报。
+@return 无返回值。
+@details 
+- 获取从站指针和请求指针。
+- 如果数据报状态为超时并且重试次数不为0，则准备邮箱读取数据报并返回。
+- 如果数据报状态不是接收到的，则设置请求的错误号并将状态设置为错误。清除邮箱读取锁定并打印接收数据报的状态。
+- 如果数据报的工作计数器不为1，则：
+  - 如果邮箱中已经有数据接收，则不视为错误。
+  - 否则，设置请求的错误号并将状态设置为错误。清除邮箱读取锁定并打印接收数据报的工作计数器错误。
+- 清除邮箱读取锁定。
+- 将状态设置为上传分段响应数据状态，并调用该状态的函数。
 */
 
 void ec_fsm_coe_up_seg_response(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 使用的数据报。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -3278,7 +3556,7 @@ void ec_fsm_coe_up_seg_response(
 
     if (fsm->datagram->state == EC_DATAGRAM_TIMED_OUT && fsm->retries--)
     {
-        ec_slave_mbox_prepare_fetch(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_fetch(slave, datagram); // 不会失败
         return;
     }
 
@@ -3287,22 +3565,20 @@ void ec_fsm_coe_up_seg_response(
         request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
         ec_read_mbox_lock_clear(slave);
-        EC_SLAVE_ERR(slave, "Failed to receive CoE upload segment"
-                            " response datagram: ");
+        EC_SLAVE_ERR(slave, "接收CoE上传分段响应数据报失败：");
         ec_datagram_print_state(fsm->datagram);
         return;
     }
 
     if (fsm->datagram->working_counter != 1)
     {
-        // only an error if data has not already been read by another read request
+        // 如果数据已经被另一个读请求读取，则不视为错误
         if (slave->mbox_coe_data.payload_size == 0)
         {
             request->errno = EIO;
             fsm->state = ec_fsm_coe_error;
             ec_read_mbox_lock_clear(slave);
-            EC_SLAVE_ERR(slave, "Reception of CoE upload segment"
-                                " response failed: ");
+            EC_SLAVE_ERR(slave, "接收CoE上传分段响应失败：");
             ec_datagram_print_wc_error(fsm->datagram);
             return;
         }
@@ -3315,13 +3591,35 @@ void ec_fsm_coe_up_seg_response(
 /*****************************************************************************/
 
 /**
-   CoE state: UP RESPONSE DATA.
-
+@brief CoE状态：上传响应数据。
+@param fsm 有限状态机。
+@param datagram 使用的数据报。
+@return 无返回值。
+@details 
+- 获取从站指针、主站指针、数据指针、邮箱协议类型、接收数据的大小、请求指针和最后一个分段标志。
+- 如果邮箱中的数据大小大于0，则清除邮箱中的数据大小。
+- 否则，如果邮箱已被锁定，则将数据报状态设置为无效，否则准备邮箱检查数据报并返回。
+- 从邮箱中获取数据并检查是否出错。
+- 如果主站的调试级别大于0，则打印上传分段响应的数据。
+- 如果邮箱协议类型不是CoE协议类型，则打印错误消息，并将请求的错误号设置为EIO，将状态设置为错误并返回。
+- 如果检查到紧急情况，则再次检查CoE响应。
+- 如果接收的数据大小小于10，则打印错误消息，并将请求的错误号设置为EIO，将状态设置为错误并返回。
+- 如果接收到的数据是SDO请求并且是SDO传输中止请求，则打印错误消息，设置请求的中止码，并调用EC_CANOPEN_ABORT_MSG函数发送中止消息。将请求的错误号设置为EIO，将状态设置为错误并返回。
+- 如果接收到的数据不是SDO响应或上传分段响应，则如果主站的调试级别大于0，则打印无效的SDO上传分段响应的数据。再次检查CoE响应并返回。
+- 计算数据大小。
+- 如果请求的数据大小加上接收到的数据大小大于完整数据的大小，则打印错误消息，设置请求的错误号为EOVERFLOW，并将状态设置为错误并返回。
+- 将接收到的数据复制到请求的数据缓冲区中。
+- 更新请求的数据大小。
+- 检查最后一个分段标志。
+- 如果不是最后一个分段，则切换标志位，准备上传分段请求，并设置重试次数，将状态设置为上传分段请求并返回。
+- 如果请求的数据大小不等于完整数据的大小，则打印警告消息。
+- 如果主站的调试级别大于0，则打印上传的数据。
+- 将状态设置为CoE结束状态（成功）。
 */
 
 void ec_fsm_coe_up_seg_response_data(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 使用的数据报。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -3331,22 +3629,22 @@ void ec_fsm_coe_up_seg_response_data(
     ec_sdo_request_t *request = fsm->request;
     unsigned int last_segment;
 
-    // process the data available or initiate a new mailbox read check
+    // 处理可用数据或启动新的邮箱读取检查
     if (slave->mbox_coe_data.payload_size > 0)
     {
         slave->mbox_coe_data.payload_size = 0;
     }
     else
     {
-        // initiate a new mailbox read check if required data is not available
+        // 如果所需数据不可用，则启动新的邮箱读取检查
         if (ec_read_mbox_locked(slave))
         {
-            // await current read request and mark the datagram as invalid
+            // 等待当前读请求，并将数据报状态设置为无效
             datagram->state = EC_DATAGRAM_INVALID;
         }
         else
         {
-            ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+            ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
             fsm->state = ec_fsm_coe_up_seg_check;
         }
         return;
@@ -3363,13 +3661,13 @@ void ec_fsm_coe_up_seg_response_data(
 
     if (master->debug_level)
     {
-        EC_SLAVE_DBG(slave, 1, "Upload segment response:\n");
+        EC_SLAVE_DBG(slave, 1, "上传分段响应数据：\n");
         ec_print_data(data, rec_size);
     }
 
     if (mbox_prot != EC_MBOX_TYPE_COE)
     {
-        EC_SLAVE_ERR(slave, "Received mailbox protocol 0x%02X as response.\n",
+        EC_SLAVE_ERR(slave, "接收到的邮箱协议类型为 0x%02X。\n",
                      mbox_prot);
         request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
@@ -3378,8 +3676,8 @@ void ec_fsm_coe_up_seg_response_data(
 
     if (ec_fsm_coe_check_emergency(fsm, data, rec_size))
     {
-        // check for CoE response again
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        // 再次检查CoE响应
+        ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
         fsm->retries = EC_FSM_RETRIES;
         fsm->state = ec_fsm_coe_up_seg_check;
         return;
@@ -3387,18 +3685,17 @@ void ec_fsm_coe_up_seg_response_data(
 
     if (rec_size < 10)
     {
-        EC_SLAVE_ERR(slave, "Received currupted SDO upload"
-                            " segment response!\n");
+        EC_SLAVE_ERR(slave, "接收到的SDO上传分段响应数据已损坏！\n");
         ec_print_data(data, rec_size);
         request->errno = EIO;
         fsm->state = ec_fsm_coe_error;
         return;
     }
 
-    if (EC_READ_U16(data) >> 12 == 0x2 && // SDO request
+    if (EC_READ_U16(data) >> 12 == 0x2 && // SDO请求
         EC_READ_U8(data + 2) >> 5 == 0x4)
-    { // abort SDO transfer request
-        EC_SLAVE_ERR(slave, "SDO upload 0x%04X:%02X aborted.\n",
+    { // SDO传输中止请求
+        EC_SLAVE_ERR(slave, "SDO上传 0x%04X:%02X 被中止。\n",
                      request->index, request->subindex);
         request->abort_code = EC_READ_U32(data + 6);
         ec_canopen_abort_msg(slave, request->abort_code);
@@ -3407,23 +3704,22 @@ void ec_fsm_coe_up_seg_response_data(
         return;
     }
 
-    if (EC_READ_U16(data) >> 12 != 0x3 || // SDO response
+    if (EC_READ_U16(data) >> 12 != 0x3 || // SDO响应
         EC_READ_U8(data + 2) >> 5 != 0x0)
-    { // upload segment response
+    { // 上传分段响应
         if (fsm->slave->master->debug_level)
         {
-            EC_SLAVE_DBG(slave, 1, "Invalid SDO upload segment response!\n");
+            EC_SLAVE_DBG(slave, 1, "无效的SDO上传分段响应数据！\n");
             ec_print_data(data, rec_size);
         }
-        // check for CoE response again
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        // 再次检查CoE响应
+        ec_slave_mbox_prepare_check(slave, datagram); // 不会失败
         fsm->retries = EC_FSM_RETRIES;
         fsm->state = ec_fsm_coe_up_seg_check;
         return;
     }
 
-    data_size = rec_size - 3; /* Header of segment upload is smaller than
-                                 normal upload */
+    data_size = rec_size - 3; /* 分段上传的头部比正常上传小 */
     if (rec_size == 10)
     {
         uint8_t seg_size = (EC_READ_U8(data + 2) & 0xE) >> 1;
@@ -3432,8 +3728,7 @@ void ec_fsm_coe_up_seg_response_data(
 
     if (request->data_size + data_size > fsm->complete_size)
     {
-        EC_SLAVE_ERR(slave, "SDO upload 0x%04X:%02X failed: Fragment"
-                            " exceeding complete size!\n",
+        EC_SLAVE_ERR(slave, "SDO上传 0x%04X:%02X 失败：分段超过完整大小！\n",
                      request->index, request->subindex);
         request->errno = EOVERFLOW;
         fsm->state = ec_fsm_coe_error;
@@ -3455,30 +3750,33 @@ void ec_fsm_coe_up_seg_response_data(
 
     if (request->data_size != fsm->complete_size)
     {
-        EC_SLAVE_WARN(slave, "SDO upload 0x%04X:%02X: Assembled data"
-                             " size (%zu) does not match complete size (%u)!\n",
+        EC_SLAVE_WARN(slave, "SDO上传 0x%04X:%02X：组装的数据大小（%zu）与完整大小（%u）不匹配！\n",
                       request->index, request->subindex,
                       request->data_size, fsm->complete_size);
     }
 
     if (master->debug_level)
     {
-        EC_SLAVE_DBG(slave, 1, "Uploaded data:\n");
+        EC_SLAVE_DBG(slave, 1, "上传的数据：\n");
         ec_print_data(request->data, request->data_size);
     }
 
-    fsm->state = ec_fsm_coe_end; // success
+    fsm->state = ec_fsm_coe_end; // 成功
 }
 
 /*****************************************************************************/
 
 /**
-   State: ERROR.
+@brief 函数作用：错误状态。
+@param fsm 有限状态机。
+@param datagram 使用的数据报。
+@return 无返回值。
+@details 该函数为空，表示在错误状态下不执行任何操作。
 */
 
 void ec_fsm_coe_error(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 使用的数据报。 */
 )
 {
 }
@@ -3486,12 +3784,16 @@ void ec_fsm_coe_error(
 /*****************************************************************************/
 
 /**
-   State: END.
+@brief 函数作用：结束状态。
+@param fsm 有限状态机。
+@param datagram 使用的数据报。
+@return 无返回值。
+@details 该函数为空，表示在结束状态下不执行任何操作。
 */
 
 void ec_fsm_coe_end(
-    ec_fsm_coe_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_coe_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 使用的数据报。 */
 )
 {
 }

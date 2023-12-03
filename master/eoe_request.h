@@ -44,30 +44,30 @@
 
 /*****************************************************************************/
 
-/** Ethernet-over-EtherCAT set IP parameter request.
- */
+/** EOE设置IP参数请求结构体 */
 typedef struct
 {
-    struct list_head list;             /**< List item. */
-    ec_internal_request_state_t state; /**< Request state. */
-    unsigned long jiffies_sent;        /**< Jiffies, when the request was sent. */
+    struct list_head list;             /**< 链表项 */
+    ec_internal_request_state_t state; /**< 请求状态 */
+    unsigned long jiffies_sent;        /**< 发送请求时的时间戳 */
 
-    uint8_t mac_address_included;
-    uint8_t ip_address_included;
-    uint8_t subnet_mask_included;
-    uint8_t gateway_included;
-    uint8_t dns_included;
-    uint8_t name_included;
+    uint8_t mac_address_included; /**< MAC地址是否包含 */
+    uint8_t ip_address_included; /**< IP地址是否包含 */
+    uint8_t subnet_mask_included; /**< 子网掩码是否包含 */
+    uint8_t gateway_included; /**< 网关是否包含 */
+    uint8_t dns_included; /**< DNS是否包含 */
+    uint8_t name_included; /**< 名称是否包含 */
 
-    unsigned char mac_address[ETH_ALEN];
-    uint32_t ip_address;
-    uint32_t subnet_mask;
-    uint32_t gateway;
-    uint32_t dns;
-    char name[EC_MAX_HOSTNAME_SIZE];
+    unsigned char mac_address[ETH_ALEN]; /**< MAC地址 */
+    uint32_t ip_address; /**< IP地址 */
+    uint32_t subnet_mask; /**< 子网掩码 */
+    uint32_t gateway; /**< 网关 */
+    uint32_t dns; /**< DNS */
+    char name[EC_MAX_HOSTNAME_SIZE]; /**< 名称 */
 
-    uint16_t result;
+    uint16_t result; /**< 结果 */
 } ec_eoe_request_t;
+
 
 /*****************************************************************************/
 

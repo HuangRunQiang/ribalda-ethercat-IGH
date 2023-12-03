@@ -41,18 +41,22 @@
 
 /*****************************************************************************/
 
-/** FMMU configuration constructor.
- *
- * Inits an FMMU configuration, sets the logical start address and adds the
- * process data size for the mapped PDOs of the given direction to the domain
- * data size.
+/**
+ * @brief 初始化FMMU配置。
+ * @param fmmu EtherCAT FMMU配置。
+ * @param sc EtherCAT从站配置。
+ * @param domain EtherCAT域。
+ * @param sync_index 使用的同步管理器索引。
+ * @param dir PDO的方向。
+ * @return 无返回值。
+ * @details 该函数用于初始化FMMU配置。它会初始化配置的各个字段，并将配置添加到域中。
  */
 void ec_fmmu_config_init(
-    ec_fmmu_config_t *fmmu, /**< EtherCAT FMMU configuration. */
-    ec_slave_config_t *sc,  /**< EtherCAT slave configuration. */
-    ec_domain_t *domain,    /**< EtherCAT domain. */
-    uint8_t sync_index,     /**< Sync manager index to use. */
-    ec_direction_t dir      /**< PDO direction. */
+    ec_fmmu_config_t *fmmu, /**< EtherCAT FMMU配置。 */
+    ec_slave_config_t *sc,  /**< EtherCAT从站配置。 */
+    ec_domain_t *domain,    /**< EtherCAT域。 */
+    uint8_t sync_index,     /**< 使用的同步管理器索引。 */
+    ec_direction_t dir      /**< PDO的方向。 */
 )
 {
     INIT_LIST_HEAD(&fmmu->list);
@@ -66,11 +70,17 @@ void ec_fmmu_config_init(
     ec_domain_add_fmmu_config(domain, fmmu);
 }
 
+/**
+ * @brief 设置FMMU配置的域偏移和大小。
+ * @param fmmu EtherCAT FMMU配置。
+ * @param logical_domain_offset 相对于域的逻辑偏移地址。
+ * @param data_size 覆盖的PDO大小。
+ * @return 无返回值。
+ */
 void ec_fmmu_set_domain_offset_size(
-    ec_fmmu_config_t *fmmu,         /**< EtherCAT FMMU configuration. */
-    uint32_t logical_domain_offset, /**< Logical offset address
-        relative to domain->logical_base_address. */
-    unsigned data_size              /**< Covered PDO size. */
+    ec_fmmu_config_t *fmmu,         /**< EtherCAT FMMU配置。 */
+    uint32_t logical_domain_offset, /**< 相对于域的逻辑偏移地址。 */
+    unsigned data_size              /**< 覆盖的PDO大小。 */
 )
 {
     fmmu->logical_domain_offset = logical_domain_offset;
@@ -79,14 +89,18 @@ void ec_fmmu_set_domain_offset_size(
 
 /*****************************************************************************/
 
-/** Initializes an FMMU configuration page.
- *
- * The referenced memory (\a data) must be at least EC_FMMU_PAGE_SIZE bytes.
+/**
+ * @brief 初始化FMMU配置页。
+ * @param fmmu EtherCAT FMMU配置。
+ * @param sync 同步管理器。
+ * @param data 配置页内存。
+ * @return 无返回值。
+ * @details 该函数用于初始化FMMU配置页。传入的内存（\a data）大小必须至少为EC_FMMU_PAGE_SIZE字节。
  */
 void ec_fmmu_config_page(
-    const ec_fmmu_config_t *fmmu, /**< EtherCAT FMMU configuration. */
-    const ec_sync_t *sync,        /**< Sync manager. */
-    uint8_t *data                 /**> Configuration page memory. */
+    const ec_fmmu_config_t *fmmu, /**< EtherCAT FMMU配置。 */
+    const ec_sync_t *sync,        /**< 同步管理器。 */
+    uint8_t *data                 /**> 配置页内存。 */
 )
 {
     EC_CONFIG_DBG(fmmu->sc, 1, "FMMU: LogOff 0x%08X, Size %3u,"
@@ -97,14 +111,13 @@ void ec_fmmu_config_page(
 
     EC_WRITE_U32(data, fmmu->domain->logical_base_address +
                            fmmu->logical_domain_offset);
-    EC_WRITE_U16(data + 4, fmmu->data_size); // size of fmmu
-    EC_WRITE_U8(data + 6, 0x00);             // logical start bit
-    EC_WRITE_U8(data + 7, 0x07);             // logical end bit
+    EC_WRITE_U16(data + 4, fmmu->data_size); // fmmu的大小
+    EC_WRITE_U8(data + 6, 0x00);             // 逻辑起始位
+    EC_WRITE_U8(data + 7, 0x07);             // 逻辑结束位
     EC_WRITE_U16(data + 8, sync->physical_start_address);
-    EC_WRITE_U8(data + 10, 0x00); // physical start bit
+    EC_WRITE_U8(data + 10, 0x00); // 物理起始位
     EC_WRITE_U8(data + 11, fmmu->dir == EC_DIR_INPUT ? 0x01 : 0x02);
-    EC_WRITE_U16(data + 12, 0x0001); // enable
-    EC_WRITE_U16(data + 14, 0x0000); // reserved
+    EC_WRITE_U16(data + 12, 0x0001); // 使能
+    EC_WRITE_U16(data + 14, 0x0000); // 保留
 }
-
 /*****************************************************************************/

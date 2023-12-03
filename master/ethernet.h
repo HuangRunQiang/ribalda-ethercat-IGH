@@ -47,16 +47,15 @@
 
 /*****************************************************************************/
 
-/** EoE frame types.
- */
+/** EoE帧类型 */
 enum
 {
-    EC_EOE_TYPE_FRAME_FRAG = 0x00,    /** EoE Frame Fragment Tx & Rx. */
-    EC_EOE_TYPE_TIMESTAMP_RES = 0x01, /** EoE Timestamp Response. */
-    EC_EOE_TYPE_INIT_REQ = 0x02,      /** EoE Init, Set IP Parameter Request. */
-    EC_EOE_TYPE_INIT_RES = 0x03,      /** EoE Init, Set IP Parameter Response. */
-    EC_EOE_TYPE_MACFILTER_REQ = 0x04, /** EoE Set MAC Address Filter Request. */
-    EC_EOE_TYPE_MACFILTER_RES = 0x05, /** EoE Set MAC Address Filter Response. */
+    EC_EOE_TYPE_FRAME_FRAG = 0x00,    /** EoE帧分片发送和接收. */
+    EC_EOE_TYPE_TIMESTAMP_RES = 0x01, /** EoE时间戳响应. */
+    EC_EOE_TYPE_INIT_REQ = 0x02,      /** EoE初始化，设置IP参数请求. */
+    EC_EOE_TYPE_INIT_RES = 0x03,      /** EoE初始化，设置IP参数响应. */
+    EC_EOE_TYPE_MACFILTER_REQ = 0x04, /** EoE设置MAC地址过滤器请求. */
+    EC_EOE_TYPE_MACFILTER_RES = 0x05, /** EoE设置MAC地址过滤器响应. */
 };
 
 /*****************************************************************************/
@@ -64,50 +63,50 @@ enum
 typedef struct ec_eoe ec_eoe_t; /**< \see ec_eoe */
 
 /**
-   Ethernet over EtherCAT (EoE) handler.
-   The master creates one of these objects for each slave that supports the
-   EoE protocol.
+   以太网通过EtherCAT（EoE）处理器。
+   主站为每个支持EoE协议的从站创建一个此类对象。
 */
 
 struct ec_eoe
 {
-    struct list_head list;         /**< list item */
-    ec_master_t *master;           /**< pointer to the corresponding master */
-    ec_slave_t *slave;             /**< pointer to the corresponding slave */
-    ec_datagram_t datagram;        /**< datagram */
-    unsigned int queue_datagram;   /**< the datagram is ready for queuing */
-    void (*state)(ec_eoe_t *);     /**< state function for the state machine */
-    struct net_device *dev;        /**< net_device for virtual ethernet device */
-    struct net_device_stats stats; /**< device statistics */
-    unsigned int opened;           /**< net_device is opened */
-    unsigned long rate_jiffies;    /**< time of last rate output */
-    unsigned int have_mbox_lock;   /**< flag to track if we have the mbox lock */
-    unsigned int auto_created;     /**< auto created flag. */
+    struct list_head list;         /**< 链表项 */
+    ec_master_t *master;           /**< 指向对应主站的指针 */
+    ec_slave_t *slave;             /**< 指向对应从站的指针 */
+    ec_datagram_t datagram;        /**< 数据报 */
+    unsigned int queue_datagram;   /**< 数据报已准备排队 */
+    void (*state)(ec_eoe_t *);     /**< 状态机的状态函数 */
+    struct net_device *dev;        /**< 虚拟以太网设备的net_device */
+    struct net_device_stats stats; /**< 设备统计信息 */
+    unsigned int opened;           /**< net_device已打开 */
+    unsigned long rate_jiffies;    /**< 上次速率输出的时间 */
+    unsigned int have_mbox_lock;   /**< 我们是否有邮箱锁的标志 */
+    unsigned int auto_created;     /**< 自动创建的标志 */
 
-    struct sk_buff *rx_skb;       /**< current rx socket buffer */
-    off_t rx_skb_offset;          /**< current write pointer in the socket buffer */
-    size_t rx_skb_size;           /**< size of the allocated socket buffer memory */
-    uint8_t rx_expected_fragment; /**< next expected fragment number */
-    uint32_t rx_counter;          /**< octets received during last second */
-    uint32_t rx_rate;             /**< receive rate (bps) */
-    unsigned int rx_idle;         /**< Idle flag. */
+    struct sk_buff *rx_skb;       /**< 当前接收的套接字缓冲区 */
+    off_t rx_skb_offset;          /**< 套接字缓冲区中的当前写指针 */
+    size_t rx_skb_size;           /**< 分配的套接字缓冲区内存大小 */
+    uint8_t rx_expected_fragment; /**< 下一个期望的分片编号 */
+    uint32_t rx_counter;          /**< 上一秒接收的八位组数 */
+    uint32_t rx_rate;             /**< 接收速率（bps） */
+    unsigned int rx_idle;         /**< 空闲标志 */
 
-    struct sk_buff **tx_ring;      /**< ring for frames to send */
-    unsigned int tx_ring_count;    /**< Transmit ring count. */
-    unsigned int tx_ring_size;     /**< Transmit ring size. */
-    unsigned int tx_next_to_use;   /**< index of frames added to the ring */
-    unsigned int tx_next_to_clean; /**< index of frames being used from the ring */
-    unsigned int tx_queue_active;  /**< kernel netif queue started */
-    struct sk_buff *tx_skb;        /**< current TX frame */
-    uint8_t tx_frame_number;       /**< number of the transmitted frame */
-    uint8_t tx_fragment_number;    /**< number of the fragment */
-    size_t tx_offset;              /**< number of octets sent */
-    uint32_t tx_counter;           /**< octets transmitted during last second */
-    uint32_t tx_rate;              /**< transmit rate (bps) */
-    unsigned int tx_idle;          /**< Idle flag. */
+    struct sk_buff **tx_ring;      /**< 用于发送帧的环形缓冲区 */
+    unsigned int tx_ring_count;    /**< 传输环形缓冲区计数 */
+    unsigned int tx_ring_size;     /**< 传输环形缓冲区大小 */
+    unsigned int tx_next_to_use;   /**< 添加到环形缓冲区的帧的索引 */
+    unsigned int tx_next_to_clean; /**< 从环形缓冲区使用的帧的索引 */
+    unsigned int tx_queue_active;  /**< 内核netif队列已启动 */
+    struct sk_buff *tx_skb;        /**< 当前TX帧 */
+    uint8_t tx_frame_number;       /**< 已传输帧的编号 */
+    uint8_t tx_fragment_number;    /**< 分片编号 */
+    size_t tx_offset;              /**< 已发送的八位组数 */
+    uint32_t tx_counter;           /**< 上一秒传输的八位组数 */
+    uint32_t tx_rate;              /**< 传输速率（bps） */
+    unsigned int tx_idle;          /**< 空闲标志 */
 
-    unsigned int tries; /**< Tries. */
+    unsigned int tries; /**< 尝试次数 */
 };
+
 
 /*****************************************************************************/
 

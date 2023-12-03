@@ -37,7 +37,11 @@
 
 /*****************************************************************************/
 
-/** Dictionary request constructor.
+/**
+ * @brief 初始化字典请求
+ * @param req 字典请求对象指针
+ * @return 无返回值
+ * @details 初始化字典请求对象。
  */
 void ec_dict_request_init(ec_dict_request_t *req)
 {
@@ -46,11 +50,16 @@ void ec_dict_request_init(ec_dict_request_t *req)
 
 /*****************************************************************************/
 
+/**
+ * @brief 执行字典请求读取操作
+ * @param req 字典请求对象指针
+ * @return 无返回值
+ * @details 将字典请求对象的状态设置为已排队。
+ */
 void ec_dict_request_read(ec_dict_request_t *req)
 {
     req->state = EC_INT_REQUEST_QUEUED;
 }
-
 /*****************************************************************************/
 
 /** \cond */

@@ -409,17 +409,21 @@ static void pcap_record(
 
 /*****************************************************************************/
 
-/** Returns a pointer to the device's transmit memory.
+/**
+ * @brief 返回指向设备传输内存的指针。
  *
- * \return pointer to the TX socket buffer
+ * @param device EtherCAT设备。
+ * @return 指向TX套接字缓冲区的指针。
+ *
+ * @details 此函数返回指向设备的传输内存的指针。
+ * 它通过循环遍历套接字缓冲区，以防止多个帧在发送过程中发生竞争条件，
+ * 如果DMA在它们之间没有被调度。
  */
 uint8_t *ec_device_tx_data(
-    ec_device_t *device /**< EtherCAT device */
+    ec_device_t *device /**< EtherCAT设备 */
 )
 {
-    /* cycle through socket buffers, because otherwise there is a race
-     * condition, if multiple frames are sent and the DMA is not scheduled in
-     * between. */
+    /* 循环遍历套接字缓冲区，以防止多个帧在发送过程中发生竞争条件 */
     device->tx_ring_index++;
     device->tx_ring_index %= EC_TX_RING_SIZE;
     return device->tx_skb[device->tx_ring_index]->data + ETH_HLEN;
@@ -427,28 +431,38 @@ uint8_t *ec_device_tx_data(
 
 /*****************************************************************************/
 
-/** Sends the content of the transmit socket buffer.
+/**
+ * @brief 发送传输套接字缓冲区的内容。
  *
- * Cuts the socket buffer content to the (now known) size, and calls the
- * start_xmit() function of the assigned net_device.
+ * 将套接字缓冲区的内容截断为（现在已知的）大小，并调用分配的net_device的start_xmit()函数。
+ *
+ * @param device EtherCAT设备。
+ * @param size 要发送的字节数。
+ *
+ * @details 此函数发送传输套接字缓冲区的内容。
+ * 它将套接字缓冲区的长度设置为ETH_HLEN + size。
+ * 如果设备的debug_level大于1，则打印发送的帧内容。
+ * 然后开始发送。
+ *
+ * @note 如果成功发送帧，则更新设备的统计信息。
  */
 void ec_device_send(
-    ec_device_t *device, /**< EtherCAT device */
-    size_t size          /**< number of bytes to send */
+    ec_device_t *device, /**< EtherCAT设备 */
+    size_t size          /**< 要发送的字节数 */
 )
 {
     struct sk_buff *skb = device->tx_skb[device->tx_ring_index];
 
-    // set the right length for the data
+    // 设置数据的正确长度
     skb->len = ETH_HLEN + size;
 
     if (unlikely(device->master->debug_level > 1))
     {
-        EC_MASTER_DBG(device->master, 2, "Sending frame:\n");
+        EC_MASTER_DBG(device->master, 2, "发送帧:\n");
         ec_print_data(skb->data, ETH_HLEN + size);
     }
 
-    // start sending
+    // 开始发送
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
     if (device->dev->netdev_ops->ndo_start_xmit(skb, device->dev) ==
         NETDEV_TX_OK)
@@ -477,15 +491,20 @@ void ec_device_send(
 
 /*****************************************************************************/
 
-/** Clears the frame statistics.
+/**
+ * @brief 清除帧统计信息。
+ *
+ * @param device EtherCAT设备。
+ *
+ * @details 此函数将帧统计信息归零。
  */
 void ec_device_clear_stats(
-    ec_device_t *device /**< EtherCAT device */
+    ec_device_t *device /**< EtherCAT设备 */
 )
 {
     unsigned int i;
 
-    // zero frame statistics
+    // 归零帧统计信息
     device->tx_count = 0;
     device->last_tx_count = 0;
     device->rx_count = 0;
@@ -507,6 +526,13 @@ void ec_device_clear_stats(
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
 
+/**
+ * @brief 获取当前时间。
+ *
+ * @param tv 指向时间结构的指针。
+ *
+ * @details 此函数获取当前的时间。
+ */
 static void do_gettimeofday(struct timeval *tv)
 {
     struct timespec64 ts;
@@ -521,13 +547,24 @@ static void do_gettimeofday(struct timeval *tv)
 /*****************************************************************************/
 
 #ifdef EC_DEBUG_RING
-/** Appends frame data to the debug ring.
+/**
+ * @brief 将帧数据追加到调试环形缓冲区。
+ *
+ * @param device EtherCAT 设备
+ * @param dir 方向
+ * @param data 帧数据
+ * @param size 数据大小
+ *
+ * @details 此函数将帧数据追加到 EtherCAT 设备的调试环形缓冲区中。
+ *          它会将数据复制到缓冲区中，并更新相关的索引和计数。
+ *
+ * @note 调试环形缓冲区的大小由 EC_DEBUG_RING_SIZE 定义。
  */
 void ec_device_debug_ring_append(
-    ec_device_t *device,      /**< EtherCAT device */
-    ec_debug_frame_dir_t dir, /**< direction */
-    const void *data,         /**< frame data */
-    size_t size               /**< data size */
+    ec_device_t *device,      /**< EtherCAT 设备 */
+    ec_debug_frame_dir_t dir, /**< 方向 */
+    const void *data,         /**< 帧数据 */
+    size_t size               /**< 数据大小 */
 )
 {
     ec_debug_frame_t *df = &device->debug_frames[device->debug_frame_index];
@@ -550,12 +587,19 @@ void ec_device_debug_ring_append(
         device->debug_frame_count++;
 }
 
+
 /*****************************************************************************/
 
-/** Outputs the debug ring.
+/** 
+ * @brief 输出调试环形缓冲区。
+ *
+ * @param device EtherCAT 设备
+ *
+ * @details 此函数用于输出 EtherCAT 设备的调试环形缓冲区。
+ *          它会按照时间顺序打印调试帧的信息和数据。
  */
 void ec_device_debug_ring_print(
-    const ec_device_t *device /**< EtherCAT device */
+    const ec_device_t *device /**< EtherCAT 设备 */
 )
 {
     int i;
@@ -563,13 +607,13 @@ void ec_device_debug_ring_print(
     const ec_debug_frame_t *df;
     struct timeval t0, diff;
 
-    // calculate index of the newest frame in the ring to get its time
+    // 计算环形缓冲区中最新帧的索引以获取其时间
     ring_index = (device->debug_frame_index + EC_DEBUG_RING_SIZE - 1) % EC_DEBUG_RING_SIZE;
     t0 = device->debug_frames[ring_index].t;
 
-    EC_MASTER_DBG(device->master, 1, "Debug ring %u:\n", ring_index);
+    EC_MASTER_DBG(device->master, 1, "调试环形缓冲区 %u:\n", ring_index);
 
-    // calculate index of the oldest frame in the ring
+    // 计算环形缓冲区中最旧帧的索引
     ring_index = (device->debug_frame_index + EC_DEBUG_RING_SIZE - device->debug_frame_count) % EC_DEBUG_RING_SIZE;
 
     for (i = 0; i < device->debug_frame_count; i++)
@@ -577,29 +621,35 @@ void ec_device_debug_ring_print(
         df = &device->debug_frames[ring_index];
         timersub(&t0, &df->t, &diff);
 
-        EC_MASTER_DBG(device->master, 1, "Frame %u, dt=%u.%06u s, %s:\n",
+        EC_MASTER_DBG(device->master, 1, "帧 %u, dt=%u.%06u 秒, %s:\n",
                       i + 1 - device->debug_frame_count,
                       (unsigned int)diff.tv_sec,
                       (unsigned int)diff.tv_usec,
-                      (df->dir == TX) ? "TX" : "RX");
+                      (df->dir == TX) ? "发送" : "接收");
         ec_print_data(df->data, df->data_size);
 
         ring_index++;
         ring_index %= EC_DEBUG_RING_SIZE;
     }
 }
+
 #endif
 
 /*****************************************************************************/
 
-/** Calls the poll function of the assigned net_device.
+/**
+ * @brief 调用分配的 net_device 的 poll 函数。
  *
- * The master itself works without using interrupts. Therefore the processing
- * of received data and status changes of the network device has to be
- * done by the master calling the ISR "manually".
+ * 主站本身不使用中断。因此，必须由主站手动调用 ISR 来处理接收到的数据和网络设备状态的变化。
+ *
+ * @param device EtherCAT 设备
+ *
+ * @details
+ * 该函数调用分配的 net_device 的 poll 函数。如果启用 EC_HAVE_CYCLES 宏，将记录循环的时间。
+ * 然后，记录 jiffies 和时间戳，用于调试目的。最后，调用设备的 poll 函数，处理接收到的数据和状态变化。
  */
 void ec_device_poll(
-    ec_device_t *device /**< EtherCAT device */
+    ec_device_t *device /**< EtherCAT 设备 */
 )
 {
 #ifdef EC_HAVE_CYCLES
@@ -615,12 +665,29 @@ void ec_device_poll(
     device->poll(device->dev);
 }
 
+
 /*****************************************************************************/
 
-/** Update device statistics.
+/**
+ * @brief 更新设备统计信息。
+ * 
+ * 更新设备的传输统计信息，包括帧率和字节率，使用低通滤波器对统计信息进行平滑处理。
+ * 
+ * @param device EtherCAT设备指针。
+ * 
+ * @details
+ * 该函数用于更新EtherCAT设备的统计信息，包括传输帧率和传输字节率。通过计算帧率和字节率的差值，
+ * 然后应用低通滤波器，以平滑处理这些统计信息，提供更稳定的结果。更新后的统计信息存储在设备结构体中，
+ * 以备将来使用。
+ * 
+ * 低通滤波器的公式如下：
+ * Y_n = y_(n - 1) + T / tau * (x - y_(n - 1))
+ * 其中，T为采样周期，此处取值为1。对于每种统计信息（帧率和字节率），分别应用该滤波器计算平滑值。
+ * 
+ * @return 无返回值。
  */
 void ec_device_update_stats(
-    ec_device_t *device /**< EtherCAT device */
+    ec_device_t *device /**< EtherCAT设备指针 */
 )
 {
     unsigned int i;
@@ -630,7 +697,7 @@ void ec_device_update_stats(
     s32 tx_byte_rate = (device->tx_bytes - device->last_tx_bytes);
     s32 rx_byte_rate = (device->rx_bytes - device->last_rx_bytes);
 
-    /* Low-pass filter:
+    /* 低通滤波器：
      *      Y_n = y_(n - 1) + T / tau * (x - y_(n - 1))   | T = 1
      *   -> Y_n += (x - y_(n - 1)) / tau
      */
@@ -653,21 +720,27 @@ void ec_device_update_stats(
     device->last_rx_bytes = device->rx_bytes;
 }
 
+
 /******************************************************************************
- *  Device interface
+ *  设备接口
  *****************************************************************************/
 
-/** Withdraws an EtherCAT device from the master.
+/** 从主站中撤销一个EtherCAT设备。
  *
- * The device is disconnected from the master and all device ressources
- * are freed.
+ * 设备从主站断开连接，并释放所有设备资源。
  *
- * \attention Before calling this function, the ecdev_stop() function has
- *            to be called, to be sure that the master does not use the device
- *            any more.
+ * \attention 在调用此函数之前，必须调用ecdev_stop()函数，以确保主站不再使用该设备。
  * \ingroup DeviceInterface
+ *
+ * @param device EtherCAT设备
+ * @return 无
+ * @details
+ *     如果设备是主站的主设备（EC_DEVICE_MAIN），将dev_str设置为"主站"；
+ *     如果设备是主站的备份设备（EC_DEVICE_BACKUP），将dev_str设置为"备份"；
+ *     否则，记录警告信息并将dev_str设置为"未知设备"。
+ *     输出释放设备的信息，包括设备类型和MAC地址。
  */
-void ecdev_withdraw(ec_device_t *device /**< EtherCAT device */)
+void ecdev_withdraw(ec_device_t *device /**< EtherCAT设备 */)
 {
     ec_master_t *master = device->master;
     char dev_str[20], mac_str[20];
@@ -676,34 +749,41 @@ void ecdev_withdraw(ec_device_t *device /**< EtherCAT device */)
 
     if (device == &master->devices[EC_DEVICE_MAIN])
     {
-        sprintf(dev_str, "main");
+        sprintf(dev_str, "主站");
     }
     else if (device == &master->devices[EC_DEVICE_BACKUP])
     {
-        sprintf(dev_str, "backup");
+        sprintf(dev_str, "备份");
     }
     else
     {
-        EC_MASTER_WARN(master, "%s() called with unknown device %s!\n",
+        EC_MASTER_WARN(master, "%s() 被调用，使用了未知设备 %s!\n",
                        __func__, mac_str);
-        sprintf(dev_str, "UNKNOWN");
+        sprintf(dev_str, "未知设备");
     }
 
-    EC_MASTER_INFO(master, "Releasing %s device %s.\n", dev_str, mac_str);
+    EC_MASTER_INFO(master, "释放 %s 设备 %s。\n", dev_str, mac_str);
 
     ec_lock_down(&master->device_sem);
     ec_device_detach(device);
     ec_lock_up(&master->device_sem);
 }
 
+
 /*****************************************************************************/
 
-/** Opens the network device and makes the master enter IDLE phase.
+/** 打开网络设备并使主站进入IDLE阶段。
  *
- * \return 0 on success, else < 0
+ * \return 成功返回0，否则返回 < 0
  * \ingroup DeviceInterface
+ *
+ * @param device EtherCAT设备
+ * @details
+ *     打开指定的EtherCAT设备，并检查所有设备是否已打开。如果所有设备都已打开，
+ *     则使主站进入IDLE阶段。如果设备打开失败，记录错误信息并返回相应的错误代码。
+ *     如果进入IDLE阶段失败，记录主站错误信息并返回相应的错误代码。
  */
-int ecdev_open(ec_device_t *device /**< EtherCAT device */)
+int ecdev_open(ec_device_t *device /**< EtherCAT设备 */)
 {
     int ret;
     ec_master_t *master = device->master;
@@ -712,7 +792,7 @@ int ecdev_open(ec_device_t *device /**< EtherCAT device */)
     ret = ec_device_open(device);
     if (ret)
     {
-        EC_MASTER_ERR(master, "Failed to open device!\n");
+        EC_MASTER_ERR(master, "打开设备失败！\n");
         return ret;
     }
 
@@ -731,7 +811,7 @@ int ecdev_open(ec_device_t *device /**< EtherCAT device */)
         ret = ec_master_enter_idle_phase(device->master);
         if (ret)
         {
-            EC_MASTER_ERR(device->master, "Failed to enter IDLE phase!\n");
+            EC_MASTER_ERR(device->master, "进入IDLE阶段失败！\n");
             return ret;
         }
     }
@@ -739,14 +819,20 @@ int ecdev_open(ec_device_t *device /**< EtherCAT device */)
     return 0;
 }
 
+
 /*****************************************************************************/
 
-/** Makes the master leave IDLE phase and closes the network device.
+/** 使主站离开IDLE阶段并关闭网络设备。
  *
- * \return 0 on success, else < 0
+ * \return 成功返回0，否则返回 < 0
  * \ingroup DeviceInterface
+ *
+ * @param device EtherCAT设备
+ * @details
+ *     如果主站处于IDLE阶段，使主站离开IDLE阶段。
+ *     然后关闭指定的EtherCAT设备。如果关闭设备失败，记录警告信息。
  */
-void ecdev_close(ec_device_t *device /**< EtherCAT device */)
+void ecdev_close(ec_device_t *device /**< EtherCAT设备 */)
 {
     ec_master_t *master = device->master;
 
@@ -757,25 +843,34 @@ void ecdev_close(ec_device_t *device /**< EtherCAT device */)
 
     if (ec_device_close(device))
     {
-        EC_MASTER_WARN(master, "Failed to close device!\n");
+        EC_MASTER_WARN(master, "关闭设备失败！\n");
     }
 }
 
 /*****************************************************************************/
 
-/** Accepts a received frame.
+/** 接受一个接收到的帧。
  *
- * Forwards the received data to the master. The master will analyze the frame
- * and dispatch the received commands to the sending instances.
+ * 将接收到的数据转发给主站。主站将分析帧并将接收到的命令分派到发送实例。
  *
- * The data have to begin with the Ethernet header (target MAC address).
+ * 数据必须以以太网头（目标MAC地址）开头。
  *
  * \ingroup DeviceInterface
+ *
+ * @param device EtherCAT设备
+ * @param data 指向接收到的数据的指针
+ * @param size 接收到的字节数
+ * @details
+ *     如果数据为NULL，记录警告信息并返回。
+ *     更新设备的接收统计信息，并将接收到的数据写入调试记录。
+ *     如果主站的调试级别大于1，记录接收到的帧的信息。
+ *     将数据传递给pcap记录和EtherCAT调试发送功能。
+ *     将数据传递给主站的接收数据报处理函数。
  */
 void ecdev_receive(
-    ec_device_t *device, /**< EtherCAT device */
-    const void *data,    /**< pointer to received data */
-    size_t size          /**< number of bytes received */
+    ec_device_t *device, /**< EtherCAT设备 */
+    const void *data,    /**< 指向接收到的数据的指针 */
+    size_t size          /**< 接收到的字节数 */
 )
 {
     const void *ec_data = data + ETH_HLEN;
@@ -783,7 +878,7 @@ void ecdev_receive(
 
     if (unlikely(!data))
     {
-        EC_MASTER_WARN(device->master, "%s() called with NULL data.\n",
+        EC_MASTER_WARN(device->master, "%s() 被调用，使用了NULL数据。\n",
                        __func__);
         return;
     }
@@ -795,7 +890,7 @@ void ecdev_receive(
 
     if (unlikely(device->master->debug_level > 1))
     {
-        EC_MASTER_DBG(device->master, 2, "Received frame:\n");
+        EC_MASTER_DBG(device->master, 2, "接收到的帧信息:\n");
         ec_print_data(data, size);
     }
 
@@ -812,21 +907,26 @@ void ecdev_receive(
 
 /*****************************************************************************/
 
-/** Sets a new link state.
+/** 设置新的链路状态。
  *
- * If the device notifies the master about the link being down, the master
- * will not try to send frames using this device.
+ * 如果设备通知主站链路已断开，主站将不会尝试使用此设备发送帧。
  *
  * \ingroup DeviceInterface
+ *
+ * @param device EtherCAT设备
+ * @param state 新的链路状态
+ * @details
+ *     如果设备不为NULL，设置设备的链路状态为新的状态。
+ *     记录链路状态的改变信息。
  */
 void ecdev_set_link(
-    ec_device_t *device, /**< EtherCAT device */
-    uint8_t state        /**< new link state */
+    ec_device_t *device, /**< EtherCAT设备 */
+    uint8_t state        /**< 新的链路状态 */
 )
 {
     if (unlikely(!device))
     {
-        EC_WARN("ecdev_set_link() called with null device!\n");
+        EC_WARN("ecdev_set_link() 被调用，使用了null设备！\n");
         return;
     }
 
@@ -834,31 +934,36 @@ void ecdev_set_link(
     {
         device->link_state = state;
         EC_MASTER_INFO(device->master,
-                       "Link state of %s changed to %s.\n",
+                       "%s 的链路状态已更改为 %s。\n",
                        device->dev->name, (state ? "UP" : "DOWN"));
     }
 }
 
 /*****************************************************************************/
 
-/** Reads the link state.
+/** 读取链路状态。
  *
  * \ingroup DeviceInterface
  *
- * \return Link state.
+ * @param device EtherCAT设备
+ * @return 链路状态
+ * @details
+ *     如果设备不为NULL，返回设备的链路状态。
+ *     否则，记录警告信息并返回0。
  */
 uint8_t ecdev_get_link(
-    const ec_device_t *device /**< EtherCAT device */
+    const ec_device_t *device /**< EtherCAT设备 */
 )
 {
     if (unlikely(!device))
     {
-        EC_WARN("ecdev_get_link() called with null device!\n");
+        EC_WARN("ecdev_get_link() 被调用，使用了null设备！\n");
         return 0;
     }
 
     return device->link_state;
 }
+
 
 /*****************************************************************************/
 

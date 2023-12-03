@@ -29,9 +29,9 @@
  *****************************************************************************/
 
 /**
-   \file
-   EtherCAT FoE state machines.
-*/
+ * \file
+ * EtherCAT FoE状态机。
+ */
 
 /*****************************************************************************/
 
@@ -48,24 +48,26 @@
 
 typedef struct ec_fsm_foe ec_fsm_foe_t; /**< \see ec_fsm_foe */
 
-/** Finite state machines for the CANopen-over-EtherCAT protocol.
+/** CANopen-over-EtherCAT协议的有限状态机。
  */
 struct ec_fsm_foe
 {
-    ec_slave_t *slave;    /**< Slave the FSM runs on. */
-    unsigned int retries; /**< Retries upon datagram timeout */
+    ec_slave_t *slave;    /**< 运行FSM的从设备。 */
+    unsigned int retries; /**< 数据报超时时的重试次数 */
 
-    void (*state)(ec_fsm_foe_t *, ec_datagram_t *); /**< FoE state function. */
-    ec_datagram_t *datagram;                        /**< Datagram used in previous step. */
-    unsigned long jiffies_start;                    /**< FoE timestamp. */
-    ec_foe_request_t *request;                      /**< FoE request. */
+    void (*state)(ec_fsm_foe_t *, ec_datagram_t *); /**< FoE状态函数。 */
+    ec_datagram_t *datagram;                        /**< 在前一步中使用的数据报。 */
+    unsigned long jiffies_start;                    /**< FoE时间戳。 */
+    ec_foe_request_t *request;                      /**< FoE请求。 */
 
-    uint32_t buffer_size;   /**< Size of transmit/receive buffer. */
-    uint32_t buffer_offset; /**< Offset of data to transmit/receive next. */
-    uint32_t last_packet;   /**< Current packet is last one to send/receive. */
-    uint32_t packet_no;     /**< FoE packet number. */
-    uint32_t current_size;  /**< Size of current packet to send. */
+    uint32_t buffer_size;   /**< 传输/接收缓冲区的大小。 */
+    uint32_t buffer_offset; /**< 下一个要传输/接收的数据的偏移量。 */
+    uint32_t last_packet;   /**< 当前数据包是否为最后一个要发送/接收的数据包。 */
+    uint32_t packet_no;     /**< FoE数据包编号。 */
+    uint32_t current_size;  /**< 要发送的当前数据包的大小。 */
 };
+
+#endif 
 
 /*****************************************************************************/
 
