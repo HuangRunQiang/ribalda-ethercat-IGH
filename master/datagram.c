@@ -83,11 +83,16 @@ static const char *type_strings[] = {
 
 /*****************************************************************************/
 
-/** Constructor.
+/**
+ * @brief 构造函数。
+ *
+ * @param datagram EtherCAT数据报文。
+ *
+ * @details 初始化EtherCAT数据报文的各个成员变量。
  */
-void ec_datagram_init(ec_datagram_t *datagram /**< EtherCAT datagram. */)
+void ec_datagram_init(ec_datagram_t *datagram /**< EtherCAT数据报文。 */)
 {
-    INIT_LIST_HEAD(&datagram->queue); // mark as unqueued
+    INIT_LIST_HEAD(&datagram->queue); // 标记为未排队
     datagram->device_index = EC_DEVICE_MAIN;
     datagram->type = EC_DATAGRAM_NONE;
     memset(datagram->address, 0x00, EC_ADDR_LEN);
@@ -114,9 +119,14 @@ void ec_datagram_init(ec_datagram_t *datagram /**< EtherCAT datagram. */)
 
 /*****************************************************************************/
 
-/** Destructor.
+/**
+ * @brief 析构函数。
+ *
+ * @param datagram EtherCAT数据报文。
+ *
+ * @details 清理EtherCAT数据报文的资源，包括从队列中移除和释放内部分配的数据内存。
  */
-void ec_datagram_clear(ec_datagram_t *datagram /**< EtherCAT datagram. */)
+void ec_datagram_clear(ec_datagram_t *datagram /**< EtherCAT数据报文。 */)
 {
     ec_datagram_unqueue(datagram);
 
@@ -129,9 +139,14 @@ void ec_datagram_clear(ec_datagram_t *datagram /**< EtherCAT datagram. */)
 
 /*****************************************************************************/
 
-/** Unqueue datagram.
+/**
+ * @brief 从队列中移除数据报文。
+ *
+ * @param datagram EtherCAT数据报文。
+ *
+ * @details 如果数据报文在队列中，将其从队列中移除。
  */
-void ec_datagram_unqueue(ec_datagram_t *datagram /**< EtherCAT datagram. */)
+void ec_datagram_unqueue(ec_datagram_t *datagram /**< EtherCAT数据报文。 */)
 {
     if (!list_empty(&datagram->queue))
     {
@@ -141,18 +156,20 @@ void ec_datagram_unqueue(ec_datagram_t *datagram /**< EtherCAT datagram. */)
 
 /*****************************************************************************/
 
-/** Allocates internal payload memory.
+/**
+ * @brief 分配内部负载内存。
  *
- * If the allocated memory is already larger than requested, nothing ist done.
+ * @param datagram EtherCAT数据报文。
+ * @param size     新的负载大小（字节）。
  *
- * \attention If external payload memory has been provided, no range checking
- *            is done!
+ * @return 成功返回0，否则返回-ENOMEM。
  *
- * \return 0 in case of success, otherwise \a -ENOMEM.
+ * @details 如果已分配的内存大小已经大于请求的大小，则不进行任何操作。
+ *          如果提供了外部负载内存，则不进行范围检查。
  */
 int ec_datagram_prealloc(
-    ec_datagram_t *datagram, /**< EtherCAT datagram. */
-    size_t size              /**< New payload size in bytes. */
+    ec_datagram_t *datagram, /**< EtherCAT数据报文。 */
+    size_t size              /**< 新的负载大小（字节）。 */
 )
 {
     if (datagram->data_origin == EC_ORIG_EXTERNAL || size <= datagram->mem_size)
@@ -177,22 +194,33 @@ int ec_datagram_prealloc(
 
 /*****************************************************************************/
 
-/** Fills the datagram payload memory with zeros.
+/**
+ * @brief 将数据报文负载内存填充为零。
+ *
+ * @param datagram EtherCAT数据报文。
+ *
+ * @details 将数据报文的负载内存填充为零。
  */
-void ec_datagram_zero(ec_datagram_t *datagram /**< EtherCAT datagram. */)
+void ec_datagram_zero(ec_datagram_t *datagram /**< EtherCAT数据报文。 */)
 {
     memset(datagram->data, 0x00, datagram->data_size);
 }
 
 /*****************************************************************************/
 
-/** Copies a previously constructed datagram for repeated send.
+/**
+ * @brief 复制先前构造的数据报文以便重复发送。
  *
- * \return Return value of ec_datagram_prealloc().
+ * @param datagram 目标EtherCAT数据报文。
+ * @param source   要复制的EtherCAT数据报文。
+ *
+ * @return ec_datagram_prealloc()的返回值。
+ *
+ * @details 复制源EtherCAT数据报文的内容到目标EtherCAT数据报文，用于重复发送。
  */
 int ec_datagram_repeat(
-    ec_datagram_t *datagram, /**< EtherCAT datagram to update. */
-    const ec_datagram_t *source /**< EtherCAT datagram to copy. */)
+    ec_datagram_t *datagram, /**< 目标EtherCAT数据报文。 */
+    const ec_datagram_t *source /**< 要复制的EtherCAT数据报文。 */)
 {
     int ret;
     size_t data_size = source->data_size;
@@ -208,15 +236,23 @@ int ec_datagram_repeat(
 
 /*****************************************************************************/
 
-/** Initializes an EtherCAT APRD datagram.
+/**
+ * @brief 初始化EtherCAT APRD数据报文。
  *
- * \return Return value of ec_datagram_prealloc().
+ * @param datagram      EtherCAT数据报文。
+ * @param ring_position 自动递增地址。
+ * @param mem_address   物理内存地址。
+ * @param data_size     要读取的字节数。
+ *
+ * @return ec_datagram_prealloc()的返回值。
+ *
+ * @details 初始化EtherCAT APRD（Auto-increment Physical Read）数据报文。
  */
 int ec_datagram_aprd(
-    ec_datagram_t *datagram, /**< EtherCAT datagram. */
-    uint16_t ring_position,  /**< Auto-increment address. */
-    uint16_t mem_address,    /**< Physical memory address. */
-    size_t data_size         /**< Number of bytes to read. */
+    ec_datagram_t *datagram, /**< EtherCAT数据报文。 */
+    uint16_t ring_position,  /**< 自动递增地址。 */
+    uint16_t mem_address,    /**< 物理内存地址。 */
+    size_t data_size         /**< 要读取的字节数。 */
 )
 {
     int ret;
@@ -229,15 +265,23 @@ int ec_datagram_aprd(
 
 /*****************************************************************************/
 
-/** Initializes an EtherCAT APWR datagram.
+/**
+ * @brief 初始化EtherCAT APWR数据报文。
  *
- * \return Return value of ec_datagram_prealloc().
+ * @param datagram      EtherCAT数据报文。
+ * @param ring_position 自动递增地址。
+ * @param mem_address   物理内存地址。
+ * @param data_size     要写入的字节数。
+ *
+ * @return ec_datagram_prealloc()的返回值。
+ *
+ * @details 初始化EtherCAT APWR（Auto-increment Physical Write）数据报文。
  */
 int ec_datagram_apwr(
-    ec_datagram_t *datagram, /**< EtherCAT datagram. */
-    uint16_t ring_position,  /**< Auto-increment address. */
-    uint16_t mem_address,    /**< Physical memory address. */
-    size_t data_size         /**< Number of bytes to write. */
+    ec_datagram_t *datagram, /**< EtherCAT数据报文。 */
+    uint16_t ring_position,  /**< 自动递增地址。 */
+    uint16_t mem_address,    /**< 物理内存地址。 */
+    size_t data_size         /**< 要写入的字节数。 */
 )
 {
     int ret;
@@ -250,15 +294,23 @@ int ec_datagram_apwr(
 
 /*****************************************************************************/
 
-/** Initializes an EtherCAT APRW datagram.
+/**
+ * @brief 初始化EtherCAT APRW数据报文。
  *
- * \return Return value of ec_datagram_prealloc().
+ * @param datagram      EtherCAT数据报文。
+ * @param ring_position 自动递增地址。
+ * @param mem_address   物理内存地址。
+ * @param data_size     要写入的字节数。
+ *
+ * @return ec_datagram_prealloc()的返回值。
+ *
+ * @details 初始化EtherCAT APRW（Auto-increment Physical Read/Write）数据报文。
  */
 int ec_datagram_aprw(
-    ec_datagram_t *datagram, /**< EtherCAT datagram. */
-    uint16_t ring_position,  /**< Auto-increment address. */
-    uint16_t mem_address,    /**< Physical memory address. */
-    size_t data_size         /**< Number of bytes to write. */
+    ec_datagram_t *datagram, /**< EtherCAT数据报文。 */
+    uint16_t ring_position,  /**< 自动递增地址。 */
+    uint16_t mem_address,    /**< 物理内存地址。 */
+    size_t data_size         /**< 要写入的字节数。 */
 )
 {
     int ret;
@@ -271,15 +323,23 @@ int ec_datagram_aprw(
 
 /*****************************************************************************/
 
-/** Initializes an EtherCAT ARMW datagram.
+/**
+ * @brief 初始化EtherCAT ARMW数据报文。
  *
- * \return Return value of ec_datagram_prealloc().
+ * @param datagram      EtherCAT数据报文。
+ * @param ring_position 自动递增地址。
+ * @param mem_address   物理内存地址。
+ * @param data_size     要读取的字节数。
+ *
+ * @return ec_datagram_prealloc()的返回值。
+ *
+ * @details 初始化EtherCAT ARMW（Auto-increment Read/Modify/Write）数据报文。
  */
 int ec_datagram_armw(
-    ec_datagram_t *datagram, /**< EtherCAT datagram. */
-    uint16_t ring_position,  /**< Auto-increment address. */
-    uint16_t mem_address,    /**< Physical memory address. */
-    size_t data_size         /**< Number of bytes to read. */
+    ec_datagram_t *datagram, /**< EtherCAT数据报文。 */
+    uint16_t ring_position,  /**< 自动递增地址。 */
+    uint16_t mem_address,    /**< 物理内存地址。 */
+    size_t data_size         /**< 要读取的字节数。 */
 )
 {
     int ret;
@@ -292,21 +352,29 @@ int ec_datagram_armw(
 
 /*****************************************************************************/
 
-/** Initializes an EtherCAT FPRD datagram.
+/**
+ * @brief 初始化EtherCAT FPRD数据报文。
  *
- * \return Return value of ec_datagram_prealloc().
+ * @param datagram            EtherCAT数据报文。
+ * @param configured_address  配置的站地址。
+ * @param mem_address         物理内存地址。
+ * @param data_size           要读取的字节数。
+ *
+ * @return ec_datagram_prealloc()的返回值。
+ *
+ * @details 初始化EtherCAT FPRD（Fixed Physical Read）数据报文。
  */
 int ec_datagram_fprd(
-    ec_datagram_t *datagram,     /**< EtherCAT datagram. */
-    uint16_t configured_address, /**< Configured station address. */
-    uint16_t mem_address,        /**< Physical memory address. */
-    size_t data_size             /**< Number of bytes to read. */
+    ec_datagram_t *datagram,     /**< EtherCAT数据报文。 */
+    uint16_t configured_address, /**< 配置的站地址。 */
+    uint16_t mem_address,        /**< 物理内存地址。 */
+    size_t data_size             /**< 要读取的字节数。 */
 )
 {
     int ret;
 
     if (unlikely(configured_address == 0x0000))
-        EC_WARN("Using configured station address 0x0000!\n");
+        EC_WARN("使用配置的站地址0x0000！\n");
 
     EC_FUNC_HEADER;
     datagram->type = EC_DATAGRAM_FPRD;
@@ -317,21 +385,29 @@ int ec_datagram_fprd(
 
 /*****************************************************************************/
 
-/** Initializes an EtherCAT FPWR datagram.
+/**
+ * @brief 初始化EtherCAT FPWR数据报文。
  *
- * \return Return value of ec_datagram_prealloc().
+ * @param datagram            EtherCAT数据报文。
+ * @param configured_address  配置的站地址。
+ * @param mem_address         物理内存地址。
+ * @param data_size           要写入的字节数。
+ *
+ * @return ec_datagram_prealloc()的返回值。
+ *
+ * @details 初始化EtherCAT FPWR（Fixed Physical Write）数据报文。
  */
 int ec_datagram_fpwr(
-    ec_datagram_t *datagram,     /**< EtherCAT datagram. */
-    uint16_t configured_address, /**< Configured station address. */
-    uint16_t mem_address,        /**< Physical memory address. */
-    size_t data_size             /**< Number of bytes to write. */
+    ec_datagram_t *datagram,     /**< EtherCAT数据报文。 */
+    uint16_t configured_address, /**< 配置的站地址。 */
+    uint16_t mem_address,        /**< 物理内存地址。 */
+    size_t data_size             /**< 要写入的字节数。 */
 )
 {
     int ret;
 
     if (unlikely(configured_address == 0x0000))
-        EC_WARN("Using configured station address 0x0000!\n");
+        EC_WARN("使用配置的站地址0x0000！\n");
 
     EC_FUNC_HEADER;
     datagram->type = EC_DATAGRAM_FPWR;
@@ -342,21 +418,29 @@ int ec_datagram_fpwr(
 
 /*****************************************************************************/
 
-/** Initializes an EtherCAT FPRW datagram.
+/**
+ * @brief 初始化EtherCAT FPRW数据报文。
  *
- * \return Return value of ec_datagram_prealloc().
+ * @param datagram            EtherCAT数据报文。
+ * @param configured_address  配置的站地址。
+ * @param mem_address         物理内存地址。
+ * @param data_size           要写入的字节数。
+ *
+ * @return ec_datagram_prealloc()的返回值。
+ *
+ * @details 初始化EtherCAT FPRW（Fixed Physical Read/Write）数据报文。
  */
 int ec_datagram_fprw(
-    ec_datagram_t *datagram,     /**< EtherCAT datagram. */
-    uint16_t configured_address, /**< Configured station address. */
-    uint16_t mem_address,        /**< Physical memory address. */
-    size_t data_size             /**< Number of bytes to write. */
+    ec_datagram_t *datagram,     /**< EtherCAT数据报文。 */
+    uint16_t configured_address, /**< 配置的站地址。 */
+    uint16_t mem_address,        /**< 物理内存地址。 */
+    size_t data_size             /**< 要写入的字节数。 */
 )
 {
     int ret;
 
     if (unlikely(configured_address == 0x0000))
-        EC_WARN("Using configured station address 0x0000!\n");
+        EC_WARN("使用配置的站地址0x0000！\n");
 
     EC_FUNC_HEADER;
     datagram->type = EC_DATAGRAM_FPRW;
@@ -367,21 +451,29 @@ int ec_datagram_fprw(
 
 /*****************************************************************************/
 
-/** Initializes an EtherCAT FRMW datagram.
+/**
+ * @brief 初始化EtherCAT FRMW数据报文。
  *
- * \return Return value of ec_datagram_prealloc().
+ * @param datagram            EtherCAT数据报文。
+ * @param configured_address  配置的站地址。
+ * @param mem_address         物理内存地址。
+ * @param data_size           要写入的字节数。
+ *
+ * @return ec_datagram_prealloc()的返回值。
+ *
+ * @details 初始化EtherCAT FRMW（Fixed Register Modify/Write）数据报文。
  */
 int ec_datagram_frmw(
-    ec_datagram_t *datagram,     /**< EtherCAT datagram. */
-    uint16_t configured_address, /**< Configured station address. */
-    uint16_t mem_address,        /**< Physical memory address. */
-    size_t data_size             /**< Number of bytes to write. */
+    ec_datagram_t *datagram,     /**< EtherCAT数据报文。 */
+    uint16_t configured_address, /**< 配置的站地址。 */
+    uint16_t mem_address,        /**< 物理内存地址。 */
+    size_t data_size             /**< 要写入的字节数。 */
 )
 {
     int ret;
 
     if (unlikely(configured_address == 0x0000))
-        EC_WARN("Using configured station address 0x0000!\n");
+        EC_WARN("使用配置的站地址0x0000！\n");
 
     EC_FUNC_HEADER;
     datagram->type = EC_DATAGRAM_FRMW;
@@ -392,14 +484,21 @@ int ec_datagram_frmw(
 
 /*****************************************************************************/
 
-/** Initializes an EtherCAT BRD datagram.
+/**
+ * @brief 初始化EtherCAT BRD数据报文。
  *
- * \return Return value of ec_datagram_prealloc().
+ * @param datagram      EtherCAT数据报文。
+ * @param mem_address   物理内存地址。
+ * @param data_size     要读取的字节数。
+ *
+ * @return ec_datagram_prealloc()的返回值。
+ *
+ * @details 初始化EtherCAT BRD（Broadcast Read）数据报文。
  */
 int ec_datagram_brd(
-    ec_datagram_t *datagram, /**< EtherCAT datagram. */
-    uint16_t mem_address,    /**< Physical memory address. */
-    size_t data_size         /**< Number of bytes to read. */
+    ec_datagram_t *datagram, /**< EtherCAT数据报文。 */
+    uint16_t mem_address,    /**< 物理内存地址。 */
+    size_t data_size         /**< 要读取的字节数。 */
 )
 {
     int ret;
@@ -412,14 +511,21 @@ int ec_datagram_brd(
 
 /*****************************************************************************/
 
-/** Initializes an EtherCAT BWR datagram.
+/**
+ * @brief 初始化EtherCAT BWR数据报文。
  *
- * \return Return value of ec_datagram_prealloc().
+ * @param datagram      EtherCAT数据报文。
+ * @param mem_address   物理内存地址。
+ * @param data_size     要写入的字节数。
+ *
+ * @return ec_datagram_prealloc()的返回值。
+ *
+ * @details 初始化EtherCAT BWR（Broadcast Write）数据报文。
  */
 int ec_datagram_bwr(
-    ec_datagram_t *datagram, /**< EtherCAT datagram. */
-    uint16_t mem_address,    /**< Physical memory address. */
-    size_t data_size         /**< Number of bytes to write. */
+    ec_datagram_t *datagram, /**< EtherCAT数据报文。 */
+    uint16_t mem_address,    /**< 物理内存地址。 */
+    size_t data_size         /**< 要写入的字节数。 */
 )
 {
     int ret;
@@ -432,14 +538,21 @@ int ec_datagram_bwr(
 
 /*****************************************************************************/
 
-/** Initializes an EtherCAT BRW datagram.
+/**
+ * @brief 初始化EtherCAT BRW数据报文。
  *
- * \return Return value of ec_datagram_prealloc().
+ * @param datagram      EtherCAT数据报文。
+ * @param mem_address   物理内存地址。
+ * @param data_size     要写入的字节数。
+ *
+ * @return ec_datagram_prealloc()的返回值。
+ *
+ * @details 初始化EtherCAT BRW（Broadcast Read/Write）数据报文。
  */
 int ec_datagram_brw(
-    ec_datagram_t *datagram, /**< EtherCAT datagram. */
-    uint16_t mem_address,    /**< Physical memory address. */
-    size_t data_size         /**< Number of bytes to write. */
+    ec_datagram_t *datagram, /**< EtherCAT数据报文。 */
+    uint16_t mem_address,    /**< 物理内存地址。 */
+    size_t data_size         /**< 要写入的字节数。 */
 )
 {
     int ret;
@@ -452,14 +565,21 @@ int ec_datagram_brw(
 
 /*****************************************************************************/
 
-/** Initializes an EtherCAT LRD datagram.
+/**
+ * @brief 初始化EtherCAT LRD数据报文。
  *
- * \return Return value of ec_datagram_prealloc().
+ * @param datagram      EtherCAT数据报文。
+ * @param offset        逻辑地址。
+ * @param data_size     要读取/写入的字节数。
+ *
+ * @return ec_datagram_prealloc()的返回值。
+ *
+ * @details 初始化EtherCAT LRD（Logical Read）数据报文。
  */
 int ec_datagram_lrd(
-    ec_datagram_t *datagram, /**< EtherCAT datagram. */
-    uint32_t offset,         /**< Logical address. */
-    size_t data_size         /**< Number of bytes to read/write. */
+    ec_datagram_t *datagram, /**< EtherCAT数据报文。 */
+    uint32_t offset,         /**< 逻辑地址。 */
+    size_t data_size         /**< 要读取/写入的字节数。 */
 )
 {
     int ret;
@@ -471,14 +591,21 @@ int ec_datagram_lrd(
 
 /*****************************************************************************/
 
-/** Initializes an EtherCAT LWR datagram.
+/**
+ * @brief 初始化EtherCAT LWR数据报文。
  *
- * \return Return value of ec_datagram_prealloc().
+ * @param datagram      EtherCAT数据报文。
+ * @param offset        逻辑地址。
+ * @param data_size     要读取/写入的字节数。
+ *
+ * @return ec_datagram_prealloc()的返回值。
+ *
+ * @details 初始化EtherCAT LWR（Logical Write）数据报文。
  */
 int ec_datagram_lwr(
-    ec_datagram_t *datagram, /**< EtherCAT datagram. */
-    uint32_t offset,         /**< Logical address. */
-    size_t data_size         /**< Number of bytes to read/write. */
+    ec_datagram_t *datagram, /**< EtherCAT数据报文。 */
+    uint32_t offset,         /**< 逻辑地址。 */
+    size_t data_size         /**< 要读取/写入的字节数。 */
 )
 {
     int ret;
@@ -490,14 +617,21 @@ int ec_datagram_lwr(
 
 /*****************************************************************************/
 
-/** Initializes an EtherCAT LRW datagram.
+/**
+ * @brief 初始化EtherCAT LRW数据报文。
  *
- * \return Return value of ec_datagram_prealloc().
+ * @param datagram      EtherCAT数据报文。
+ * @param offset        逻辑地址。
+ * @param data_size     要读取/写入的字节数。
+ *
+ * @return ec_datagram_prealloc()的返回值。
+ *
+ * @details 初始化EtherCAT LRW（Logical Read/Write）数据报文。
  */
 int ec_datagram_lrw(
-    ec_datagram_t *datagram, /**< EtherCAT datagram. */
-    uint32_t offset,         /**< Logical address. */
-    size_t data_size         /**< Number of bytes to read/write. */
+    ec_datagram_t *datagram, /**< EtherCAT数据报文。 */
+    uint32_t offset,         /**< 逻辑地址。 */
+    size_t data_size         /**< 要读取/写入的字节数。 */
 )
 {
     int ret;
@@ -509,18 +643,24 @@ int ec_datagram_lrw(
 
 /*****************************************************************************/
 
-/** Initializes an EtherCAT LRD datagram with external memory.
+/**
+ * @brief 使用外部内存初始化EtherCAT LRD数据报文。
  *
- * \attention It is assumed, that the external memory is at least \a data_size
- *            bytes large.
+ * @param datagram          EtherCAT数据报文。
+ * @param offset            逻辑地址。
+ * @param data_size         要读取/写入的字节数。
+ * @param external_memory   要使用的内存指针。
  *
- * \return Return value of ec_datagram_prealloc().
+ * @return ec_datagram_prealloc()的返回值。
+ *
+ * @details 使用外部内存初始化EtherCAT LRD（Logical Read）数据报文。
+ *          假设外部内存至少有 \a data_size 字节大小。
  */
 int ec_datagram_lrd_ext(
-    ec_datagram_t *datagram, /**< EtherCAT datagram. */
-    uint32_t offset,         /**< Logical address. */
-    size_t data_size,        /**< Number of bytes to read/write. */
-    uint8_t *external_memory /**< Pointer to the memory to use. */
+    ec_datagram_t *datagram, /**< EtherCAT数据报文。 */
+    uint32_t offset,         /**< 逻辑地址。 */
+    size_t data_size,        /**< 要读取/写入的字节数。 */
+    uint8_t *external_memory /**< 要使用的内存指针。 */
 )
 {
     int ret;
@@ -534,18 +674,24 @@ int ec_datagram_lrd_ext(
 
 /*****************************************************************************/
 
-/** Initializes an EtherCAT LWR datagram with external memory.
+/**
+ * @brief 使用外部内存初始化EtherCAT LWR数据报文。
  *
- * \attention It is assumed, that the external memory is at least \a data_size
- *            bytes large.
+ * @param datagram          EtherCAT数据报文。
+ * @param offset            逻辑地址。
+ * @param data_size         要读取/写入的字节数。
+ * @param external_memory   要使用的内存指针。
  *
- * \return Return value of ec_datagram_prealloc().
+ * @return ec_datagram_prealloc()的返回值。
+ *
+ * @details 使用外部内存初始化EtherCAT LWR（Logical Write）数据报文。
+ *          假设外部内存至少有 \a data_size 字节大小。
  */
 int ec_datagram_lwr_ext(
-    ec_datagram_t *datagram, /**< EtherCAT datagram. */
-    uint32_t offset,         /**< Logical address. */
-    size_t data_size,        /**< Number of bytes to read/write. */
-    uint8_t *external_memory /**< Pointer to the memory to use. */
+    ec_datagram_t *datagram, /**< EtherCAT数据报文。 */
+    uint32_t offset,         /**< 逻辑地址。 */
+    size_t data_size,        /**< 要读取/写入的字节数。 */
+    uint8_t *external_memory /**< 要使用的内存指针。 */
 )
 {
     int ret;
@@ -559,18 +705,24 @@ int ec_datagram_lwr_ext(
 
 /*****************************************************************************/
 
-/** Initializes an EtherCAT LRW datagram with external memory.
+/**
+ * @brief 使用外部内存初始化EtherCAT LRW数据报文。
  *
- * \attention It is assumed, that the external memory is at least \a data_size
- *            bytes large.
+ * @param datagram          EtherCAT数据报文。
+ * @param offset            逻辑地址。
+ * @param data_size         要读取/写入的字节数。
+ * @param external_memory   要使用的内存指针。
  *
- * \return Return value of ec_datagram_prealloc().
+ * @return ec_datagram_prealloc()的返回值。
+ *
+ * @details 使用外部内存初始化EtherCAT LRW（Logical Read/Write）数据报文。
+ *          假设外部内存至少有 \a data_size 字节大小。
  */
 int ec_datagram_lrw_ext(
-    ec_datagram_t *datagram, /**< EtherCAT datagram. */
-    uint32_t offset,         /**< Logical address. */
-    size_t data_size,        /**< Number of bytes to read/write. */
-    uint8_t *external_memory /**< Pointer to the memory to use. */
+    ec_datagram_t *datagram, /**< EtherCAT数据报文。 */
+    uint32_t offset,         /**< 逻辑地址。 */
+    size_t data_size,        /**< 要读取/写入的字节数。 */
+    uint8_t *external_memory /**< 要使用的内存指针。 */
 )
 {
     int ret;
@@ -584,67 +736,78 @@ int ec_datagram_lrw_ext(
 
 /*****************************************************************************/
 
-/** Prints the state of a datagram.
+/**
+ * @brief 打印数据报文的状态。
  *
- * Outputs a text message.
+ * @param datagram EtherCAT数据报文
+ * 
+ * @details 输出文本消息。
  */
 void ec_datagram_print_state(
-    const ec_datagram_t *datagram /**< EtherCAT datagram */
+    const ec_datagram_t *datagram /**< EtherCAT数据报文 */
 )
 {
-    printk(KERN_CONT "Datagram ");
+    printk(KERN_CONT "数据报文 ");
     switch (datagram->state)
     {
     case EC_DATAGRAM_INIT:
-        printk(KERN_CONT "initialized");
+        printk(KERN_CONT "已初始化");
         break;
     case EC_DATAGRAM_QUEUED:
-        printk(KERN_CONT "queued");
+        printk(KERN_CONT "已入队");
         break;
     case EC_DATAGRAM_SENT:
-        printk(KERN_CONT "sent");
+        printk(KERN_CONT "已发送");
         break;
     case EC_DATAGRAM_RECEIVED:
-        printk(KERN_CONT "received");
+        printk(KERN_CONT "已接收");
         break;
     case EC_DATAGRAM_TIMED_OUT:
-        printk(KERN_CONT "timed out");
+        printk(KERN_CONT "超时");
         break;
     case EC_DATAGRAM_ERROR:
-        printk(KERN_CONT "error");
+        printk(KERN_CONT "错误");
         break;
     case EC_DATAGRAM_INVALID:
-        printk(KERN_CONT "invalid");
+        printk(KERN_CONT "无效");
         break;
     default:
         printk(KERN_CONT "???");
     }
 
-    printk(KERN_CONT ".\n");
+    printk(KERN_CONT "。\n");
 }
 
 /*****************************************************************************/
 
-/** Evaluates the working counter of a single-cast datagram.
+/**
+ * @brief 评估单播数据报文的工作计数器。
  *
- * Outputs an error message.
+ * @param datagram EtherCAT数据报文
+ * 
+ * @details 输出错误消息。
  */
 void ec_datagram_print_wc_error(
-    const ec_datagram_t *datagram /**< EtherCAT datagram */
+    const ec_datagram_t *datagram /**< EtherCAT数据报文 */
 )
 {
     if (datagram->working_counter == 0)
-        printk(KERN_CONT "No response.");
+        printk(KERN_CONT "无响应。");
     else if (datagram->working_counter > 1)
-        printk(KERN_CONT "%u slaves responded!", datagram->working_counter);
+        printk(KERN_CONT "有%u个从站响应！", datagram->working_counter);
     else
-        printk(KERN_CONT "Success.");
+        printk(KERN_CONT "成功。");
     printk(KERN_CONT "\n");
 }
 
 /*****************************************************************************/
 
-/** Outputs datagram statistics at most every second.
+/**
+ * @brief 每秒最多输出一次数据报文统计信息。
+ *
+ * @param datagram EtherCAT数据报文
+ * 
+ * @details 如果距上次输出超过一秒，则输出数据报文的统计信息。
  */
 void ec_datagram_output_stats(
     ec_datagram_t *datagram)
@@ -655,10 +818,9 @@ void ec_datagram_output_stats(
 
         if (unlikely(datagram->skip_count))
         {
-            EC_WARN("Datagram %p (%s) was SKIPPED %u time%s.\n",
+            EC_WARN("数据报文 %p (%s) 已被跳过 %u 次。\n",
                     datagram, datagram->name,
-                    datagram->skip_count,
-                    datagram->skip_count == 1 ? "" : "s");
+                    datagram->skip_count);
             datagram->skip_count = 0;
         }
     }
@@ -666,12 +828,15 @@ void ec_datagram_output_stats(
 
 /*****************************************************************************/
 
-/** Returns a string describing the datagram type.
+/**
+ * @brief 返回描述数据报文类型的字符串。
  *
- * \return Pointer on a static memory containing the requested string.
+ * @param datagram EtherCAT数据报文
+ * 
+ * @return 包含所需字符串的静态内存的指针。
  */
 const char *ec_datagram_type_string(
-    const ec_datagram_t *datagram /**< EtherCAT datagram. */
+    const ec_datagram_t *datagram /**< EtherCAT数据报文。 */
 )
 {
     return type_strings[datagram->type];
@@ -679,11 +844,15 @@ const char *ec_datagram_type_string(
 
 /*****************************************************************************/
 
-/** Initialize mailbox response data.
+/**
+ * @brief 初始化邮箱响应数据。
  *
+ * @param mbox_data 邮箱响应数据。
+ * 
+ * @details 初始化邮箱响应数据结构。
  */
 void ec_mbox_data_init(
-    ec_mbox_data_t *mbox_data /**< Mailbox response data. */
+    ec_mbox_data_t *mbox_data /**< 邮箱响应数据。 */
 )
 {
     mbox_data->data = NULL;
@@ -693,11 +862,15 @@ void ec_mbox_data_init(
 
 /*****************************************************************************/
 
-/** Free internal memory for mailbox response data.
+/**
+ * @brief 释放邮箱响应数据的内部内存。
  *
+ * @param mbox_data 邮箱响应数据。
+ * 
+ * @details 释放邮箱响应数据结构中的内部内存。
  */
 void ec_mbox_data_clear(
-    ec_mbox_data_t *mbox_data /**< Mailbox response data. */
+    ec_mbox_data_t *mbox_data /**< 邮箱响应数据。 */
 )
 {
     if (mbox_data->data)
@@ -710,13 +883,18 @@ void ec_mbox_data_clear(
 
 /*****************************************************************************/
 
-/** Allocates internal memory for mailbox response data.
+/**
+ * @brief 为邮箱响应数据分配内部内存。
  *
- * \return 0 in case of success, otherwise \a -ENOMEM.
+ * @param mbox_data 邮箱响应数据。
+ * @param size 邮箱大小（字节）。
+ * @return 如果成功则为0，否则为 \a -ENOMEM。
+ * 
+ * @details 为邮箱响应数据结构分配指定大小的内部内存。
  */
 int ec_mbox_data_prealloc(
-    ec_mbox_data_t *mbox_data, /**< Mailbox response data. */
-    size_t size                /**< Mailbox size in bytes. */
+    ec_mbox_data_t *mbox_data, /**< 邮箱响应数据。 */
+    size_t size                /**< 邮箱大小（字节）。 */
 )
 {
     if (mbox_data->data)
@@ -728,7 +906,7 @@ int ec_mbox_data_prealloc(
 
     if (!(mbox_data->data = kmalloc(size, GFP_KERNEL)))
     {
-        EC_ERR("Failed to allocate %zu bytes of mailbox data memory!\n", size);
+        EC_ERR("分配 %zu 字节的邮箱数据内存失败！\n", size);
         return -ENOMEM;
     }
     mbox_data->data_size = size;
@@ -737,14 +915,19 @@ int ec_mbox_data_prealloc(
 
 /*****************************************************************************/
 
-/** Allocates internal memory for mailbox response data for all slave
- *  supported mailbox protocols .
+/**
+ * @brief 为所有支持的邮箱协议分配邮箱响应数据的内部内存。
  *
+ * @param slave EtherCAT从站。
+ * @param protocols 支持的协议。
+ * @param size 邮箱大小（字节）。
+ * 
+ * @details 根据支持的协议为从站的邮箱响应数据结构分配指定大小的内部内存。
  */
 void ec_mbox_prot_data_prealloc(
-    ec_slave_t *slave,  /**< EtherCAT slave. */
-    uint16_t protocols, /**< Supported protocols. */
-    size_t size         /**< Mailbox size in bytes. */
+    ec_slave_t *slave,  /**< EtherCAT从站。 */
+    uint16_t protocols, /**< 支持的协议。 */
+    size_t size         /**< 邮箱大小（字节）。 */
 )
 {
     if ((size > 0) && (size <= EC_MAX_DATA_SIZE))
@@ -794,7 +977,7 @@ void ec_mbox_prot_data_prealloc(
             ec_mbox_data_clear(&slave->mbox_voe_data);
         }
 
-        // alloc mailbox gateway if slave supports any protocol
+        // 如果从站支持任何协议，则分配邮箱网关
         if (protocols)
         {
             ec_mbox_data_prealloc(&slave->mbox_mbg_data, size);

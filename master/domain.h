@@ -46,38 +46,33 @@
 
 /*****************************************************************************/
 
-/** EtherCAT domain.
+/** EtherCAT 域。
  *
- * Handles the process data and the therefore needed datagrams of a certain
- * group of slaves.
+ * 处理特定组从站的过程数据和因此需要的数据报。
  */
 struct ec_domain
 {
-    struct list_head list; /**< List item. */
-    ec_master_t *master;   /**< EtherCAT master owning the domain. */
-    unsigned int index;    /**< Index (just a number). */
+    struct list_head list; /**< 列表项。 */
+    ec_master_t *master;   /**< 拥有该域的 EtherCAT 主站。 */
+    unsigned int index;    /**< 索引（仅为一个数字）。 */
 
-    struct list_head fmmu_configs;                /**< FMMU configurations contained. */
-    size_t data_size;                             /**< Size of the process data. */
-    uint8_t *data;                                /**< Memory for the process data. */
-    ec_origin_t data_origin;                      /**< Origin of the \a data memory. */
-    uint32_t logical_base_address;                /**< Logical offset address of the
-                                                    process data. */
-    struct list_head datagram_pairs;              /**< Datagrams pairs (main/backup) for
-                                                    process data exchange. */
-    uint16_t working_counter[EC_MAX_NUM_DEVICES]; /**< Last working counter
-                                                values. */
-    uint16_t expected_working_counter;            /**< Expected working counter. */
-    unsigned int working_counter_changes;         /**< Working counter changes
-                                                     since last notification. */
-    unsigned int redundancy_active;               /**< Non-zero, if redundancy is in use. */
-    unsigned long notify_jiffies;                 /**< Time of last notification. */
-    uint32_t offset_used[EC_DIR_COUNT];           /**< Next available domain offset of
-                  PDO, by direction */
-    const ec_slave_config_t *sc_in_work;          /**< slave_config which is actively
-                 being registered in this domain
-                 (i.e. ecrt_slave_config_reg_pdo_entry() ) */
+    struct list_head fmmu_configs;                /**< 包含的 FMMU 配置。 */
+    size_t data_size;                             /**< 过程数据的大小。 */
+    uint8_t *data;                                /**< 用于过程数据的内存。 */
+    ec_origin_t data_origin;                      /**< \a data 内存的来源。 */
+    uint32_t logical_base_address;                /**< 过程数据的逻辑偏移地址。 */
+    struct list_head datagram_pairs;              /**< 过程数据交换的数据报对（主/备份）。 */
+    uint16_t working_counter[EC_MAX_NUM_DEVICES]; /**< 上次工作计数器的值。 */
+    uint16_t expected_working_counter;            /**< 预期的工作计数器。 */
+    unsigned int working_counter_changes;         /**< 自上次通知以来的工作计数器变化。 */
+    unsigned int redundancy_active;               /**< 如果使用冗余，则为非零值。 */
+    unsigned long notify_jiffies;                 /**< 上次通知的时间。 */
+    uint32_t offset_used[EC_DIR_COUNT];           /**< 下一个可用的域偏移量
+                                                     （按方向划分的 PDO）。 */
+    const ec_slave_config_t *sc_in_work;          /**< 正在该域中被激活注册的 slave_config
+                                                     （即 ecrt_slave_config_reg_pdo_entry()）。 */
 };
+
 
 /*****************************************************************************/
 

@@ -29,7 +29,7 @@
 
 /**
    \file
-   EtherCAT CANopen dictionary request structure.
+   EtherCAT CANopen 字典请求结构。
 */
 
 /*****************************************************************************/
@@ -43,12 +43,12 @@
 
 /*****************************************************************************/
 
-/** CANopen dictionary request.
+/** CANopen 字典请求。
  */
 typedef struct
 {
-    struct list_head list;             /**< List item. */
-    ec_internal_request_state_t state; /**< SDO request state. */
+    struct list_head list;             /**< 列表项。 */
+    ec_internal_request_state_t state; /**< SDO 请求状态。 */
 } ec_dict_request_t;
 
 /*****************************************************************************/
@@ -59,3 +59,4 @@ void ec_dict_request_read(ec_dict_request_t *);
 /*****************************************************************************/
 
 #endif
+

@@ -59,13 +59,19 @@
 
 /*****************************************************************************/
 
-/** Constructor.
+/**
+ * @brief 初始化EtherCAT设备。
  *
- * \return 0 in case of success, else < 0
+ * @param device EtherCAT设备
+ * @param master 拥有该设备的主站
+ * 
+ * @return 如果成功则为0，否则为 \a -ENODEV。
+ * 
+ * @details 初始化EtherCAT设备结构，并分配和设置相关资源。
  */
 int ec_device_init(
-    ec_device_t *device, /**< EtherCAT device */
-    ec_master_t *master  /**< master owning the device */
+    ec_device_t *device, /**< EtherCAT设备 */
+    ec_master_t *master  /**< 拥有该设备的主站 */
 )
 {
     int ret;
@@ -129,7 +135,7 @@ int ec_device_init(
     ret = ec_debug_init(&device->dbg, device, ifname);
     if (ret < 0)
     {
-        EC_MASTER_ERR(master, "Failed to init debug device!\n");
+        EC_MASTER_ERR(master, "初始化调试设备失败！\n");
         goto out_return;
     }
 #endif
@@ -138,12 +144,12 @@ int ec_device_init(
     {
         if (!(device->tx_skb[i] = dev_alloc_skb(ETH_FRAME_LEN)))
         {
-            EC_MASTER_ERR(master, "Error allocating device socket buffer!\n");
+            EC_MASTER_ERR(master, "分配设备套接字缓冲区失败！\n");
             ret = -ENOMEM;
             goto out_tx_ring;
         }
 
-        // add Ethernet-II-header
+        // 添加以太网II头部
         skb_reserve(device->tx_skb[i], ETH_HLEN);
         eth = (struct ethhdr *)skb_push(device->tx_skb[i], ETH_HLEN);
         eth->h_proto = htons(0x88A4);
@@ -169,10 +175,15 @@ out_return:
 
 /*****************************************************************************/
 
-/** Destructor.
+/**
+ * @brief 析构函数。
+ *
+ * @param device EtherCAT设备
+ * 
+ * @details 清理EtherCAT设备结构，并释放相关资源。
  */
 void ec_device_clear(
-    ec_device_t *device /**< EtherCAT device */
+    ec_device_t *device /**< EtherCAT设备 */
 )
 {
     unsigned int i;
@@ -190,19 +201,27 @@ void ec_device_clear(
 
 /*****************************************************************************/
 
-/** Associate with net_device.
+/**
+ * @brief 关联net_device。
+ *
+ * @param device EtherCAT设备
+ * @param net_dev net_device结构
+ * @param poll 设备的轮询函数指针
+ * @param module 设备的模块
+ * 
+ * @details 将EtherCAT设备与net_device关联，并设置相关参数。
  */
 void ec_device_attach(
-    ec_device_t *device,        /**< EtherCAT device */
-    struct net_device *net_dev, /**< net_device structure */
-    ec_pollfunc_t poll,         /**< pointer to device's poll function */
-    struct module *module       /**< the device's module */
+    ec_device_t *device,        /**< EtherCAT设备 */
+    struct net_device *net_dev, /**< net_device结构 */
+    ec_pollfunc_t poll,         /**< 设备的轮询函数指针 */
+    struct module *module       /**< 设备的模块 */
 )
 {
     unsigned int i;
     struct ethhdr *eth;
 
-    ec_device_detach(device); // resets fields
+    ec_device_detach(device); // 重置字段
 
     device->dev = net_dev;
     device->poll = poll;
@@ -222,10 +241,15 @@ void ec_device_attach(
 
 /*****************************************************************************/
 
-/** Disconnect from net_device.
+/**
+ * @brief 与net_device断开连接。
+ *
+ * @param device EtherCAT设备
+ * 
+ * @details 将EtherCAT设备与net_device断开连接，并重置相关参数。
  */
 void ec_device_detach(
-    ec_device_t *device /**< EtherCAT device */
+    ec_device_t *device /**< EtherCAT设备 */
 )
 {
     unsigned int i;
@@ -238,7 +262,7 @@ void ec_device_detach(
     device->poll = NULL;
     device->module = NULL;
     device->open = 0;
-    device->link_state = 0; // down
+    device->link_state = 0; // 下线
 
     ec_device_clear_stats(device);
 
@@ -250,25 +274,30 @@ void ec_device_detach(
 
 /*****************************************************************************/
 
-/** Opens the EtherCAT device.
+/**
+ * @brief 打开EtherCAT设备。
  *
- * \return 0 in case of success, else < 0
+ * @param device EtherCAT设备
+ * 
+ * @return 如果成功则为0，否则为 \a -ENODEV。
+ * 
+ * @details 打开EtherCAT设备，启动设备的操作。
  */
 int ec_device_open(
-    ec_device_t *device /**< EtherCAT device */
+    ec_device_t *device /**< EtherCAT设备 */
 )
 {
     int ret;
 
     if (!device->dev)
     {
-        EC_MASTER_ERR(device->master, "No net_device to open!\n");
+        EC_MASTER_ERR(device->master, "没有要打开的net_device！\n");
         return -ENODEV;
     }
 
     if (device->open)
     {
-        EC_MASTER_WARN(device->master, "Device already opened!\n");
+        EC_MASTER_WARN(device->master, "设备已经打开！\n");
         return 0;
     }
 
@@ -289,25 +318,30 @@ int ec_device_open(
 
 /*****************************************************************************/
 
-/** Stops the EtherCAT device.
+/**
+ * @brief 关闭EtherCAT设备。
  *
- * \return 0 in case of success, else < 0
+ * @param device EtherCAT设备
+ * 
+ * @return 如果成功则为0，否则为 \a -ENODEV。
+ * 
+ * @details 关闭EtherCAT设备，停止设备的操作。
  */
 int ec_device_close(
-    ec_device_t *device /**< EtherCAT device */
+    ec_device_t *device /**< EtherCAT设备 */
 )
 {
     int ret;
 
     if (!device->dev)
     {
-        EC_MASTER_ERR(device->master, "No device to close!\n");
+        EC_MASTER_ERR(device->master, "没有要关闭的设备！\n");
         return -ENODEV;
     }
 
     if (!device->open)
     {
-        EC_MASTER_WARN(device->master, "Device already closed!\n");
+        EC_MASTER_WARN(device->master, "设备已经关闭！\n");
         return 0;
     }
 
@@ -324,19 +358,25 @@ int ec_device_close(
 
 /*****************************************************************************/
 
-/** Records a packet in the master's pcap buffer, if there is room.
+/**
+ * @brief 记录一个数据包到主站的pcap缓冲区（如果有空间）。
+ *
+ * @param device EtherCAT设备
+ * @param data 数据包的数据
+ * @param size 数据包的大小
+ * 
+ * @details 检查是否有足够的空间将数据帧复制到pcap内存中，并记录到pcap缓冲区中。
  */
-
 static void pcap_record(
-    ec_device_t *device, /**< EtherCAT device */
-    const void *data,    /**< Packet data */
-    size_t size          /**< Packet size */
+    ec_device_t *device, /**< EtherCAT设备 */
+    const void *data,    /**< 数据包数据 */
+    size_t size          /**< 数据包大小 */
 )
 {
-    // check there's enough room to copy frame to pcap mem
+    // 检查是否有足够的空间将帧复制到pcap内存中
     if (unlikely(device->master->pcap_data))
     {
-        // get current data pointer
+        // 获取当前数据指针
         void *curr_data = device->master->pcap_curr_data;
         long available = pcap_size - (curr_data - device->master->pcap_data);
         long reqd = size + sizeof(pcaprec_hdr_t);
@@ -345,10 +385,10 @@ static void pcap_record(
             pcaprec_hdr_t *pcaphdr;
             struct timeval t;
 
-            // update curr data pointer
+            // 更新当前数据指针
             device->master->pcap_curr_data = curr_data + reqd;
 
-            // fill in pcap frame header info
+            // 填写pcap帧头信息
             pcaphdr = curr_data;
 #ifdef EC_RTDM
             jiffies_to_timeval(device->jiffies_poll, &t);
@@ -361,7 +401,7 @@ static void pcap_record(
             pcaphdr->orig_len = size;
             curr_data += sizeof(pcaprec_hdr_t);
 
-            // copy frame
+            // 复制数据帧
             memcpy(curr_data, data, size);
         }
     }

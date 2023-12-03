@@ -43,11 +43,10 @@
 #include "../devices/ecdev.h"
 #include "globals.h"
 
+
 /**
- * Size of the transmit ring.
- * This memory ring is used to transmit frames. It is necessary to use
- * different memory regions, because otherwise the network device DMA could
- * send the same data twice, if it is called twice.
+ * 传输环的大小。
+ * 该内存环用于传输帧。必须使用不同的内存区域，否则网络设备的 DMA 可能会发送相同的数据两次，如果调用两次。
  */
 #define EC_TX_RING_SIZE 0x10
 
@@ -58,8 +57,8 @@
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0)
 struct timeval
 {
-    __kernel_old_time_t tv_sec;   /* seconds */
-    __kernel_suseconds_t tv_usec; /* microseconds */
+    __kernel_old_time_t tv_sec;   /* 秒 */
+    __kernel_suseconds_t tv_usec; /* 微秒 */
 };
 #endif
 
@@ -85,54 +84,45 @@ typedef struct
 /*****************************************************************************/
 
 /**
-   EtherCAT device.
-   An EtherCAT device is a network interface card, that is owned by an
-   EtherCAT master to send and receive EtherCAT frames with.
+   EtherCAT 设备。
+   一个 EtherCAT 设备是一个网络接口卡，由 EtherCAT 主控制器拥有，用于发送和接收 EtherCAT 帧。
 */
 
 struct ec_device
 {
-    ec_master_t *master;                     /**< EtherCAT master */
-    struct net_device *dev;                  /**< pointer to the assigned net_device */
-    ec_pollfunc_t poll;                      /**< pointer to the device's poll function */
-    struct module *module;                   /**< pointer to the device's owning module */
-    uint8_t open;                            /**< true, if the net_device has been opened */
-    uint8_t link_state;                      /**< device link state */
-    struct sk_buff *tx_skb[EC_TX_RING_SIZE]; /**< transmit skb ring */
-    unsigned int tx_ring_index;              /**< last ring entry used to transmit */
+    ec_master_t *master;                     /**< EtherCAT 主控制器 */
+    struct net_device *dev;                  /**< 指向分配的 net_device 的指针 */
+    ec_pollfunc_t poll;                      /**< 指向设备的轮询函数的指针 */
+    struct module *module;                   /**< 指向拥有该设备的模块的指针 */
+    uint8_t open;                            /**< 如果 net_device 已经打开，则为 true */
+    uint8_t link_state;                      /**< 设备连接状态 */
+    struct sk_buff *tx_skb[EC_TX_RING_SIZE]; /**< 传输 skb 环 */
+    unsigned int tx_ring_index;              /**< 用于传输的最后一个环条目 */
 #ifdef EC_HAVE_CYCLES
-    cycles_t cycles_poll; /**< cycles of last poll */
+    cycles_t cycles_poll; /**< 上次轮询的周期数 */
 #endif
 #if defined(EC_DEBUG_RING) || !defined(EC_RTDM)
     struct timeval timeval_poll;
 #endif
-    unsigned long jiffies_poll; /**< jiffies of last poll */
+    unsigned long jiffies_poll; /**< 上次轮询的 jiffies */
 
-    // Frame statistics
-    u64 tx_count;                      /**< Number of frames sent. */
-    u64 last_tx_count;                 /**< Number of frames sent of last statistics cycle. */
-    u64 rx_count;                      /**< Number of frames received. */
-    u64 last_rx_count;                 /**< Number of frames received of last statistics
-                                         cycle. */
-    u64 tx_bytes;                      /**< Number of bytes sent. */
-    u64 last_tx_bytes;                 /**< Number of bytes sent of last statistics cycle. */
-    u64 rx_bytes;                      /**< Number of bytes received. */
-    u64 last_rx_bytes;                 /**< Number of bytes received of last statistics cycle.
-                                        */
-    u64 tx_errors;                     /**< Number of transmit errors. */
-    s32 tx_frame_rates[EC_RATE_COUNT]; /**< Transmit rates in frames/s for
-                                         different statistics cycle periods.
-                                        */
-    s32 rx_frame_rates[EC_RATE_COUNT]; /**< Receive rates in frames/s for
-                                         different statistics cycle periods.
-                                        */
-    s32 tx_byte_rates[EC_RATE_COUNT];  /**< Transmit rates in byte/s for
-                                         different statistics cycle periods. */
-    s32 rx_byte_rates[EC_RATE_COUNT];  /**< Receive rates in byte/s for
-                                         different statistics cycle periods. */
+    // 帧统计
+    u64 tx_count;                      /**< 发送的帧数 */
+    u64 last_tx_count;                 /**< 上次统计周期发送的帧数 */
+    u64 rx_count;                      /**< 接收的帧数 */
+    u64 last_rx_count;                 /**< 上次统计周期接收的帧数 */
+    u64 tx_bytes;                      /**< 发送的字节数 */
+    u64 last_tx_bytes;                 /**< 上次统计周期发送的字节数 */
+    u64 rx_bytes;                      /**< 接收的字节数 */
+    u64 last_rx_bytes;                 /**< 上次统计周期接收的字节数 */
+    u64 tx_errors;                     /**< 传输错误数 */
+    s32 tx_frame_rates[EC_RATE_COUNT]; /**< 不同统计周期内的帧传输速率（每秒帧数） */
+    s32 rx_frame_rates[EC_RATE_COUNT]; /**< 不同统计周期内的帧接收速率（每秒帧数） */
+    s32 tx_byte_rates[EC_RATE_COUNT];  /**< 不同统计周期内的字节传输速率（每秒字节数） */
+    s32 rx_byte_rates[EC_RATE_COUNT];  /**< 不同统计周期内的字节接收速率（每秒字节数） */
 
 #ifdef EC_DEBUG_IF
-    ec_debug_t dbg; /**< debug device */
+    ec_debug_t dbg; /**< 调试设备 */
 #endif
 #ifdef EC_DEBUG_RING
     ec_debug_frame_t debug_frames[EC_DEBUG_RING_SIZE];
@@ -144,32 +134,32 @@ struct ec_device
 /*****************************************************************************/
 
 /**
-   pcap global header
+   pcap 全局标头
 */
 
 typedef struct
 {
-    u32 magic_number;  /* magic number */
-    u16 version_major; /* major version number */
-    u16 version_minor; /* minor version number */
-    s32 thiszone;      /* GMT to local correction */
-    u32 sigfigs;       /* accuracy of timestamps */
-    u32 snaplen;       /* max length of captured packets, in octets */
-    u32 network;       /* data link type */
+    u32 magic_number;  /* 魔术数 */
+    u16 version_major; /* 主版本号 */
+    u16 version_minor; /* 次版本号 */
+    s32 thiszone;      /* GMT 到本地时间的修正 */
+    u32 sigfigs;       /* 时间戳的精度 */
+    u32 snaplen;       /* 文件中捕获的数据包的最大长度（以八位字节为单位） */
+    u32 network;       /* 数据链路类型 */
 } pcap_hdr_t;
 
 /*****************************************************************************/
 
 /**
-   pcap packet header
+   pcap 数据包标头
 */
 
 typedef struct
 {
-    u32 ts_sec;   /* timestamp seconds */
-    u32 ts_usec;  /* timestamp microseconds */
-    u32 incl_len; /* number of octets of packet saved in file */
-    u32 orig_len; /* actual length of packet */
+    u32 ts_sec;   /* 时间戳秒数 */
+    u32 ts_usec;  /* 时间戳微秒数 */
+    u32 incl_len; /* 文件中保存的数据包的八位字节数 */
+    u32 orig_len; /* 数据包的实际长度 */
 } pcaprec_hdr_t;
 
 /*****************************************************************************/
@@ -199,3 +189,4 @@ void ec_device_debug_ring_print(const ec_device_t *);
 /*****************************************************************************/
 
 #endif
+
