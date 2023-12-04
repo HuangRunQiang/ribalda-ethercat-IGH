@@ -6,86 +6,111 @@
 */
 把下面的代码,按照上面的doxygen格式，添加函数头注释并汉化代码。要有函数作用，函数参数，函数返回值，分点换行概括函数的逻辑，给出完整代码
 
-/** Sent an acknowledge.
+/** Read next PDO.
  */
-void ec_fsm_foe_state_sent_ack(
-    ec_fsm_foe_t *fsm,      /**< FoE statemachine. */
+void ec_fsm_pdo_read_action_next_pdo(
+    ec_fsm_pdo_t *fsm,      /**< Finite state machine. */
     ec_datagram_t *datagram /**< Datagram to use. */
 )
 {
-    ec_slave_t *slave = fsm->slave;
-
-#ifdef DEBUG_FOE
-    EC_SLAVE_DBG(fsm->slave, 0, "%s()\n", __func__);
-#endif
-
-    if (fsm->datagram->state != EC_DATAGRAM_RECEIVED)
+    if (fsm->pdo_pos <= fsm->pdo_count)
     {
-        ec_foe_set_rx_error(fsm, FOE_RECEIVE_ERROR);
-        EC_SLAVE_ERR(slave, "Failed to send FoE ACK: ");
-        ec_datagram_print_state(fsm->datagram);
+        ecrt_sdo_request_index(&fsm->request, 0x1C10 + fsm->sync_index,
+                               fsm->pdo_pos);
+        ecrt_sdo_request_read(&fsm->request);
+        fsm->state = ec_fsm_pdo_read_state_pdo;
+        ec_fsm_coe_transfer(fsm->fsm_coe, fsm->slave, &fsm->request);
+        ec_fsm_coe_exec(fsm->fsm_coe, datagram); // execute immediately
         return;
     }
 
-    if (fsm->datagram->working_counter != 1)
-    {
-        // slave did not put anything into the mailbox yet
-        ec_foe_set_rx_error(fsm, FOE_WC_ERROR);
-        EC_SLAVE_ERR(slave, "Reception of FoE ACK failed: ");
-        ec_datagram_print_wc_error(fsm->datagram);
-        return;
-    }
+    // finished reading PDO configuration
 
-    fsm->jiffies_start = fsm->datagram->jiffies_sent;
+    ec_pdo_list_copy(&fsm->sync->pdos, &fsm->pdos);
+    ec_pdo_list_clear_pdos(&fsm->pdos);
 
-    if (fsm->last_packet)
-    {
-        fsm->packet_no = 0;
-        fsm->request->data_size = fsm->buffer_offset;
-        fsm->state = ec_fsm_foe_end;
-    }
-    else
-    {
-        fsm->packet_no++;
-
-        // mailbox read check is skipped if a read request is already ongoing
-        if (ec_read_mbox_locked(slave))
-        {
-            fsm->state = ec_fsm_foe_state_data_read_data;
-            // the datagram is not used and marked as invalid
-            datagram->state = EC_DATAGRAM_INVALID;
-        }
-        else
-        {
-            ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
-            fsm->retries = EC_FSM_RETRIES;
-            fsm->state = ec_fsm_foe_state_data_check;
-        }
-    }
+    // next sync manager
+    ec_fsm_pdo_read_action_next_sync(fsm, datagram);
 }
 
 /*****************************************************************************/
 
-/** Set an error code and go to the send error state.
+/** Fetch PDO information.
  */
-void ec_foe_set_tx_error(
-    ec_fsm_foe_t *fsm, /**< FoE statemachine. */
-    uint32_t errorcode /**< FoE error code. */
+void ec_fsm_pdo_read_state_pdo(
+    ec_fsm_pdo_t *fsm,      /**< Finite state machine. */
+    ec_datagram_t *datagram /**< Datagram to use. */
 )
 {
-    fsm->request->result = errorcode;
-    fsm->state = ec_fsm_foe_error;
+    if (ec_fsm_coe_exec(fsm->fsm_coe, datagram))
+    {
+        return;
+    }
+
+    if (!ec_fsm_coe_success(fsm->fsm_coe))
+    {
+        EC_SLAVE_ERR(fsm->slave, "Failed to read index of"
+                                 " assigned PDO %u from SM%u.\n",
+                     fsm->pdo_pos, fsm->sync_index);
+        ec_fsm_pdo_read_action_next_sync(fsm, datagram);
+        return;
+    }
+
+    if (fsm->request.data_size != sizeof(uint16_t))
+    {
+        EC_SLAVE_ERR(fsm->slave, "Invalid data size %zu returned"
+                                 " when uploading SDO 0x%04X:%02X.\n",
+                     fsm->request.data_size,
+                     fsm->request.index, fsm->request.subindex);
+        ec_fsm_pdo_read_action_next_sync(fsm, datagram);
+        return;
+    }
+
+    if (!(fsm->pdo = (ec_pdo_t *)
+              kmalloc(sizeof(ec_pdo_t), GFP_KERNEL)))
+    {
+        EC_SLAVE_ERR(fsm->slave, "Failed to allocate PDO.\n");
+        ec_fsm_pdo_read_action_next_sync(fsm, datagram);
+        return;
+    }
+
+    ec_pdo_init(fsm->pdo);
+    fsm->pdo->index = EC_READ_U16(fsm->request.data);
+    fsm->pdo->sync_index = fsm->sync_index;
+
+    EC_SLAVE_DBG(fsm->slave, 1, "PDO 0x%04X.\n", fsm->pdo->index);
+
+    list_add_tail(&fsm->pdo->list, &fsm->pdos.list);
+
+    fsm->state = ec_fsm_pdo_read_state_pdo_entries;
+    ec_fsm_pdo_entry_start_reading(&fsm->fsm_pdo_entry, fsm->slave, fsm->pdo);
+    fsm->state(fsm, datagram); // execute immediately
 }
 
 /*****************************************************************************/
 
-/** Set an error code and go to the receive error state.
+/** Fetch PDO information.
  */
-void ec_foe_set_rx_error(
-    ec_fsm_foe_t *fsm, /**< FoE statemachine. */
-    uint32_t errorcode /**< FoE error code. */
+void ec_fsm_pdo_read_state_pdo_entries(
+    ec_fsm_pdo_t *fsm,      /**< Finite state machine. */
+    ec_datagram_t *datagram /**< Datagram to use. */
 )
 {
-    fsm->request->result = errorcode;
-    fsm->state = ec_fsm_foe_error;
+    if (ec_fsm_pdo_entry_exec(&fsm->fsm_pdo_entry, datagram))
+    {
+        return;
+    }
+
+    if (!ec_fsm_pdo_entry_success(&fsm->fsm_pdo_entry))
+    {
+        EC_SLAVE_ERR(fsm->slave, "Failed to read mapped PDO entries"
+                                 " for PDO 0x%04X.\n",
+                     fsm->pdo->index);
+        ec_fsm_pdo_read_action_next_sync(fsm, datagram);
+        return;
+    }
+
+    // next PDO
+    fsm->pdo_pos++;
+    ec_fsm_pdo_read_action_next_pdo(fsm, datagram);
 }

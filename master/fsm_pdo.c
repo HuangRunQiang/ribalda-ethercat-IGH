@@ -28,7 +28,7 @@
  *****************************************************************************/
 
 /** \file
- * EtherCAT PDO configuration state machine.
+ * EtherCAT PDO配置状态机。
  */
 
 /*****************************************************************************/
@@ -69,11 +69,19 @@ void ec_fsm_pdo_state_error(ec_fsm_pdo_t *, ec_datagram_t *);
 
 /*****************************************************************************/
 
-/** Constructor.
- */
+/**
+@brief 构造函数。初始化EtherCAT PDO配置状态机。
+@param fsm 指向PDO配置状态机的指针。
+@param fsm_coe 指向要使用的CoE状态机的指针。
+@return 无。
+@details 此函数用于初始化EtherCAT PDO配置状态机。它将设置状态机的成员变量，并调用其他初始化函数来初始化相关的数据结构。
+
+- `fsm`: PDO配置状态机。
+- `fsm_coe`: 要使用的CoE状态机。
+*/
 void ec_fsm_pdo_init(
-    ec_fsm_pdo_t *fsm,    /**< PDO configuration state machine. */
-    ec_fsm_coe_t *fsm_coe /**< CoE state machine to use */
+    ec_fsm_pdo_t *fsm,    /**< PDO配置状态机。 */
+    ec_fsm_coe_t *fsm_coe /**< 要使用的CoE状态机 */
 )
 {
     fsm->fsm_coe = fsm_coe;
@@ -85,10 +93,16 @@ void ec_fsm_pdo_init(
 
 /*****************************************************************************/
 
-/** Destructor.
- */
+/**
+@brief 析构函数。清理EtherCAT PDO配置状态机的资源。
+@param fsm 指向PDO配置状态机的指针。
+@return 无。
+@details 此函数用于清理EtherCAT PDO配置状态机的资源。它将调用其他清理函数来清理相关的数据结构。
+
+- `fsm`: PDO配置状态机。
+*/
 void ec_fsm_pdo_clear(
-    ec_fsm_pdo_t *fsm /**< PDO configuration state machine. */
+    ec_fsm_pdo_t *fsm /**< PDO配置状态机。 */
 )
 {
     ec_fsm_pdo_entry_clear(&fsm->fsm_pdo_entry);
@@ -99,26 +113,40 @@ void ec_fsm_pdo_clear(
 
 /*****************************************************************************/
 
-/** Print the current and desired PDO assignment.
- */
+/**
+@brief 打印当前和期望的PDO分配情况。
+@param fsm 指向PDO配置状态机的指针。
+@return 无。
+@details 此函数用于打印当前和期望的PDO分配情况。
+
+- `fsm`: PDO配置状态机。
+*/
 void ec_fsm_pdo_print(
-    ec_fsm_pdo_t *fsm /**< PDO configuration state machine. */
+    ec_fsm_pdo_t *fsm /**< PDO配置状态机。 */
 )
 {
-    printk(KERN_CONT "Currently assigned PDOs: ");
+    printk(KERN_CONT "当前分配的PDO：");
     ec_pdo_list_print(&fsm->sync->pdos);
-    printk(KERN_CONT ". PDOs to assign: ");
+    printk(KERN_CONT "。待分配的PDO：");
     ec_pdo_list_print(&fsm->pdos);
     printk(KERN_CONT "\n");
 }
 
 /*****************************************************************************/
 
-/** Start reading the PDO configuration.
- */
+/**
+@brief 开始读取PDO配置。
+@param fsm 指向PDO配置状态机的指针。
+@param slave 要配置的从站。
+@return 无。
+@details 此函数用于开始读取PDO配置。它将设置要配置的从站，并将状态设置为开始读取PDO配置。
+
+- `fsm`: PDO配置状态机。
+- `slave`: 要配置的从站。
+*/
 void ec_fsm_pdo_start_reading(
-    ec_fsm_pdo_t *fsm, /**< PDO configuration state machine. */
-    ec_slave_t *slave  /**< slave to configure */
+    ec_fsm_pdo_t *fsm, /**< PDO配置状态机。 */
+    ec_slave_t *slave  /**< 要配置的从站 */
 )
 {
     fsm->slave = slave;
@@ -127,11 +155,19 @@ void ec_fsm_pdo_start_reading(
 
 /*****************************************************************************/
 
-/** Start writing the PDO configuration.
- */
+/**
+@brief 开始写入PDO配置。
+@param fsm 指向PDO配置状态机的指针。
+@param slave 要配置的从站。
+@return 无。
+@details 此函数用于开始写入PDO配置。它将设置要配置的从站，并将状态设置为开始写入PDO配置。
+
+- `fsm`: PDO配置状态机。
+- `slave`: 要配置的从站。
+*/
 void ec_fsm_pdo_start_configuration(
-    ec_fsm_pdo_t *fsm, /**< PDO configuration state machine. */
-    ec_slave_t *slave  /**< slave to configure */
+    ec_fsm_pdo_t *fsm, /**< PDO配置状态机。 */
+    ec_slave_t *slave  /**< 要配置的从站 */
 )
 {
     fsm->slave = slave;
@@ -140,12 +176,12 @@ void ec_fsm_pdo_start_configuration(
 
 /*****************************************************************************/
 
-/** Get running state.
- *
- * \return false, if state machine has terminated
- */
+/**
+@brief 获取状态机的运行状态。
+@return 如果状态机已终止，则返回0；否则返回1。
+*/
 int ec_fsm_pdo_running(
-    const ec_fsm_pdo_t *fsm /**< PDO configuration state machine. */
+    const ec_fsm_pdo_t *fsm /**< PDO配置状态机。 */
 )
 {
     return fsm->state != ec_fsm_pdo_state_end && fsm->state != ec_fsm_pdo_state_error;
@@ -153,16 +189,19 @@ int ec_fsm_pdo_running(
 
 /*****************************************************************************/
 
-/** Executes the current state of the state machine.
- *
- * If the state machine's datagram is not sent or received yet, the execution
- * of the state machine is delayed to the next cycle.
- *
- * \return false, if state machine has terminated
- */
+/**
+@brief 执行状态机的当前状态。
+@param fsm 指向PDO配置状态机的指针。
+@param datagram 要使用的数据报文。
+@return 如果状态机仍在运行，则返回1；否则返回0。
+@details 此函数用于执行状态机的当前状态。如果状态机的数据报文尚未发送或接收，则状态机的执行将延迟到下一个周期。
+
+- `fsm`: PDO配置状态机。
+- `datagram`: 要使用的数据报文。
+*/
 int ec_fsm_pdo_exec(
-    ec_fsm_pdo_t *fsm,      /**< PDO configuration state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_pdo_t *fsm,      /**< PDO配置状态机。 */
+    ec_datagram_t *datagram /**< 要使用的数据报文。 */
 )
 {
     fsm->state(fsm, datagram);
@@ -172,40 +211,55 @@ int ec_fsm_pdo_exec(
 
 /*****************************************************************************/
 
-/** Get execution result.
- *
- * \return true, if the state machine terminated gracefully
- */
+/**
+@brief 获取状态机的执行结果。
+@return 如果状态机正常终止，则返回1；否则返回0。
+*/
 int ec_fsm_pdo_success(
-    const ec_fsm_pdo_t *fsm /**< PDO configuration state machine. */
+    const ec_fsm_pdo_t *fsm /**< PDO配置状态机。 */
 )
 {
     return fsm->state == ec_fsm_pdo_state_end;
 }
-
 /******************************************************************************
- * Reading state funtions.
+* 读取状态函数。
  *****************************************************************************/
 
-/** Start reading PDO assignment.
- */
+/**
+@brief 开始读取PDO分配。
+@param fsm 指向PDO配置状态机的指针。
+@param datagram 要使用的数据报文。
+@return 无。
+@details 此函数用于开始读取PDO分配。它将设置状态机的同步管理器索引，并调用下一个同步管理器的读取动作函数。
+
+- `fsm`: PDO配置状态机。
+- `datagram`: 要使用的数据报文。
+*/
 void ec_fsm_pdo_read_state_start(
-    ec_fsm_pdo_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_pdo_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 要使用的数据报文。 */
 )
 {
-    // read PDO assignment for first sync manager not reserved for mailbox
-    fsm->sync_index = 1; // next is 2
+    // 读取第一个未保留用于邮箱的同步管理器的PDO分配
+    fsm->sync_index = 1; // 下一个是2
     ec_fsm_pdo_read_action_next_sync(fsm, datagram);
 }
 
 /*****************************************************************************/
 
-/** Read PDO assignment of next sync manager.
- */
+/**
+@brief 读取下一个同步管理器的PDO分配。
+@param fsm 指向PDO配置状态机的指针。
+@param datagram 要使用的数据报文。
+@return 无。
+@details 此函数用于读取下一个同步管理器的PDO分配。它将逐个检查同步管理器，并执行相应的操作。
+
+- `fsm`: PDO配置状态机。
+- `datagram`: 要使用的数据报文。
+*/
 void ec_fsm_pdo_read_action_next_sync(
-    ec_fsm_pdo_t *fsm,      /**< finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_pdo_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 要使用的数据报文。 */
 )
 {
     ec_slave_t *slave = fsm->slave;
@@ -217,7 +271,7 @@ void ec_fsm_pdo_read_action_next_sync(
         if (!(fsm->sync = ec_slave_get_sync(slave, fsm->sync_index)))
             continue;
 
-        EC_SLAVE_DBG(slave, 1, "Reading PDO assignment of SM%u.\n",
+        EC_SLAVE_DBG(slave, 1, "正在读取第%u个同步管理器的PDO分配。\n",
                      fsm->sync_index);
 
         ec_pdo_list_clear_pdos(&fsm->pdos);
@@ -226,23 +280,36 @@ void ec_fsm_pdo_read_action_next_sync(
         ecrt_sdo_request_read(&fsm->request);
         fsm->state = ec_fsm_pdo_read_state_pdo_count;
         ec_fsm_coe_transfer(fsm->fsm_coe, fsm->slave, &fsm->request);
-        ec_fsm_coe_exec(fsm->fsm_coe, datagram); // execute immediately
+        ec_fsm_coe_exec(fsm->fsm_coe, datagram); // 立即执行
         return;
     }
 
-    EC_SLAVE_DBG(slave, 1, "Reading of PDO configuration finished.\n");
+    EC_SLAVE_DBG(slave, 1, "PDO配置读取完成。\n");
 
     ec_pdo_list_clear_pdos(&fsm->pdos);
     fsm->state = ec_fsm_pdo_state_end;
 }
 
+
 /*****************************************************************************/
 
-/** Count assigned PDOs.
- */
+/**
+@brief 计算已分配的PDO数量。
+@param fsm 有限状态机。
+@param datagram 使用的数据报。
+@return 无
+@details
+- 如果执行ec_fsm_coe_exec(fsm->fsm_coe, datagram)失败，则返回。
+- 如果ec_fsm_coe_success(fsm->fsm_coe)为假，则输出错误信息，指示无法读取SM%u的已分配PDO数量，并调用ec_fsm_pdo_read_action_next_sync(fsm, datagram)函数。
+- 如果fsm->request.data_size的大小不等于sizeof(uint8_t)，则输出错误信息，指示在上传SDO 0x%04X:%02X时返回的数据大小无效，并调用ec_fsm_pdo_read_action_next_sync(fsm, datagram)函数。
+- 将fsm->request.data中的值读取为一个字节，并将其赋值给fsm->pdo_count。
+- 输出调试信息，指示已分配的PDO数量为%u。
+- 将fsm->pdo_pos设置为1。
+- 调用ec_fsm_pdo_read_action_next_pdo(fsm, datagram)函数，读取第一个PDO。
+*/
 void ec_fsm_pdo_read_state_pdo_count(
-    ec_fsm_pdo_t *fsm,      /**< Finite state machine. */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_pdo_t *fsm,      /**< 有限状态机。 */
+    ec_datagram_t *datagram /**< 使用的数据报。 */
 )
 {
     if (ec_fsm_coe_exec(fsm->fsm_coe, datagram))
@@ -252,8 +319,7 @@ void ec_fsm_pdo_read_state_pdo_count(
 
     if (!ec_fsm_coe_success(fsm->fsm_coe))
     {
-        EC_SLAVE_ERR(fsm->slave, "Failed to read number of assigned PDOs"
-                                 " for SM%u.\n",
+        EC_SLAVE_ERR(fsm->slave, "无法读取SM%u的已分配PDO数量。\n",
                      fsm->sync_index);
         ec_fsm_pdo_read_action_next_sync(fsm, datagram);
         return;
@@ -261,18 +327,17 @@ void ec_fsm_pdo_read_state_pdo_count(
 
     if (fsm->request.data_size != sizeof(uint8_t))
     {
-        EC_SLAVE_ERR(fsm->slave, "Invalid data size %zu returned"
-                                 " when uploading SDO 0x%04X:%02X.\n",
-                     fsm->request.data_size,
-                     fsm->request.index, fsm->request.subindex);
+        EC_SLAVE_ERR(fsm->slave, "上传SDO 0x%04X:%02X时返回的数据大小%zu无效。\n",
+                     fsm->request.index, fsm->request.subindex,
+                     fsm->request.data_size);
         ec_fsm_pdo_read_action_next_sync(fsm, datagram);
         return;
     }
     fsm->pdo_count = EC_READ_U8(fsm->request.data);
 
-    EC_SLAVE_DBG(fsm->slave, 1, "%u PDOs assigned.\n", fsm->pdo_count);
+    EC_SLAVE_DBG(fsm->slave, 1, "已分配%u个PDO。\n", fsm->pdo_count);
 
-    // read first PDO
+    // 读取第一个PDO
     fsm->pdo_pos = 1;
     ec_fsm_pdo_read_action_next_pdo(fsm, datagram);
 }

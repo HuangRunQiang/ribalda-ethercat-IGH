@@ -28,7 +28,7 @@
  *****************************************************************************/
 
 /** \file
- * EtherCAT PDO entry configuration state machine structures.
+ * EtherCAT PDO条目配置状态机结构。
  */
 
 /*****************************************************************************/
@@ -47,23 +47,24 @@
  */
 typedef struct ec_fsm_pdo_entry ec_fsm_pdo_entry_t;
 
-/** PDO configuration state machine.
+/** PDO配置状态机。
  */
 struct ec_fsm_pdo_entry
 {
-        void (*state)(ec_fsm_pdo_entry_t *, ec_datagram_t *); /**< state function
-                                                               */
-        ec_fsm_coe_t *fsm_coe;                                /**< CoE state machine to use */
-        ec_sdo_request_t request;                             /**< SDO request. */
+        void (*state)(ec_fsm_pdo_entry_t *, ec_datagram_t *); /**< 状态函数 */
+        ec_fsm_coe_t *fsm_coe;                                /**< 使用的CoE状态机 */
+        ec_sdo_request_t request;                             /**< SDO请求。 */
 
-        ec_slave_t *slave;           /**< Slave the FSM runs on. */
-        ec_pdo_t *target_pdo;        /**< PDO to read the mapping for. */
-        const ec_pdo_t *source_pdo;  /**< PDO with desired mapping. */
-        const ec_pdo_t *cur_pdo;     /**< PDO with current mapping (display only). */
-        const ec_pdo_entry_t *entry; /**< Current entry. */
-        unsigned int entry_count;    /**< Number of entries. */
-        unsigned int entry_pos;      /**< Position in PDO mapping. */
+        ec_slave_t *slave;           /**< 运行状态机的从站。 */
+        ec_pdo_t *target_pdo;        /**< 要读取映射的PDO。 */
+        const ec_pdo_t *source_pdo;  /**< 具有所需映射的PDO。 */
+        const ec_pdo_t *cur_pdo;     /**< 具有当前映射的PDO（仅显示）。 */
+        const ec_pdo_entry_t *entry; /**< 当前条目。 */
+        unsigned int entry_count;    /**< 条目数。 */
+        unsigned int entry_pos;      /**< PDO映射中的位置。 */
 };
+
+
 
 /*****************************************************************************/
 
