@@ -29,7 +29,7 @@
 
 /**
    \file
-   EtherCAT PDO configuration state machine structures.
+   EtherCAT PDO配置状态机结构体。
 */
 
 /*****************************************************************************/
@@ -49,24 +49,25 @@
  */
 typedef struct ec_fsm_pdo ec_fsm_pdo_t;
 
-/** PDO configuration state machine.
+/** PDO配置状态机。
  */
 struct ec_fsm_pdo
 {
-    void (*state)(ec_fsm_pdo_t *, ec_datagram_t *); /**< State function. */
-    ec_fsm_coe_t *fsm_coe;                          /**< CoE state machine to use. */
-    ec_fsm_pdo_entry_t fsm_pdo_entry;               /**< PDO entry state machine. */
-    ec_pdo_list_t pdos;                             /**< PDO configuration. */
-    ec_sdo_request_t request;                       /**< SDO request. */
-    ec_pdo_t slave_pdo;                             /**< PDO actually appearing in a slave. */
+    void (*state)(ec_fsm_pdo_t *, ec_datagram_t *); /**< 状态函数。 */
+    ec_fsm_coe_t *fsm_coe;                          /**< 使用的CoE状态机。 */
+    ec_fsm_pdo_entry_t fsm_pdo_entry;               /**< PDO条目状态机。 */
+    ec_pdo_list_t pdos;                             /**< PDO配置。 */
+    ec_sdo_request_t request;                       /**< SDO请求。 */
+    ec_pdo_t slave_pdo;                             /**< 实际出现在从站中的PDO。 */
 
-    ec_slave_t *slave;      /**< Slave the FSM runs on. */
-    uint8_t sync_index;     /**< Current sync manager index. */
-    ec_sync_t *sync;        /**< Current sync manager. */
-    ec_pdo_t *pdo;          /**< Current PDO. */
-    unsigned int pdo_pos;   /**< Assignment position of current PDOs. */
-    unsigned int pdo_count; /**< Number of assigned PDOs. */
+    ec_slave_t *slave;      /**< 运行该状态机的从站。 */
+    uint8_t sync_index;     /**< 当前同步管理器索引。 */
+    ec_sync_t *sync;        /**< 当前同步管理器。 */
+    ec_pdo_t *pdo;          /**< 当前PDO。 */
+    unsigned int pdo_pos;   /**< 当前PDO的分配位置。 */
+    unsigned int pdo_count; /**< 已分配的PDO数目。 */
 };
+
 
 /*****************************************************************************/
 

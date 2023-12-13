@@ -55,6 +55,7 @@ struct ec_fsm_pdo_entry
         ec_fsm_coe_t *fsm_coe;                                /**< 使用的CoE状态机 */
         ec_sdo_request_t request;                             /**< SDO请求。 */
 
+<<<<<<< Updated upstream
         ec_slave_t *slave;           /**< 运行状态机的从站。 */
         ec_pdo_t *target_pdo;        /**< 要读取映射的PDO。 */
         const ec_pdo_t *source_pdo;  /**< 具有所需映射的PDO。 */
@@ -62,6 +63,15 @@ struct ec_fsm_pdo_entry
         const ec_pdo_entry_t *entry; /**< 当前条目。 */
         unsigned int entry_count;    /**< 条目数。 */
         unsigned int entry_pos;      /**< PDO映射中的位置。 */
+=======
+        ec_slave_t *slave;           /**< 状态机所在的从站 */
+        ec_pdo_t *target_pdo;        /**< 要读取映射的PDO */
+        const ec_pdo_t *source_pdo;  /**< 具有所需映射的PDO */
+        const ec_pdo_t *cur_pdo;     /**< 具有当前映射的PDO（仅用于显示） */
+        const ec_pdo_entry_t *entry; /**< 当前条目 */
+        unsigned int entry_count;    /**< 条目数量 */
+        unsigned int entry_pos;      /**< PDO映射中的位置 */
+>>>>>>> Stashed changes
 };
 
 

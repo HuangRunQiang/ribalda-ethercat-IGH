@@ -29,7 +29,7 @@
 
 /**
    \file
-   EtherCAT slave configuration state machine.
+   EtherCAT从站配置状态机。
 */
 
 /*****************************************************************************/
@@ -49,26 +49,26 @@
 /** \see ec_fsm_slave_config */
 typedef struct ec_fsm_slave_config ec_fsm_slave_config_t;
 
-/** Finite state machine to configure an EtherCAT slave.
+/** EtherCAT从站配置的有限状态机。
  */
 struct ec_fsm_slave_config
 {
-    ec_datagram_t *datagram;     /**< Datagram used in the state machine. */
-    ec_fsm_change_t *fsm_change; /**< State change state machine. */
-    ec_fsm_coe_t *fsm_coe;       /**< CoE state machine. */
-    ec_fsm_soe_t *fsm_soe;       /**< SoE state machine. */
-    ec_fsm_pdo_t *fsm_pdo;       /**< PDO configuration state machine. */
+    ec_datagram_t *datagram;     /**< 在状态机中使用的数据报。 */
+    ec_fsm_change_t *fsm_change; /**< 状态变化状态机。 */
+    ec_fsm_coe_t *fsm_coe;       /**< CoE状态机。 */
+    ec_fsm_soe_t *fsm_soe;       /**< SoE状态机。 */
+    ec_fsm_pdo_t *fsm_pdo;       /**< PDO配置状态机。 */
 
-    ec_slave_t *slave;                                       /**< Slave the FSM runs on. */
-    void (*state)(ec_fsm_slave_config_t *, ec_datagram_t *); /**< State function. */
-    unsigned int retries;                                    /**< Retries on datagram timeout. */
-    ec_sdo_request_t *request;                               /**< SDO request for SDO configuration. */
-    ec_sdo_request_t request_copy;                           /**< Copied SDO request. */
-    ec_soe_request_t *soe_request;                           /**< SDO request for SDO configuration. */
-    ec_soe_request_t soe_request_copy;                       /**< Copied SDO request. */
-    unsigned long last_diff_ms;                              /**< For sync reporting. */
-    unsigned long jiffies_start;                             /**< For timeout calculations. */
-    unsigned int take_time;                                  /**< Store jiffies after datagram reception. */
+    ec_slave_t *slave;                                       /**< FSM运行的从站。 */
+    void (*state)(ec_fsm_slave_config_t *, ec_datagram_t *); /**< 状态函数。 */
+    unsigned int retries;                                    /**< 数据报超时时的重试次数。 */
+    ec_sdo_request_t *request;                               /**< SDO请求用于SDO配置。 */
+    ec_sdo_request_t request_copy;                           /**< 复制的SDO请求。 */
+    ec_soe_request_t *soe_request;                           /**< SDO请求用于SDO配置。 */
+    ec_soe_request_t soe_request_copy;                       /**< 复制的SDO请求。 */
+    unsigned long last_diff_ms;                              /**< 用于同步报告。 */
+    unsigned long jiffies_start;                             /**< 用于超时计算。 */
+    unsigned int take_time;                                  /**< 在接收数据报后存储jiffies。 */
 };
 
 /*****************************************************************************/

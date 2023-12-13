@@ -29,7 +29,8 @@
 
 /**
    \file
-   EtherCAT slave information interface FSM structure.
+   EtherCAT从站信息接口FSM结构。
+
 */
 
 /*****************************************************************************/
@@ -43,12 +44,12 @@
 
 /*****************************************************************************/
 
-/** SII access addressing mode.
+/** SII访问寻址模式。
  */
 typedef enum
 {
-    EC_FSM_SII_USE_INCREMENT_ADDRESS, /**< Use auto-increment addressing. */
-    EC_FSM_SII_USE_CONFIGURED_ADDRESS /**< Use configured addresses. */
+    EC_FSM_SII_USE_INCREMENT_ADDRESS, /**< 使用自动增量寻址。 */
+    EC_FSM_SII_USE_CONFIGURED_ADDRESS /**< 使用配置的地址。 */
 } ec_fsm_sii_addressing_t;
 
 /*****************************************************************************/
@@ -56,22 +57,22 @@ typedef enum
 typedef struct ec_fsm_sii ec_fsm_sii_t; /**< \see ec_fsm_sii */
 
 /**
-   Slave information interface FSM.
+   从站信息接口FSM。
 */
 
 struct ec_fsm_sii
 {
-    ec_slave_t *slave;       /**< slave the FSM runs on */
-    ec_datagram_t *datagram; /**< datagram used in the state machine */
-    unsigned int retries;    /**< retries upon datagram timeout */
+    ec_slave_t *slave;       /**< 运行FSM的从站 */
+    ec_datagram_t *datagram; /**< 状态机中使用的数据报 */
+    unsigned int retries;    /**< 数据报超时时的重试次数 */
 
-    void (*state)(ec_fsm_sii_t *, ec_datagram_t *); /**< SII state function */
-    uint16_t word_offset;                           /**< input: word offset in SII */
-    ec_fsm_sii_addressing_t mode;                   /**< reading via APRD or NPRD */
-    uint8_t value[4];                               /**< raw SII value (32bit) */
-    unsigned long jiffies_start;                    /**< Start timestamp. */
-    uint8_t check_once_more;                        /**< one more try after timeout */
-    uint8_t eeprom_load_retry;                      /**< waiting for eeprom to be loaded */
+    void (*state)(ec_fsm_sii_t *, ec_datagram_t *); /**< SII状态函数 */
+    uint16_t word_offset;                           /**< 输入：SII中的字偏移量 */
+    ec_fsm_sii_addressing_t mode;                   /**< 通过APRD或NPRD进行读取 */
+    uint8_t value[4];                               /**< 原始SII值（32位） */
+    unsigned long jiffies_start;                    /**< 开始时间戳。 */
+    uint8_t check_once_more;                        /**< 超时后再尝试一次 */
+    uint8_t eeprom_load_retry;                      /**< 等待EEPROM加载 */
 };
 
 /*****************************************************************************/

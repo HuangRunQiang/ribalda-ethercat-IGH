@@ -29,7 +29,7 @@
 
 /**
    \file
-   EtherCAT slave information interface FSM.
+   EtherCAT从站信息接口有限状态机。
 */
 
 /*****************************************************************************/
@@ -39,25 +39,23 @@
 #include "master.h"
 #include "fsm_sii.h"
 
-/** EEPROM load timeout [ms].
+/** EEPROM加载超时时间[毫秒]。
  *
- * Used to calculate timeouts bsed on the jiffies counter.
+ * 根据jiffies计数器计算超时时间。
  *
- * \attention Must be more than 10 to avoid problems on kernels that run with
- * a timer interupt frequency of 100 Hz.
+ * \attention 必须大于10，以避免在定时器中断频率为100 Hz的内核上出现问题。
  */
 #define SII_LOAD_TIMEOUT 500
 
-/** Read/write timeout [ms].
+/** 读/写超时时间[毫秒]。
  *
- * Used to calculate timeouts bsed on the jiffies counter.
+ * 根据jiffies计数器计算超时时间。
  *
- * \attention Must be more than 10 to avoid problems on kernels that run with
- * a timer interupt frequency of 100 Hz.
+ * \attention 必须大于10，以避免在定时器中断频率为100 Hz的内核上出现问题。
  */
 #define SII_TIMEOUT 20
 
-/** Time before evaluating answer at writing [ms].
+/** 写入操作前的等待时间[毫秒]。
  */
 #define SII_INHIBIT 5
 
@@ -77,11 +75,12 @@ void ec_fsm_sii_state_error(ec_fsm_sii_t *, ec_datagram_t *);
 /*****************************************************************************/
 
 /**
-   Constructor.
+   \brief 构造函数。
+   \details 初始化有限状态机。
+   \param fsm 有限状态机。
+   \return 无。
 */
-
-void ec_fsm_sii_init(ec_fsm_sii_t *fsm /**< finite state machine */
-)
+void ec_fsm_sii_init(ec_fsm_sii_t *fsm /**< 有限状态机 */)
 {
     fsm->state = NULL;
     fsm->datagram = NULL;
@@ -90,23 +89,30 @@ void ec_fsm_sii_init(ec_fsm_sii_t *fsm /**< finite state machine */
 /*****************************************************************************/
 
 /**
-   Destructor.
+   \brief 析构函数。
+   \details 清除有限状态机。
+   \param fsm 有限状态机。
+   \return 无。
 */
-
-void ec_fsm_sii_clear(ec_fsm_sii_t *fsm /**< finite state machine */)
+void ec_fsm_sii_clear(ec_fsm_sii_t *fsm /**< 有限状态机 */)
 {
 }
 
 /*****************************************************************************/
 
 /**
-   Initializes the SII read state machine.
+   \brief 初始化SII读取状态机。
+   \details 初始化SII读取状态机，设置从站、偏移量和寻址方案。
+   \param fsm 有限状态机。
+   \param slave 要读取的从站。
+   \param word_offset 要读取的偏移量。
+   \param mode 寻址方案。
+   \return 无。
 */
-
-void ec_fsm_sii_read(ec_fsm_sii_t *fsm,           /**< finite state machine */
-                     ec_slave_t *slave,           /**< slave to read from */
-                     uint16_t word_offset,        /**< offset to read from */
-                     ec_fsm_sii_addressing_t mode /**< addressing scheme */
+void ec_fsm_sii_read(ec_fsm_sii_t *fsm,           /**< 有限状态机 */
+                     ec_slave_t *slave,           /**< 要读取的从站 */
+                     uint16_t word_offset,        /**< 要读取的偏移量 */
+                     ec_fsm_sii_addressing_t mode /**< 寻址方案 */
 )
 {
     fsm->state = ec_fsm_sii_state_start_reading;
@@ -118,14 +124,20 @@ void ec_fsm_sii_read(ec_fsm_sii_t *fsm,           /**< finite state machine */
 /*****************************************************************************/
 
 /**
-   Initializes the SII write state machine.
+   \brief 初始化SII写入状态机。
+   \details 初始化SII写入状态机，设置从站、偏移量、数据和寻址方案。
+   \param fsm 有限状态机。
+   \param slave 要写入的从站。
+   \param word_offset 要写入的偏移量。
+   \param value 指向2个字节数据的指针。
+   \param mode 寻址方案。
+   \return 无。
 */
-
-void ec_fsm_sii_write(ec_fsm_sii_t *fsm,           /**< finite state machine */
-                      ec_slave_t *slave,           /**< slave to read from */
-                      uint16_t word_offset,        /**< offset to read from */
-                      const uint16_t *value,       /**< pointer to 2 bytes of data */
-                      ec_fsm_sii_addressing_t mode /**< addressing scheme */
+void ec_fsm_sii_write(ec_fsm_sii_t *fsm,           /**< 有限状态机 */
+                      ec_slave_t *slave,           /**< 要写入的从站 */
+                      uint16_t word_offset,        /**< 要写入的偏移量 */
+                      const uint16_t *value,       /**< 指向2个字节数据的指针 */
+                      ec_fsm_sii_addressing_t mode /**< 寻址方案 */
 )
 {
     fsm->state = ec_fsm_sii_state_start_writing;
@@ -138,12 +150,12 @@ void ec_fsm_sii_write(ec_fsm_sii_t *fsm,           /**< finite state machine */
 /*****************************************************************************/
 
 /**
-   Executes the SII state machine.
-   \return false, if the state machine has terminated
+   \brief 执行SII状态机。
+   \details 执行SII状态机，并返回状态机是否已终止。
+   \return 如果状态机已终止，则返回false。
 */
-
-int ec_fsm_sii_exec(ec_fsm_sii_t *fsm,      /**< finite state machine */
-                    ec_datagram_t *datagram /**< datagram structure to use */
+int ec_fsm_sii_exec(ec_fsm_sii_t *fsm,      /**< 有限状态机 */
+                    ec_datagram_t *datagram /**< 要使用的数据报结构 */
 )
 {
     if (fsm->state == ec_fsm_sii_state_end || fsm->state == ec_fsm_sii_state_error)
@@ -153,7 +165,7 @@ int ec_fsm_sii_exec(ec_fsm_sii_t *fsm,      /**< finite state machine */
          fsm->datagram->state == EC_DATAGRAM_QUEUED ||
          fsm->datagram->state == EC_DATAGRAM_SENT))
     {
-        // datagram not received yet
+        // 数据报尚未接收
         if (datagram != fsm->datagram)
             datagram->state = EC_DATAGRAM_INVALID;
         return 1;
@@ -174,11 +186,10 @@ int ec_fsm_sii_exec(ec_fsm_sii_t *fsm,      /**< finite state machine */
 /*****************************************************************************/
 
 /**
-   Returns, if the master startup state machine terminated with success.
-   \return non-zero if successful.
+   \brief 返回主站启动状态机是否成功终止。
+   \return 如果成功终止，则返回非零值。
 */
-
-int ec_fsm_sii_success(ec_fsm_sii_t *fsm /**< Finite state machine */)
+int ec_fsm_sii_success(ec_fsm_sii_t *fsm /**< 有限状态机 */)
 {
     return fsm->state == ec_fsm_sii_state_end;
 }
@@ -187,12 +198,19 @@ int ec_fsm_sii_success(ec_fsm_sii_t *fsm /**< Finite state machine */)
  * datagram functions
  *****************************************************************************/
 
+/**
+   \brief 准备读取操作。
+   \details 初始化读取操作，根据寻址方案选择不同的读取方式。
+   \param fsm 有限状态机。
+   \param datagram 使用的数据报结构。
+   \return 无。
+*/
 static void ec_fsm_sii_prepare_read(
-    ec_fsm_sii_t *fsm,      /**< finite state machine */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_sii_t *fsm,      /**< 有限状态机 */
+    ec_datagram_t *datagram /**< 要使用的数据报结构 */
 )
 {
-    // initiate read operation
+    // 启动读取操作
     switch (fsm->mode)
     {
     case EC_FSM_SII_USE_INCREMENT_ADDRESS:
@@ -203,19 +221,26 @@ static void ec_fsm_sii_prepare_read(
         break;
     }
 
-    EC_WRITE_U8(datagram->data, 0x80);     // two address octets
-    EC_WRITE_U8(datagram->data + 1, 0x01); // request read operation
+    EC_WRITE_U8(datagram->data, 0x80);     // 两个地址八位字节
+    EC_WRITE_U8(datagram->data + 1, 0x01); // 请求读取操作
     EC_WRITE_U16(datagram->data + 2, fsm->word_offset);
 }
 
 /*****************************************************************************/
 
+/**
+   \brief 准备读取检查操作。
+   \details 发送检查/获取数据报。
+   \param fsm 有限状态机。
+   \param datagram 使用的数据报结构。
+   \return 无。
+*/
 static void ec_fsm_sii_prepare_read_check(
-    ec_fsm_sii_t *fsm,      /**< finite state machine */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_sii_t *fsm,      /**< 有限状态机 */
+    ec_datagram_t *datagram /**< 要使用的数据报结构 */
 )
 {
-    // issue check/fetch datagram
+    // 发送检查/获取数据报
     switch (fsm->mode)
     {
     case EC_FSM_SII_USE_INCREMENT_ADDRESS:
@@ -231,16 +256,23 @@ static void ec_fsm_sii_prepare_read_check(
 
 /*****************************************************************************/
 
+/**
+   \brief 准备写入操作。
+   \details 初始化写入操作。
+   \param fsm 有限状态机。
+   \param datagram 使用的数据报结构。
+   \return 无。
+*/
 static void ec_fsm_sii_prepare_write(
-    ec_fsm_sii_t *fsm,      /**< finite state machine */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_sii_t *fsm,      /**< 有限状态机 */
+    ec_datagram_t *datagram /**< 要使用的数据报结构 */
 )
 {
-    // initiate write operation
+    // 启动写入操作
     ec_datagram_fpwr(datagram, fsm->slave->station_address, 0x502, 8);
-    EC_WRITE_U8(datagram->data, 0x81);     /* two address octets
-                                              + enable write access */
-    EC_WRITE_U8(datagram->data + 1, 0x02); // request write operation
+    EC_WRITE_U8(datagram->data, 0x81);     /* 两个地址八位字节
+                                              + 启用写入访问 */
+    EC_WRITE_U8(datagram->data + 1, 0x02); // 请求写入操作
     EC_WRITE_U16(datagram->data + 2, fsm->word_offset);
     memset(datagram->data + 4, 0x00, 2);
     memcpy(datagram->data + 6, fsm->value, 2);
@@ -248,34 +280,41 @@ static void ec_fsm_sii_prepare_write(
 
 /*****************************************************************************/
 
+/**
+ * @brief 准备写入检查
+ * @param fsm 有限状态机
+ * @param datagram 使用的数据报
+ * @return 无
+ * @details 发送检查数据报，将数据报清零
+ */
 static void ec_fsm_sii_prepare_write_check(
-    ec_fsm_sii_t *fsm,      /**< finite state machine */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_sii_t *fsm,      /**< 有限状态机 */
+    ec_datagram_t *datagram /**< 使用的数据报 */
 )
 {
-    // issue check datagram
+    // 发送检查数据报
     ec_datagram_fprd(datagram, fsm->slave->station_address, 0x502, 2);
+    // 数据报清零
     ec_datagram_zero(datagram);
 }
 
 /******************************************************************************
- * state functions
+ * 状态函数
  *****************************************************************************/
 
 /**
-   SII state: START READING.
-   Starts reading the slave information interface.
-*/
-
+ * SII状态：开始读取
+ * 开始读取从站信息接口
+ */
 void ec_fsm_sii_state_start_reading(
-    ec_fsm_sii_t *fsm,      /**< finite state machine */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_sii_t *fsm,      /**< 有限状态机 */
+    ec_datagram_t *datagram /**< 使用的数据报 */
 )
 {
     ec_fsm_sii_prepare_read(fsm, datagram);
 
 #ifdef SII_DEBUG
-    EC_SLAVE_DBG(fsm->slave, 0, "reading SII data, word %u:\n",
+    EC_SLAVE_DBG(fsm->slave, 0, "正在读取SII数据，字 %u:\n",
                  fsm->word_offset);
     ec_print_data(datagram->data, 4);
 #endif
@@ -287,13 +326,12 @@ void ec_fsm_sii_state_start_reading(
 /*****************************************************************************/
 
 /**
-   SII state: READ CHECK.
-   Checks, if the SII-read-datagram has been sent and issues a fetch datagram.
-*/
-
+ * SII状态：读取检查
+ * 检查SII读取数据报是否已发送并发出获取数据报
+ */
 void ec_fsm_sii_state_read_check(
-    ec_fsm_sii_t *fsm,      /**< finite state machine */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_sii_t *fsm,      /**< 有限状态机 */
+    ec_datagram_t *datagram /**< 使用的数据报 */
 )
 {
     if (fsm->datagram->state == EC_DATAGRAM_TIMED_OUT && fsm->retries--)
@@ -305,7 +343,7 @@ void ec_fsm_sii_state_read_check(
     if (fsm->datagram->state != EC_DATAGRAM_RECEIVED)
     {
         fsm->state = ec_fsm_sii_state_error;
-        EC_SLAVE_ERR(fsm->slave, "Failed to receive SII read datagram: ");
+        EC_SLAVE_ERR(fsm->slave, "无法接收SII读取数据报: ");
         ec_datagram_print_state(fsm->datagram);
         return;
     }
@@ -313,7 +351,7 @@ void ec_fsm_sii_state_read_check(
     if (fsm->datagram->working_counter != 1)
     {
         fsm->state = ec_fsm_sii_state_error;
-        EC_SLAVE_ERR(fsm->slave, "Reception of SII read datagram failed: ");
+        EC_SLAVE_ERR(fsm->slave, "接收SII读取数据报失败: ");
         ec_datagram_print_wc_error(fsm->datagram);
         return;
     }
@@ -330,12 +368,15 @@ void ec_fsm_sii_state_read_check(
 /*****************************************************************************/
 
 /**
-   SII state: READ FETCH.
-   Fetches the result of an SII-read datagram.
-*/
+ * @brief SII状态：读取获取
+ * @param fsm 有限状态机
+ * @param datagram 使用的数据报
+ * @return 无
+ * @details 获取SII读取数据报的结果
+ */
 void ec_fsm_sii_state_read_fetch(
-    ec_fsm_sii_t *fsm,      /**< finite state machine */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_sii_t *fsm,      /**< 有限状态机 */
+    ec_datagram_t *datagram /**< 使用的数据报 */
 )
 {
     if (fsm->datagram->state == EC_DATAGRAM_TIMED_OUT && fsm->retries--)
@@ -348,7 +389,7 @@ void ec_fsm_sii_state_read_fetch(
     {
         fsm->state = ec_fsm_sii_state_error;
         EC_SLAVE_ERR(fsm->slave,
-                     "Failed to receive SII check/fetch datagram: ");
+                     "无法接收SII检查/获取数据报: ");
         ec_datagram_print_state(fsm->datagram);
         return;
     }
@@ -357,39 +398,38 @@ void ec_fsm_sii_state_read_fetch(
     {
         fsm->state = ec_fsm_sii_state_error;
         EC_SLAVE_ERR(fsm->slave,
-                     "Reception of SII check/fetch datagram failed: ");
+                     "接收SII检查/获取数据报失败: ");
         ec_datagram_print_wc_error(fsm->datagram);
         return;
     }
 
 #ifdef SII_DEBUG
-    EC_SLAVE_DBG(fsm->slave, 0, "checking SII read state:\n");
+    EC_SLAVE_DBG(fsm->slave, 0, "检查SII读取状态:\n");
     ec_print_data(fsm->datagram->data, 10);
 #endif
 
     if (EC_READ_U8(fsm->datagram->data + 1) & 0x20)
     {
-        EC_SLAVE_ERR(fsm->slave, "Error on last command while"
-                                 " reading from SII word 0x%04x.\n",
+        EC_SLAVE_ERR(fsm->slave, "在读取SII字0x%04x时出错。\n",
                      fsm->word_offset);
         fsm->state = ec_fsm_sii_state_error;
         return;
     }
 
-    // check "EEPROM Loading bit"
+    // 检查"EEPROM Loading bit"
     if (EC_READ_U8(fsm->datagram->data + 1) & 0x10)
-    { /* EEPROM not loaded */
+    { /* EEPROM未加载 */
         unsigned long diff_ms;
 
         if (fsm->eeprom_load_retry == 0)
         {
             fsm->eeprom_load_retry = 1;
             EC_SLAVE_WARN(fsm->slave,
-                          "SII Read Error, EEPROM not loaded.  Retrying...\n");
+                          "SII读取错误，EEPROM未加载。正在重试...\n");
         }
 
-        // EEPROM still not loaded... timeout?
-        // May be due to an EEPROM load error
+        // EEPROM仍未加载... 超时？
+        // 可能是由于EEPROM加载错误
         diff_ms =
             (fsm->datagram->jiffies_received - fsm->jiffies_start) * 1000 / HZ;
         if (diff_ms >= SII_LOAD_TIMEOUT)
@@ -401,13 +441,13 @@ void ec_fsm_sii_state_read_fetch(
             else
             {
                 EC_SLAVE_ERR(fsm->slave,
-                             "SII Error: Timeout waiting for EEPROM to load.\n");
+                             "SII错误：等待EEPROM加载超时。\n");
                 fsm->state = ec_fsm_sii_state_error;
                 return;
             }
         }
 
-        // issue check/fetch datagram again
+        // 再次发出检查/获取数据报
         ec_fsm_sii_prepare_read_check(fsm, datagram);
         fsm->retries = EC_FSM_RETRIES;
         return;
@@ -415,18 +455,18 @@ void ec_fsm_sii_state_read_fetch(
     else if (fsm->eeprom_load_retry)
     {
         fsm->eeprom_load_retry = 0;
-        EC_SLAVE_INFO(fsm->slave, "SII EEPROM loaded.  Continuing.\n");
+        EC_SLAVE_INFO(fsm->slave, "SII EEPROM已加载。继续。\n");
 
-        // start reading SII value again
+        // 重新开始读取SII值
         fsm->state = ec_fsm_sii_state_start_reading;
         return;
     }
 
-    // check "busy bit"
+    // 检查"busy bit"
     if (EC_READ_U8(fsm->datagram->data + 1) & 0x81)
     { /* busy bit or
     read operation busy */
-        // still busy... timeout?
+        // 仍在忙... 超时？
         unsigned long diff_ms =
             (fsm->datagram->jiffies_received - fsm->jiffies_start) * 1000 / HZ;
         if (diff_ms >= SII_TIMEOUT)
@@ -437,19 +477,19 @@ void ec_fsm_sii_state_read_fetch(
             }
             else
             {
-                EC_SLAVE_ERR(fsm->slave, "SII: Read timeout.\n");
+                EC_SLAVE_ERR(fsm->slave, "SII：读取超时。\n");
                 fsm->state = ec_fsm_sii_state_error;
                 return;
             }
         }
 
-        // issue check/fetch datagram again
+        // 再次发出检查/获取数据报
         ec_fsm_sii_prepare_read_check(fsm, datagram);
         fsm->retries = EC_FSM_RETRIES;
         return;
     }
 
-    // SII value received.
+    // 收到SII值
     memcpy(fsm->value, fsm->datagram->data + 6, 4);
     fsm->state = ec_fsm_sii_state_end;
 }
@@ -457,19 +497,21 @@ void ec_fsm_sii_state_read_fetch(
 /*****************************************************************************/
 
 /**
-   SII state: START WRITING.
-   Starts writing a word through the slave information interface.
-*/
-
+ * @brief SII状态：开始写入
+ * @param fsm 有限状态机
+ * @param datagram 使用的数据报
+ * @return 无
+ * @details 开始通过从站信息接口写入一个字
+ */
 void ec_fsm_sii_state_start_writing(
-    ec_fsm_sii_t *fsm,      /**< finite state machine */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_sii_t *fsm,      /**< 有限状态机 */
+    ec_datagram_t *datagram /**< 使用的数据报 */
 )
 {
     ec_fsm_sii_prepare_write(fsm, datagram);
 
 #ifdef SII_DEBUG
-    EC_SLAVE_DBG(fsm->slave, 0, "writing SII data:\n");
+    EC_SLAVE_DBG(fsm->slave, 0, "写入SII数据:\n");
     ec_print_data(datagram->data, 8);
 #endif
 
@@ -480,12 +522,15 @@ void ec_fsm_sii_state_start_writing(
 /*****************************************************************************/
 
 /**
-   SII state: WRITE CHECK.
-*/
-
+ * @brief SII状态：写入检查
+ * @param fsm 有限状态机
+ * @param datagram 使用的数据报
+ * @return 无
+ * @details 无
+ */
 void ec_fsm_sii_state_write_check(
-    ec_fsm_sii_t *fsm,      /**< finite state machine */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_sii_t *fsm,      /**< 有限状态机 */
+    ec_datagram_t *datagram /**< 使用的数据报 */
 )
 {
     if (fsm->datagram->state == EC_DATAGRAM_TIMED_OUT && fsm->retries--)
@@ -497,7 +542,7 @@ void ec_fsm_sii_state_write_check(
     if (fsm->datagram->state != EC_DATAGRAM_RECEIVED)
     {
         fsm->state = ec_fsm_sii_state_error;
-        EC_SLAVE_ERR(fsm->slave, "Failed to receive SII write datagram: ");
+        EC_SLAVE_ERR(fsm->slave, "无法接收SII写入数据报: ");
         ec_datagram_print_state(fsm->datagram);
         return;
     }
@@ -505,7 +550,7 @@ void ec_fsm_sii_state_write_check(
     if (fsm->datagram->working_counter != 1)
     {
         fsm->state = ec_fsm_sii_state_error;
-        EC_SLAVE_ERR(fsm->slave, "Reception of SII write datagram failed: ");
+        EC_SLAVE_ERR(fsm->slave, "接收SII写入数据报失败: ");
         ec_datagram_print_wc_error(fsm->datagram);
         return;
     }
@@ -521,12 +566,15 @@ void ec_fsm_sii_state_write_check(
 /*****************************************************************************/
 
 /**
-   SII state: WRITE CHECK 2.
-*/
-
+ * @brief SII状态：写入检查2
+ * @param fsm 有限状态机
+ * @param datagram 使用的数据报
+ * @return 无
+ * @details 无
+ */
 void ec_fsm_sii_state_write_check2(
-    ec_fsm_sii_t *fsm,      /**< finite state machine */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_sii_t *fsm,      /**< 有限状态机 */
+    ec_datagram_t *datagram /**< 使用的数据报 */
 )
 {
     unsigned long diff_ms;
@@ -541,7 +589,7 @@ void ec_fsm_sii_state_write_check2(
     {
         fsm->state = ec_fsm_sii_state_error;
         EC_SLAVE_ERR(fsm->slave,
-                     "Failed to receive SII write check datagram: ");
+                     "无法接收SII写入检查数据报: ");
         ec_datagram_print_state(fsm->datagram);
         return;
     }
@@ -550,32 +598,32 @@ void ec_fsm_sii_state_write_check2(
     {
         fsm->state = ec_fsm_sii_state_error;
         EC_SLAVE_ERR(fsm->slave,
-                     "Reception of SII write check datagram failed: ");
+                     "接收SII写入检查数据报失败: ");
         ec_datagram_print_wc_error(fsm->datagram);
         return;
     }
 
 #ifdef SII_DEBUG
-    EC_SLAVE_DBG(fsm->slave, 0, "checking SII write state:\n");
+    EC_SLAVE_DBG(fsm->slave, 0, "检查SII写入状态:\n");
     ec_print_data(fsm->datagram->data, 2);
 #endif
 
     if (EC_READ_U8(fsm->datagram->data + 1) & 0x20)
     {
-        EC_SLAVE_ERR(fsm->slave, "SII: Error on last SII command!\n");
+        EC_SLAVE_ERR(fsm->slave, "SII：上一个SII命令出错！\n");
         fsm->state = ec_fsm_sii_state_error;
         return;
     }
 
-    /* FIXME: some slaves never answer with the busy flag set...
-     * wait a few ms for the write operation to complete. */
+    /* FIXME: 一些从站永远不会以设置忙标志的方式回答...
+     * 等待几毫秒以完成写操作。 */
     diff_ms = (fsm->datagram->jiffies_received - fsm->jiffies_start) * 1000 / HZ;
     if (diff_ms < SII_INHIBIT)
     {
 #ifdef SII_DEBUG
-        EC_SLAVE_DBG(fsm->slave, 0, "too early.\n");
+        EC_SLAVE_DBG(fsm->slave, 0, "太早了。\n");
 #endif
-        // issue check datagram again
+        // 再次发出检查数据报
         fsm->retries = EC_FSM_RETRIES;
         return;
     }
@@ -583,7 +631,7 @@ void ec_fsm_sii_state_write_check2(
     if (EC_READ_U8(fsm->datagram->data + 1) & 0x82)
     { /* busy bit or
     write operation busy bit */
-        // still busy... timeout?
+        // 仍在忙... 超时？
         if (diff_ms >= SII_TIMEOUT)
         {
             if (fsm->check_once_more)
@@ -592,13 +640,13 @@ void ec_fsm_sii_state_write_check2(
             }
             else
             {
-                EC_SLAVE_ERR(fsm->slave, "SII: Write timeout.\n");
+                EC_SLAVE_ERR(fsm->slave, "SII：写入超时。\n");
                 fsm->state = ec_fsm_sii_state_error;
                 return;
             }
         }
 
-        // issue check datagram again
+        // 再次发出检查数据报
         ec_fsm_sii_prepare_write_check(fsm, datagram);
         fsm->retries = EC_FSM_RETRIES;
         return;
@@ -606,24 +654,27 @@ void ec_fsm_sii_state_write_check2(
 
     if (EC_READ_U8(fsm->datagram->data + 1) & 0x40)
     {
-        EC_SLAVE_ERR(fsm->slave, "SII: Write operation failed!\n");
+        EC_SLAVE_ERR(fsm->slave, "SII：写入操作失败！\n");
         fsm->state = ec_fsm_sii_state_error;
         return;
     }
 
-    // success
+    // 成功
     fsm->state = ec_fsm_sii_state_end;
 }
 
 /*****************************************************************************/
 
 /**
-   State: ERROR.
-*/
-
+ * @brief 状态：错误
+ * @param fsm 有限状态机
+ * @param datagram 使用的数据报
+ * @return 无
+ * @details 无
+ */
 void ec_fsm_sii_state_error(
-    ec_fsm_sii_t *fsm,      /**< finite state machine */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_sii_t *fsm,      /**< 有限状态机 */
+    ec_datagram_t *datagram /**< 使用的数据报 */
 )
 {
 }
@@ -631,12 +682,15 @@ void ec_fsm_sii_state_error(
 /*****************************************************************************/
 
 /**
-   State: END.
-*/
-
+ * @brief 状态：结束
+ * @param fsm 有限状态机
+ * @param datagram 使用的数据报
+ * @return 无
+ * @details 无
+ */
 void ec_fsm_sii_state_end(
-    ec_fsm_sii_t *fsm,      /**< finite state machine */
-    ec_datagram_t *datagram /**< Datagram to use. */
+    ec_fsm_sii_t *fsm,      /**< 有限状态机 */
+    ec_datagram_t *datagram /**< 使用的数据报 */
 )
 {
 }
