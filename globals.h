@@ -40,22 +40,22 @@
 #include "config.h"
 
 /******************************************************************************
- *  Overall macros
+ *  全局宏定义
  *****************************************************************************/
 
-/** Helper macro for EC_STR(), literates a macro argument.
+/** EC_STR()的辅助宏，将宏参数转换为字符串。
  *
- * \param X argument to literate.
+ * \param X 要转换为字符串的参数。
  */
 #define EC_LIT(X) #X
 
-/** Converts a macro argument to a string.
+/** 将宏参数转换为字符串。
  *
- * \param X argument to stringify.
+ * \param X 要转换为字符串的参数。
  */
 #define EC_STR(X) EC_LIT(X)
 
-/** Master version string
+/** 主站版本字符串
  */
 #define EC_MASTER_VERSION VERSION " " EC_STR(REV)
 

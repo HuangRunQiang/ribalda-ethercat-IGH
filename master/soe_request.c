@@ -41,7 +41,7 @@
 
 /*****************************************************************************/
 
-/** Default timeout in ms to wait for SoE responses.
+/** 等待SoE响应的默认超时时间，以毫秒为单位。
  */
 #define EC_SOE_REQUEST_RESPONSE_TIMEOUT 1000
 
@@ -51,10 +51,14 @@ void ec_soe_request_clear_data(ec_soe_request_t *);
 
 /*****************************************************************************/
 
-/** SoE request constructor.
+/** SoE请求构造函数。
+ * 
+ * 初始化SoE请求对象。
+ *
+ * @param req SoE请求对象。
  */
 void ec_soe_request_init(
-    ec_soe_request_t *req /**< SoE request. */
+    ec_soe_request_t *req /**< SoE请求对象。 */
 )
 {
     INIT_LIST_HEAD(&req->list);
@@ -72,10 +76,14 @@ void ec_soe_request_init(
 
 /*****************************************************************************/
 
-/** SoE request destructor.
+/** SoE请求析构函数。
+ * 
+ * 清除SoE请求对象的数据。
+ *
+ * @param req SoE请求对象。
  */
 void ec_soe_request_clear(
-    ec_soe_request_t *req /**< SoE request. */
+    ec_soe_request_t *req /**< SoE请求对象。 */
 )
 {
     ec_soe_request_clear_data(req);
@@ -83,13 +91,17 @@ void ec_soe_request_clear(
 
 /*****************************************************************************/
 
-/** Copy another SoE request.
+/** 复制另一个SoE请求。
  *
- * \return Zero on success, otherwise a negative error code.
+ * 从另一个SoE请求对象复制数据到当前SoE请求对象。
+ * 
+ * @param req 当前SoE请求对象。
+ * @param other 要复制的另一个SoE请求对象。
+ * @return 成功返回0，否则返回负数错误代码。
  */
 int ec_soe_request_copy(
-    ec_soe_request_t *req,        /**< SoE request. */
-    const ec_soe_request_t *other /**< Other SoE request to copy from. */
+    ec_soe_request_t *req,        /**< 当前SoE请求对象。 */
+    const ec_soe_request_t *other /**< 要复制的另一个SoE请求对象。 */
 )
 {
     req->drive_no = other->drive_no;
@@ -100,11 +112,14 @@ int ec_soe_request_copy(
 
 /*****************************************************************************/
 
-/** Set drive number.
+/** 设置驱动号。
+ *
+ * @param req SoE请求对象。
+ * @param drive_no 驱动号。
  */
 void ec_soe_request_set_drive_no(
-    ec_soe_request_t *req, /**< SoE request. */
-    uint8_t drive_no       /** Drive Number. */
+    ec_soe_request_t *req, /**< SoE请求对象。 */
+    uint8_t drive_no       /** 驱动号。 */
 )
 {
     req->drive_no = drive_no;
@@ -112,11 +127,14 @@ void ec_soe_request_set_drive_no(
 
 /*****************************************************************************/
 
-/** Set IDN.
+/** 设置IDN。
+ *
+ * @param req SoE请求对象。
+ * @param idn IDN。
  */
 void ec_soe_request_set_idn(
-    ec_soe_request_t *req, /**< SoE request. */
-    uint16_t idn           /** IDN. */
+    ec_soe_request_t *req, /**< SoE请求对象。 */
+    uint16_t idn           /** IDN。 */
 )
 {
     req->idn = idn;
@@ -124,10 +142,14 @@ void ec_soe_request_set_idn(
 
 /*****************************************************************************/
 
-/** Free allocated memory.
+/** 释放分配的内存。
+ *
+ * 清除SoE请求对象中的数据内存。
+ *
+ * @param req SoE请求对象。
  */
 void ec_soe_request_clear_data(
-    ec_soe_request_t *req /**< SoE request. */
+    ec_soe_request_t *req /**< SoE请求对象。 */
 )
 {
     if (req->data)
@@ -142,15 +164,17 @@ void ec_soe_request_clear_data(
 
 /*****************************************************************************/
 
-/** Pre-allocates the data memory.
+/** 预分配数据内存。
  *
- * If the \a mem_size is already bigger than \a size, nothing is done.
+ * 如果 \a mem_size 已经大于等于 \a size，则不执行任何操作。
  *
- * \return 0 on success, otherwise -ENOMEM.
+ * @param req SoE请求对象。
+ * @param size 要分配的数据大小。
+ * @return 成功返回0，否则返回 -ENOMEM。
  */
 int ec_soe_request_alloc(
-    ec_soe_request_t *req, /**< SoE request. */
-    size_t size            /**< Data size to allocate. */
+    ec_soe_request_t *req, /**< SoE请求对象。 */
+    size_t size            /**< 要分配的数据大小。 */
 )
 {
     if (size <= req->mem_size)
@@ -160,7 +184,7 @@ int ec_soe_request_alloc(
 
     if (!(req->data = (uint8_t *)kmalloc(size, GFP_KERNEL)))
     {
-        EC_ERR("Failed to allocate %zu bytes of SoE memory.\n", size);
+        EC_ERR("无法分配 %zu 字节的SoE内存。\n", size);
         return -ENOMEM;
     }
 
@@ -171,17 +195,19 @@ int ec_soe_request_alloc(
 
 /*****************************************************************************/
 
-/** Copies SoE data from an external source.
+/** 从外部源复制SoE数据。
  *
- * If the \a mem_size is to small, new memory is allocated.
+ * 如果 \a mem_size 太小，则分配新的内存。
  *
- * \retval  0 Success.
- * \retval <0 Error code.
+ * @param req SoE请求对象。
+ * @param source 源数据。
+ * @param size \a source 中的字节数。
+ * @return 成功返回0，否则返回负数错误代码。
  */
 int ec_soe_request_copy_data(
-    ec_soe_request_t *req, /**< SoE request. */
-    const uint8_t *source, /**< Source data. */
-    size_t size            /**< Number of bytes in \a source. */
+    ec_soe_request_t *req, /**< SoE请求对象。 */
+    const uint8_t *source, /**< 源数据。 */
+    size_t size            /**< \a source 中的字节数。 */
 )
 {
     int ret = ec_soe_request_alloc(req, size);
@@ -195,17 +221,19 @@ int ec_soe_request_copy_data(
 
 /*****************************************************************************/
 
-/** Copies SoE data from an external source.
+/** 从外部源追加SoE数据。
  *
- * If the \a mem_size is to small, new memory is allocated.
+ * 如果 \a mem_size 太小，则分配新的内存。
  *
- * \retval  0 Success.
- * \retval <0 Error code.
+ * @param req SoE请求对象。
+ * @param source 源数据。
+ * @param size \a source 中的字节数。
+ * @return 成功返回0，否则返回负数错误代码。
  */
 int ec_soe_request_append_data(
-    ec_soe_request_t *req, /**< SoE request. */
-    const uint8_t *source, /**< Source data. */
-    size_t size            /**< Number of bytes in \a source. */
+    ec_soe_request_t *req, /**< SoE请求对象。 */
+    const uint8_t *source, /**< 源数据。 */
+    size_t size            /**< \a source 中的字节数。 */
 )
 {
     if (req->data_size + size > req->mem_size)
@@ -214,7 +242,7 @@ int ec_soe_request_append_data(
         uint8_t *new_data = (uint8_t *)kmalloc(new_size, GFP_KERNEL);
         if (!new_data)
         {
-            EC_ERR("Failed to allocate %zu bytes of SoE memory.\n",
+            EC_ERR("无法分配 %zu 字节的SoE内存。\n",
                    new_size);
             return -ENOMEM;
         }
@@ -231,10 +259,14 @@ int ec_soe_request_append_data(
 
 /*****************************************************************************/
 
-/** Request a read operation.
+/** 请求读操作。
+ * 
+ * 设置SoE请求对象的方向为输入，将请求状态设置为已入队列，错误代码清零。
+ *
+ * @param req SoE请求对象。
  */
 void ec_soe_request_read(
-    ec_soe_request_t *req /**< SoE request. */
+    ec_soe_request_t *req /**< SoE请求对象。 */
 )
 {
     req->dir = EC_DIR_INPUT;
@@ -244,15 +276,18 @@ void ec_soe_request_read(
 
 /*****************************************************************************/
 
-/** Request a write operation.
+/** 请求写操作。
+ * 
+ * 设置SoE请求对象的方向为输出，将请求状态设置为已入队列，错误代码清零。
+ *
+ * @param req SoE请求对象。
  */
 void ec_soe_request_write(
-    ec_soe_request_t *req /**< SoE request. */
+    ec_soe_request_t *req /**< SoE请求对象。 */
 )
 {
     req->dir = EC_DIR_OUTPUT;
     req->state = EC_INT_REQUEST_QUEUED;
     req->error_code = 0x0000;
 }
-
 /*****************************************************************************/

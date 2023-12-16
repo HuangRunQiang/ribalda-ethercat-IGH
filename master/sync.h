@@ -42,16 +42,16 @@
 
 /*****************************************************************************/
 
-/** Sync manager.
+/** 同步管理器。
  */
 typedef struct
 {
-    ec_slave_t *slave;               /**< Slave, the sync manager belongs to. */
-    uint16_t physical_start_address; /**< Physical start address. */
-    uint16_t default_length;         /**< Data length in bytes. */
-    uint8_t control_register;        /**< Control register value. */
-    uint8_t enable;                  /**< Enable bit. */
-    ec_pdo_list_t pdos;              /**< Current PDO assignment. */
+    ec_slave_t *slave;               /**< 所属从站。 */
+    uint16_t physical_start_address; /**< 物理起始地址。 */
+    uint16_t default_length;         /**< 数据长度（字节）。 */
+    uint8_t control_register;        /**< 控制寄存器值。 */
+    uint8_t enable;                  /**< 使能位。 */
+    ec_pdo_list_t pdos;              /**< 当前PDO分配。 */
 } ec_sync_t;
 
 /*****************************************************************************/

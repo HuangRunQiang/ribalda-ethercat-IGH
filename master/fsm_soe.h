@@ -28,9 +28,9 @@
  *****************************************************************************/
 
 /**
-   \file
-   EtherCAT CoE state machines.
-*/
+ * @file
+ * EtherCAT CoE（Sercos over EtherCAT）状态机。
+ */
 
 /*****************************************************************************/
 
@@ -46,19 +46,19 @@
 
 typedef struct ec_fsm_soe ec_fsm_soe_t; /**< \see ec_fsm_soe */
 
-/** Finite state machines for the Sercos over EtherCAT protocol.
+/** Sercos over EtherCAT协议的有限状态机。
  */
 struct ec_fsm_soe
 {
-    ec_slave_t *slave;    /**< slave the FSM runs on */
-    unsigned int retries; /**< retries upon datagram timeout */
+    ec_slave_t *slave;    /**< 运行有限状态机的从站 */
+    unsigned int retries; /**< 数据报超时时的重试次数 */
 
-    void (*state)(ec_fsm_soe_t *, ec_datagram_t *); /**< CoE state function */
-    ec_datagram_t *datagram;                        /**< Datagram used in the previous step. */
-    unsigned long jiffies_start;                    /**< Timestamp. */
-    ec_soe_request_t *request;                      /**< SoE request */
-    off_t offset;                                   /**< IDN data offset during fragmented write. */
-    size_t fragment_size;                           /**< Size of the current fragment. */
+    void (*state)(ec_fsm_soe_t *, ec_datagram_t *); /**< CoE状态函数 */
+    ec_datagram_t *datagram;                        /**< 上一步使用的数据报 */
+    unsigned long jiffies_start;                    /**< 时间戳 */
+    ec_soe_request_t *request;                      /**< SoE请求 */
+    off_t offset;                                   /**< 分段写入中的IDN数据偏移量 */
+    size_t fragment_size;                           /**< 当前片段的大小 */
 };
 
 /*****************************************************************************/

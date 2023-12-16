@@ -28,7 +28,7 @@
  *****************************************************************************/
 
 /** \file
- * Vendor specific over EtherCAT protocol handler functions.
+ * 基于EtherCAT的供应商特定协议处理函数。
  */
 
 /*****************************************************************************/
@@ -40,11 +40,11 @@
 #include "mailbox.h"
 #include "voe_handler.h"
 
-/** VoE header size.
+/** VoE头部大小。
  */
 #define EC_VOE_HEADER_SIZE 6
 
-/** VoE response timeout in [ms].
+/** VoE响应超时时间（毫秒）。
  */
 #define EC_VOE_RESPONSE_TIMEOUT 500
 
@@ -66,14 +66,14 @@ void ec_voe_handler_state_error(ec_voe_handler_t *);
 
 /*****************************************************************************/
 
-/** VoE handler constructor.
- *
- * \return Return value of ec_datagram_prealloc().
- */
+/**
+@brief VoE处理器构造函数。
+@return 返回ec_datagram_prealloc()的返回值。
+*/
 int ec_voe_handler_init(
-    ec_voe_handler_t *voe, /**< VoE handler. */
-    ec_slave_config_t *sc, /**< Parent slave configuration. */
-    size_t size            /**< Size of memory to reserve. */
+    ec_voe_handler_t *voe, /**< VoE处理器。 */
+    ec_slave_config_t *sc, /**< 父从站配置。 */
+    size_t size            /**< 预留内存的大小。 */
 )
 {
     voe->config = sc;
@@ -91,10 +91,10 @@ int ec_voe_handler_init(
 
 /*****************************************************************************/
 
-/** VoE handler destructor.
+/** VoE处理器析构函数。
  */
 void ec_voe_handler_clear(
-    ec_voe_handler_t *voe /**< VoE handler. */
+    ec_voe_handler_t *voe /**< VoE处理器。 */
 )
 {
     ec_datagram_clear(&voe->datagram);
@@ -102,12 +102,12 @@ void ec_voe_handler_clear(
 
 /*****************************************************************************/
 
-/** Get usable memory size.
+/** 获取可用内存大小。
  *
- * \return Memory size.
+ * \return 内存大小。
  */
 size_t ec_voe_handler_mem_size(
-    const ec_voe_handler_t *voe /**< VoE handler. */
+    const ec_voe_handler_t *voe /**< VoE处理器。 */
 )
 {
     if (voe->datagram.mem_size >= EC_MBOX_HEADER_SIZE + EC_VOE_HEADER_SIZE)
@@ -116,11 +116,16 @@ size_t ec_voe_handler_mem_size(
     else
         return 0;
 }
-
 /*****************************************************************************
  * Application interface.
  ****************************************************************************/
 
+/**
+@brief VoE处理器发送头部。
+@param voe VoE处理器。
+@param vendor_id 供应商ID。
+@param vendor_type 供应商类型。
+*/
 void ecrt_voe_handler_send_header(ec_voe_handler_t *voe, uint32_t vendor_id,
                                   uint16_t vendor_type)
 {
@@ -130,6 +135,12 @@ void ecrt_voe_handler_send_header(ec_voe_handler_t *voe, uint32_t vendor_id,
 
 /*****************************************************************************/
 
+/**
+@brief VoE处理器接收到头部。
+@param voe VoE处理器。
+@param vendor_id 供应商ID。
+@param vendor_type 供应商类型。
+*/
 void ecrt_voe_handler_received_header(const ec_voe_handler_t *voe,
                                       uint32_t *vendor_id, uint16_t *vendor_type)
 {
@@ -143,6 +154,11 @@ void ecrt_voe_handler_received_header(const ec_voe_handler_t *voe,
 
 /*****************************************************************************/
 
+/**
+@brief 获取VoE处理器的数据指针。
+@param voe VoE处理器。
+@return 数据指针。
+*/
 uint8_t *ecrt_voe_handler_data(ec_voe_handler_t *voe)
 {
     return voe->datagram.data + EC_MBOX_HEADER_SIZE + EC_VOE_HEADER_SIZE;
@@ -150,6 +166,11 @@ uint8_t *ecrt_voe_handler_data(ec_voe_handler_t *voe)
 
 /*****************************************************************************/
 
+/**
+@brief 获取VoE处理器的数据大小。
+@param voe VoE处理器。
+@return 数据大小。
+*/
 size_t ecrt_voe_handler_data_size(const ec_voe_handler_t *voe)
 {
     return voe->data_size;
@@ -157,6 +178,10 @@ size_t ecrt_voe_handler_data_size(const ec_voe_handler_t *voe)
 
 /*****************************************************************************/
 
+/**
+@brief 执行VoE处理器的读操作。
+@param voe VoE处理器。
+*/
 void ecrt_voe_handler_read(ec_voe_handler_t *voe)
 {
     voe->dir = EC_DIR_INPUT;
@@ -166,6 +191,10 @@ void ecrt_voe_handler_read(ec_voe_handler_t *voe)
 
 /*****************************************************************************/
 
+/**
+@brief 执行VoE处理器的非同步读操作。
+@param voe VoE处理器。
+*/
 void ecrt_voe_handler_read_nosync(ec_voe_handler_t *voe)
 {
     voe->dir = EC_DIR_INPUT;
@@ -175,6 +204,11 @@ void ecrt_voe_handler_read_nosync(ec_voe_handler_t *voe)
 
 /*****************************************************************************/
 
+/**
+@brief 执行VoE处理器的写操作。
+@param voe VoE处理器。
+@param size 数据大小。
+*/
 void ecrt_voe_handler_write(ec_voe_handler_t *voe, size_t size)
 {
     voe->dir = EC_DIR_OUTPUT;
@@ -185,6 +219,11 @@ void ecrt_voe_handler_write(ec_voe_handler_t *voe, size_t size)
 
 /*****************************************************************************/
 
+/**
+@brief 执行VoE处理器的操作。
+@param voe VoE处理器。
+@return 请求状态。
+*/
 ec_request_state_t ecrt_voe_handler_execute(ec_voe_handler_t *voe)
 {
     if (voe->config->slave)
@@ -208,8 +247,20 @@ ec_request_state_t ecrt_voe_handler_execute(ec_voe_handler_t *voe)
  * State functions.
  *****************************************************************************/
 
-/** Start writing VoE data.
- */
+/**
+@brief 开始写入VoE数据。
+@param voe VoE处理器。
+@return 无。
+@details
+- 获取从站对象和数据指针。
+- 如果调试级别大于0，则打印写入VoE数据的字节数和数据内容。
+- 检查从站的SII数据是否可用，如果不可用，则设置状态为错误并返回。
+- 检查从站是否支持VoE协议，如果不支持，则设置状态为错误并返回。
+- 准备发送VoE数据报，如果失败，则设置状态为错误并返回。
+- 将厂商ID和厂商类型写入数据报头部。
+- 设置重试次数和起始时间。
+- 设置状态为写入响应状态。
+*/
 void ec_voe_handler_state_write_start(ec_voe_handler_t *voe)
 {
     ec_slave_t *slave = voe->config->slave;
@@ -217,15 +268,14 @@ void ec_voe_handler_state_write_start(ec_voe_handler_t *voe)
 
     if (slave->master->debug_level)
     {
-        EC_SLAVE_DBG(slave, 0, "Writing %zu bytes of VoE data.\n",
+        EC_SLAVE_DBG(slave, 0, "正在写入 %zu 字节的VoE数据。\n",
                      voe->data_size);
         ec_print_data(ecrt_voe_handler_data(voe), voe->data_size);
     }
 
     if (!slave->sii_image)
     {
-        EC_SLAVE_ERR(slave, "Slave cannot process VoE write request."
-                            " SII data not available.\n");
+        EC_SLAVE_ERR(slave, "从站无法处理VoE写入请求。SII数据不可用。\n");
         voe->state = ec_voe_handler_state_error;
         voe->request_state = EC_INT_REQUEST_FAILURE;
         return;
@@ -233,7 +283,7 @@ void ec_voe_handler_state_write_start(ec_voe_handler_t *voe)
 
     if (!(slave->sii_image->sii.mailbox_protocols & EC_MBOX_VOE))
     {
-        EC_SLAVE_ERR(slave, "Slave does not support VoE!\n");
+        EC_SLAVE_ERR(slave, "从站不支持VoE！\n");
         voe->state = ec_voe_handler_state_error;
         voe->request_state = EC_INT_REQUEST_FAILURE;
         return;
@@ -259,8 +309,20 @@ void ec_voe_handler_state_write_start(ec_voe_handler_t *voe)
 
 /*****************************************************************************/
 
-/** Wait for the mailbox response.
- */
+/**
+@brief 等待邮箱响应。
+@param voe VoE处理器。
+@return 无。
+@details
+- 获取数据报和从站对象。
+- 如果数据报状态为超时并且重试次数大于0，则返回。
+- 如果数据报状态不是接收到，则设置状态为错误，并打印接收VoE写入请求数据报的状态。
+- 如果数据报的工作计数器不等于1，则进行以下判断：
+  - 如果工作计数器为0，则计算时间差，如果小于VoE响应超时时间，则打印从站未响应VoE写入请求的消息，并返回。
+- 设置状态为错误，并打印接收VoE写入请求失败的消息。
+- 设置VoE请求状态为失败。
+- 设置状态为结束状态。
+*/
 void ec_voe_handler_state_write_response(ec_voe_handler_t *voe)
 {
     ec_datagram_t *datagram = &voe->datagram;
@@ -273,7 +335,7 @@ void ec_voe_handler_state_write_response(ec_voe_handler_t *voe)
     {
         voe->state = ec_voe_handler_state_error;
         voe->request_state = EC_INT_REQUEST_FAILURE;
-        EC_SLAVE_ERR(slave, "Failed to receive VoE write request datagram: ");
+        EC_SLAVE_ERR(slave, "接收VoE写入请求数据报失败: ");
         ec_datagram_print_state(datagram);
         return;
     }
@@ -286,21 +348,20 @@ void ec_voe_handler_state_write_response(ec_voe_handler_t *voe)
                 (jiffies - voe->jiffies_start) * 1000 / HZ;
             if (diff_ms < EC_VOE_RESPONSE_TIMEOUT)
             {
-                EC_SLAVE_DBG(slave, 1, "Slave did not respond to"
-                                       " VoE write request. Retrying after %lu ms...\n",
+                EC_SLAVE_DBG(slave, 1, "从站未响应VoE写入请求。%lu毫秒后重试...\n",
                              diff_ms);
-                // no response; send request datagram again
+                // 没有响应；再次发送请求数据报
                 return;
             }
         }
         voe->state = ec_voe_handler_state_error;
         voe->request_state = EC_INT_REQUEST_FAILURE;
-        EC_SLAVE_ERR(slave, "Reception of VoE write request failed: ");
+        EC_SLAVE_ERR(slave, "接收VoE写入请求失败: ");
         ec_datagram_print_wc_error(datagram);
         return;
     }
 
-    EC_CONFIG_DBG(voe->config, 1, "VoE write request successful.\n");
+    EC_CONFIG_DBG(voe->config, 1, "VoE写入请求成功。\n");
 
     voe->request_state = EC_INT_REQUEST_SUCCESS;
     voe->state = ec_voe_handler_state_end;
@@ -308,18 +369,29 @@ void ec_voe_handler_state_write_response(ec_voe_handler_t *voe)
 
 /*****************************************************************************/
 
-/** Start reading VoE data.
- */
+/**
+@brief 开始读取VoE数据。
+@param voe VoE处理器。
+@return 无。
+@details
+- 获取数据报、从站对象和主站对象。
+- 打印读取VoE数据的消息。
+- 检查从站的SII数据是否可用，如果不可用，则设置状态为错误并返回。
+- 检查从站是否支持VoE协议，如果不支持，则设置状态为错误并返回。
+- 设置起始时间。
+- 如果邮箱读取锁定，则设置状态为读取响应数据，并将数据报状态设置为无效。
+- 否则，准备邮箱检查，设置重试次数，并设置状态为读取检查状态。
+*/
 void ec_voe_handler_state_read_start(ec_voe_handler_t *voe)
 {
     ec_datagram_t *datagram = &voe->datagram;
     ec_slave_t *slave = voe->config->slave;
 
-    EC_SLAVE_DBG(slave, 1, "Reading VoE data.\n");
+    EC_SLAVE_DBG(slave, 1, "读取VoE数据。\n");
 
     if (!slave->sii_image)
     {
-        EC_SLAVE_ERR(slave, "Slave not ready to process VoE request\n");
+        EC_SLAVE_ERR(slave, "从站无法处理VoE请求。\n");
         voe->state = ec_voe_handler_state_error;
         voe->request_state = EC_INT_REQUEST_FAILURE;
         return;
@@ -327,7 +399,7 @@ void ec_voe_handler_state_read_start(ec_voe_handler_t *voe)
 
     if (!(slave->sii_image->sii.mailbox_protocols & EC_MBOX_VOE))
     {
-        EC_SLAVE_ERR(slave, "Slave does not support VoE!\n");
+        EC_SLAVE_ERR(slave, "从站不支持VoE！\n");
         voe->state = ec_voe_handler_state_error;
         voe->request_state = EC_INT_REQUEST_FAILURE;
         return;
@@ -335,16 +407,16 @@ void ec_voe_handler_state_read_start(ec_voe_handler_t *voe)
 
     voe->jiffies_start = jiffies;
 
-    // mailbox read check is skipped if a read request is already ongoing
+    // 如果已经有读取请求正在进行中，则跳过邮箱读取检查
     if (ec_read_mbox_locked(slave))
     {
         voe->state = ec_voe_handler_state_read_response_data;
-        // the datagram is not used and marked as invalid
+        // 数据报不被使用，标记为无效
         datagram->state = EC_DATAGRAM_INVALID;
     }
     else
     {
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_check(slave, datagram); // 不会失败。
         voe->jiffies_start = jiffies;
         voe->retries = EC_FSM_RETRIES;
         voe->state = ec_voe_handler_state_read_check;
@@ -353,8 +425,20 @@ void ec_voe_handler_state_read_start(ec_voe_handler_t *voe)
 
 /*****************************************************************************/
 
-/** Check for new data in the mailbox.
- */
+/**
+@brief 检查邮箱中是否有新的数据。
+@param voe VoE处理器。
+@return 无。
+@details
+- 获取数据报、从站对象和主站对象。
+- 如果数据报状态为超时并且重试次数大于0，则返回。
+- 如果数据报状态不是接收到，则设置状态为错误，并打印接收VoE邮箱检查数据报的状态。
+- 如果数据报的工作计数器不等于1，则进行以下判断：
+  - 如果工作计数器为0，则计算时间差，如果小于VoE响应超时时间，则打印从站未响应VoE邮箱检查的消息，并返回。
+- 设置状态为错误，并打印接收VoE邮箱检查数据报失败的消息。
+- 设置VoE请求状态为失败。
+- 设置状态为结束状态。
+*/
 void ec_voe_handler_state_read_check(ec_voe_handler_t *voe)
 {
     ec_datagram_t *datagram = &voe->datagram;
@@ -368,7 +452,7 @@ void ec_voe_handler_state_read_check(ec_voe_handler_t *voe)
         voe->state = ec_voe_handler_state_error;
         ec_read_mbox_lock_clear(slave);
         voe->request_state = EC_INT_REQUEST_FAILURE;
-        EC_SLAVE_ERR(slave, "Failed to receive VoE mailbox check datagram: ");
+        EC_SLAVE_ERR(slave, "接收VoE邮箱检查数据报失败: ");
         ec_datagram_print_state(datagram);
         return;
     }
@@ -378,8 +462,7 @@ void ec_voe_handler_state_read_check(ec_voe_handler_t *voe)
         voe->state = ec_voe_handler_state_error;
         ec_read_mbox_lock_clear(slave);
         voe->request_state = EC_INT_REQUEST_FAILURE;
-        EC_SLAVE_ERR(slave, "Reception of VoE mailbox check"
-                            " datagram failed: ");
+        EC_SLAVE_ERR(slave, "接收VoE邮箱检查数据报失败: ");
         ec_datagram_print_wc_error(datagram);
         return;
     }
@@ -388,7 +471,7 @@ void ec_voe_handler_state_read_check(ec_voe_handler_t *voe)
     {
         unsigned long diff_ms = 0;
 
-        // check that data is not already received by another read request
+        // 检查数据是否已经被其他读取请求读取
         if (slave->mbox_voe_data.payload_size > 0)
         {
             ec_read_mbox_lock_clear(slave);
@@ -404,25 +487,37 @@ void ec_voe_handler_state_read_check(ec_voe_handler_t *voe)
             voe->state = ec_voe_handler_state_error;
             ec_read_mbox_lock_clear(slave);
             voe->request_state = EC_INT_REQUEST_FAILURE;
-            EC_SLAVE_ERR(slave, "Timeout while waiting for VoE data.\n");
+            EC_SLAVE_ERR(slave, "等待VoE数据超时。\n");
             return;
         }
 
-        ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+        ec_slave_mbox_prepare_check(slave, datagram); // 不会失败。
         voe->retries = EC_FSM_RETRIES;
         return;
     }
 
-    // Fetch response
-    ec_slave_mbox_prepare_fetch(slave, datagram); // can not fail.
+    // 获取响应
+    ec_slave_mbox_prepare_fetch(slave, datagram); // 不会失败。
     voe->retries = EC_FSM_RETRIES;
     voe->state = ec_voe_handler_state_read_response;
 }
 
 /*****************************************************************************/
 
-/** Read the pending mailbox data.
- */
+/**
+@brief 读取待处理的邮箱数据。
+@param voe VoE处理器。
+@return 无。
+@details
+- 获取数据报、从站对象和主站对象。
+- 如果数据报状态为超时并且重试次数大于0，则返回。
+- 如果数据报状态不是接收到，则设置状态为错误，并打印接收VoE读取数据报的状态。
+- 如果数据报的工作计数器不等于1，则进行以下判断：
+  - 只有在数据已经被其他读取请求读取时，才会出现错误。
+- 清除邮箱读取锁定。
+- 设置状态为读取响应数据。
+- 调用读取响应数据的函数。
+*/
 void ec_voe_handler_state_read_response(ec_voe_handler_t *voe)
 {
     ec_datagram_t *datagram = &voe->datagram;
@@ -436,20 +531,20 @@ void ec_voe_handler_state_read_response(ec_voe_handler_t *voe)
         voe->state = ec_voe_handler_state_error;
         ec_read_mbox_lock_clear(slave);
         voe->request_state = EC_INT_REQUEST_FAILURE;
-        EC_SLAVE_ERR(slave, "Failed to receive VoE read datagram: ");
+        EC_SLAVE_ERR(slave, "接收VoE读取数据报失败: ");
         ec_datagram_print_state(datagram);
         return;
     }
 
     if (datagram->working_counter != 1)
     {
-        // only an error if data has not already been read by another read request
+        // 只有在数据没有被其他读取请求读取时才会出现错误
         if (slave->mbox_voe_data.payload_size == 0)
         {
             voe->state = ec_voe_handler_state_error;
             ec_read_mbox_lock_clear(slave);
             voe->request_state = EC_INT_REQUEST_FAILURE;
-            EC_SLAVE_ERR(slave, "Reception of VoE read response failed: ");
+            EC_SLAVE_ERR(slave, "接收VoE读取响应失败: ");
             ec_datagram_print_wc_error(datagram);
             return;
         }
@@ -462,10 +557,19 @@ void ec_voe_handler_state_read_response(ec_voe_handler_t *voe)
 /*****************************************************************************/
 
 /**
-   VoE state: READ RESPONSE DATA.
-
+@brief 读取响应数据。
+@param voe VoE处理器。
+@return 无。
+@details
+- 获取数据报、从站对象和主站对象。
+- 如果数据报状态为超时并且重试次数大于0，则返回。
+- 如果数据报状态不是接收到，则设置状态为错误，并打印接收VoE读取响应数据报的状态。
+- 如果数据报的工作计数器不等于1，则进行以下判断：
+  - 只有在数据已经被其他读取请求读取时，才会出现错误。
+- 清除邮箱读取锁定。
+- 设置状态为读取响应数据。
+- 调用读取响应数据的函数。
 */
-
 void ec_voe_handler_state_read_response_data(ec_voe_handler_t *voe)
 {
     ec_datagram_t *datagram = &voe->datagram;
@@ -474,22 +578,22 @@ void ec_voe_handler_state_read_response_data(ec_voe_handler_t *voe)
     uint8_t *data, mbox_prot;
     size_t rec_size;
 
-    // process the data available or initiate a new mailbox read check
+    // 处理可用的数据或启动新的邮箱读取检查
     if (slave->mbox_voe_data.payload_size > 0)
     {
         slave->mbox_voe_data.payload_size = 0;
     }
     else
     {
-        // initiate a new mailbox read check if required data is not available
+        // 如果所需数据不可用，则启动新的邮箱读取检查
         if (ec_read_mbox_locked(slave))
         {
-            // await current read request and mark the datagram as invalid
+            // 等待当前读取请求，并将数据报标记为无效
             datagram->state = EC_DATAGRAM_INVALID;
         }
         else
         {
-            ec_slave_mbox_prepare_check(slave, datagram); // can not fail.
+            ec_slave_mbox_prepare_check(slave, datagram); // 不会失败。
             voe->state = ec_voe_handler_state_read_check;
         }
         return;
@@ -507,8 +611,7 @@ void ec_voe_handler_state_read_response_data(ec_voe_handler_t *voe)
     {
         voe->state = ec_voe_handler_state_error;
         voe->request_state = EC_INT_REQUEST_FAILURE;
-        EC_SLAVE_WARN(slave, "Received mailbox protocol 0x%02X"
-                             " as response.\n",
+        EC_SLAVE_WARN(slave, "接收到0x%02X的邮箱协议作为响应。\n",
                       mbox_prot);
         ec_print_data(data, rec_size);
         return;
@@ -518,39 +621,49 @@ void ec_voe_handler_state_read_response_data(ec_voe_handler_t *voe)
     {
         voe->state = ec_voe_handler_state_error;
         voe->request_state = EC_INT_REQUEST_FAILURE;
-        EC_SLAVE_ERR(slave, "Received VoE header is"
-                            " incomplete (%zu bytes)!\n",
+        EC_SLAVE_ERR(slave, "接收到不完整的VoE头部（%zu字节）！\n",
                      rec_size);
         return;
     }
 
     if (master->debug_level)
     {
-        EC_CONFIG_DBG(voe->config, 0, "VoE data:\n");
+        EC_CONFIG_DBG(voe->config, 0, "VoE数据：\n");
         ec_print_data(data, rec_size);
     }
 
     voe->data_size = rec_size - EC_VOE_HEADER_SIZE;
     memcpy(voe->datagram.data + EC_MBOX_HEADER_SIZE, data, rec_size);
     voe->request_state = EC_INT_REQUEST_SUCCESS;
-    voe->state = ec_voe_handler_state_end; // success
+    voe->state = ec_voe_handler_state_end; // 成功
 }
 
 /*****************************************************************************/
 
-/** Start reading VoE data without sending a sync message before.
- */
+/**
+@brief 开始无同步消息读取VoE数据。
+@param voe VoE处理器。
+@return 无。
+@details
+- 获取数据报和从站对象。
+- 打印读取VoE数据的消息。
+- 检查从站的SII数据是否可用，如果不可用，则设置状态为错误并返回。
+- 检查从站是否支持VoE协议，如果不支持，则设置状态为错误并返回。
+- 准备邮箱读取，不会失败。
+- 设置起始时间。
+- 设置重试次数。
+- 设置状态为读取无同步响应。
+*/
 void ec_voe_handler_state_read_nosync_start(ec_voe_handler_t *voe)
 {
     ec_datagram_t *datagram = &voe->datagram;
     ec_slave_t *slave = voe->config->slave;
 
-    EC_SLAVE_DBG(slave, 1, "Reading VoE data.\n");
+    EC_SLAVE_DBG(slave, 1, "正在读取VoE数据。\n");
 
     if (!slave->sii_image)
     {
-        EC_SLAVE_ERR(slave, "Slave cannot process VoE read request."
-                            " SII data not available.\n");
+        EC_SLAVE_ERR(slave, "从站无法处理VoE读取请求。SII数据不可用。\n");
         voe->state = ec_voe_handler_state_error;
         voe->request_state = EC_INT_REQUEST_FAILURE;
         return;
@@ -558,13 +671,13 @@ void ec_voe_handler_state_read_nosync_start(ec_voe_handler_t *voe)
 
     if (!(slave->sii_image->sii.mailbox_protocols & EC_MBOX_VOE))
     {
-        EC_SLAVE_ERR(slave, "Slave does not support VoE!\n");
+        EC_SLAVE_ERR(slave, "从站不支持VoE！\n");
         voe->state = ec_voe_handler_state_error;
         voe->request_state = EC_INT_REQUEST_FAILURE;
         return;
     }
 
-    ec_slave_mbox_prepare_fetch(slave, datagram); // can not fail.
+    ec_slave_mbox_prepare_fetch(slave, datagram); // 不会失败。
 
     voe->jiffies_start = jiffies;
     voe->retries = EC_FSM_RETRIES;
@@ -573,9 +686,21 @@ void ec_voe_handler_state_read_nosync_start(ec_voe_handler_t *voe)
 
 /*****************************************************************************/
 
-/** Read the pending mailbox data without sending a sync message before. This
- *  might lead to an empty reponse from the client.
- */
+/**
+@brief 读取无同步响应数据。
+@param voe VoE处理器。
+@return 无。
+@details
+- 获取数据报、从站对象和主站对象。
+- 如果数据报状态为超时并且重试次数大于0，则返回。
+- 如果数据报状态不是接收到，则设置状态为错误，并打印接收VoE读取无同步响应数据报的状态。
+- 如果数据报的工作计数器为0，则设置状态为错误，并打印从站未发送VoE数据的消息。
+- 如果数据报的工作计数器不等于1，则进行以下判断：
+  - 只有在数据已经被其他读取请求读取时，才会出现错误。
+- 清除邮箱读取锁定。
+- 设置状态为读取无同步响应数据。
+- 调用读取无同步响应数据的函数。
+*/
 void ec_voe_handler_state_read_nosync_response(ec_voe_handler_t *voe)
 {
     ec_datagram_t *datagram = &voe->datagram;
@@ -591,7 +716,7 @@ void ec_voe_handler_state_read_nosync_response(ec_voe_handler_t *voe)
     {
         voe->state = ec_voe_handler_state_error;
         voe->request_state = EC_INT_REQUEST_FAILURE;
-        EC_SLAVE_ERR(slave, "Failed to receive VoE read datagram: ");
+        EC_SLAVE_ERR(slave, "接收VoE读取数据报失败: ");
         ec_datagram_print_state(datagram);
         return;
     }
@@ -600,7 +725,7 @@ void ec_voe_handler_state_read_nosync_response(ec_voe_handler_t *voe)
     {
         voe->state = ec_voe_handler_state_error;
         voe->request_state = EC_INT_REQUEST_FAILURE;
-        EC_SLAVE_DBG(slave, 1, "Slave did not send VoE data.\n");
+        EC_SLAVE_DBG(slave, 1, "从站未发送VoE数据。\n");
         return;
     }
 
@@ -608,7 +733,7 @@ void ec_voe_handler_state_read_nosync_response(ec_voe_handler_t *voe)
     {
         voe->state = ec_voe_handler_state_error;
         voe->request_state = EC_INT_REQUEST_FAILURE;
-        EC_SLAVE_WARN(slave, "Reception of VoE read response failed: ");
+        EC_SLAVE_WARN(slave, "接收VoE读取响应失败: ");
         ec_datagram_print_wc_error(datagram);
         return;
     }
@@ -629,8 +754,7 @@ void ec_voe_handler_state_read_nosync_response(ec_voe_handler_t *voe)
     {
         voe->state = ec_voe_handler_state_error;
         voe->request_state = EC_INT_REQUEST_FAILURE;
-        EC_SLAVE_WARN(slave, "Received mailbox protocol 0x%02X"
-                             " as response.\n",
+        EC_SLAVE_WARN(slave, "接收到0x%02X的邮箱协议作为响应。\n",
                       mbox_prot);
         ec_print_data(data, rec_size);
         return;
@@ -640,36 +764,43 @@ void ec_voe_handler_state_read_nosync_response(ec_voe_handler_t *voe)
     {
         voe->state = ec_voe_handler_state_error;
         voe->request_state = EC_INT_REQUEST_FAILURE;
-        EC_SLAVE_ERR(slave, "Received VoE header is"
-                            " incomplete (%zu bytes)!\n",
+        EC_SLAVE_ERR(slave, "接收到不完整的VoE头部（%zu字节）！\n",
                      rec_size);
         return;
     }
 
     if (master->debug_level)
     {
-        EC_CONFIG_DBG(voe->config, 1, "VoE data:\n");
+        EC_CONFIG_DBG(voe->config, 1, "VoE数据：\n");
         ec_print_data(data, rec_size);
     }
 
     voe->data_size = rec_size - EC_VOE_HEADER_SIZE;
     memcpy(voe->datagram.data + EC_MBOX_HEADER_SIZE, data, rec_size);
     voe->request_state = EC_INT_REQUEST_SUCCESS;
-    voe->state = ec_voe_handler_state_end; // success
+    voe->state = ec_voe_handler_state_end; // 成功
 }
 
 /*****************************************************************************/
 
-/** Successful termination state function.
- */
+/**
+@brief 结束状态函数。
+@param voe VoE处理器。
+@return 无。
+@details 无。
+*/
 void ec_voe_handler_state_end(ec_voe_handler_t *voe)
 {
 }
 
 /*****************************************************************************/
 
-/** Failure termination state function.
- */
+/**
+@brief 错误状态函数。
+@param voe VoE处理器。
+@return 无。
+@details 无。
+*/
 void ec_voe_handler_state_error(ec_voe_handler_t *voe)
 {
 }

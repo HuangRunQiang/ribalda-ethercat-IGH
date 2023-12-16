@@ -43,25 +43,22 @@
 
 /*****************************************************************************/
 
-/** Sercos-over-EtherCAT request.
+/** Sercos-over-EtherCAT请求。
  */
 typedef struct
 {
-    struct list_head list;             /**< List item. */
-    uint8_t drive_no;                  /**< Drive number. */
-    uint16_t idn;                      /**< Sercos ID-Number. */
-    ec_al_state_t al_state;            /**< AL state (only valid for IDN config). */
-    uint8_t *data;                     /**< Pointer to SDO data. */
-    size_t mem_size;                   /**< Size of SDO data memory. */
-    size_t data_size;                  /**< Size of SDO data. */
-    ec_direction_t dir;                /**< Direction. EC_DIR_OUTPUT means writing to the
-                                         slave, EC_DIR_INPUT means reading from the slave. */
-    ec_internal_request_state_t state; /**< Request state. */
-    unsigned long jiffies_sent;        /**< Jiffies, when the upload/download
-                                            request was sent. */
-    uint16_t error_code;               /**< SoE error code. */
+    struct list_head list;             /**< 列表项。 */
+    uint8_t drive_no;                  /**< 驱动号。 */
+    uint16_t idn;                      /**< Sercos ID号。 */
+    ec_al_state_t al_state;            /**< AL状态（仅对IDN配置有效）。 */
+    uint8_t *data;                     /**< 指向SDO数据的指针。 */
+    size_t mem_size;                   /**< SDO数据内存的大小。 */
+    size_t data_size;                  /**< SDO数据的大小。 */
+    ec_direction_t dir;                /**< 方向。EC_DIR_OUTPUT表示向从站写入，EC_DIR_INPUT表示从从站读取。 */
+    ec_internal_request_state_t state; /**< 请求状态。 */
+    unsigned long jiffies_sent;        /**< 发送上传/下载请求时的jiffies。 */
+    uint16_t error_code;               /**< SoE错误代码。 */
 } ec_soe_request_t;
-
 /*****************************************************************************/
 
 void ec_soe_request_init(ec_soe_request_t *);

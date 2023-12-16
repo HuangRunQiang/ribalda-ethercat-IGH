@@ -44,15 +44,15 @@
 
 /*****************************************************************************/
 
-/** PDO description.
+/** PDO描述。
  */
 typedef struct
 {
-    struct list_head list;    /**< List item. */
-    uint16_t index;           /**< PDO index. */
-    int8_t sync_index;        /**< Assigned sync manager. \todo remove? */
-    char *name;               /**< PDO name. */
-    struct list_head entries; /**< List of PDO entries. */
+    struct list_head list;    /**< 列表项。 */
+    uint16_t index;           /**< PDO索引。 */
+    int8_t sync_index;        /**< 分配的同步管理器。 \todo 是否移除？ */
+    char *name;               /**< PDO名称。 */
+    struct list_head entries; /**< PDO条目的列表。 */
 } ec_pdo_t;
 
 /*****************************************************************************/

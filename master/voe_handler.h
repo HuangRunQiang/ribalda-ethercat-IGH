@@ -44,25 +44,22 @@
 
 /*****************************************************************************/
 
-/** Vendor specific over EtherCAT handler.
+/** 厂商特定的EtherCAT处理器。
  */
 struct ec_voe_handler
 {
-    struct list_head list;                     /**< List item. */
-    ec_slave_config_t *config;                 /**< Parent slave configuration. */
-    ec_datagram_t datagram;                    /**< State machine datagram. */
-    uint32_t vendor_id;                        /**< Vendor ID for the header. */
-    uint16_t vendor_type;                      /**< Vendor type for the header. */
-    size_t data_size;                          /**< Size of VoE data. */
-    ec_direction_t dir;                        /**< Direction. EC_DIR_OUTPUT means writing to
-                                                 the slave, EC_DIR_INPUT means reading from the
-                                                 slave. */
-    void (*state)(ec_voe_handler_t *);         /**< State function */
-    ec_internal_request_state_t request_state; /**< Handler state. */
-    unsigned int retries;                      /**< retries upon datagram timeout */
-    unsigned long jiffies_start;               /**< Timestamp for timeout calculation. */
+    struct list_head list;                     /**< 列表项。*/
+    ec_slave_config_t *config;                 /**< 父从站配置。*/
+    ec_datagram_t datagram;                    /**< 状态机数据报。*/
+    uint32_t vendor_id;                        /**< 头部的厂商ID。*/
+    uint16_t vendor_type;                      /**< 头部的厂商类型。*/
+    size_t data_size;                          /**< VoE数据的大小。*/
+    ec_direction_t dir;                        /**< 方向。EC_DIR_OUTPUT表示写入从站，EC_DIR_INPUT表示从从站读取。*/
+    void (*state)(ec_voe_handler_t *);         /**< 状态函数。*/
+    ec_internal_request_state_t request_state; /**< 处理器状态。*/
+    unsigned int retries;                      /**< 数据报超时时的重试次数。*/
+    unsigned long jiffies_start;               /**< 用于计算超时的时间戳。*/
 };
-
 /*****************************************************************************/
 
 int ec_voe_handler_init(ec_voe_handler_t *, ec_slave_config_t *, size_t);

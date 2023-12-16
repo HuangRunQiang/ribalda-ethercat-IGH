@@ -28,7 +28,7 @@
  *****************************************************************************/
 
 /** \file
- * EtherCAT master driver module.
+ * EtherCAT主站驱动模块。
  */
 
 /*****************************************************************************/
@@ -43,7 +43,7 @@
 
 /*****************************************************************************/
 
-#define MAX_MASTERS 32 /**< Maximum number of masters. */
+#define MAX_MASTERS 32 /**< 最大主站数量。 */
 
 /*****************************************************************************/
 
@@ -54,66 +54,83 @@ static int ec_mac_parse(uint8_t *, const char *, int);
 
 /*****************************************************************************/
 
-static char *main_devices[MAX_MASTERS];   /**< Main devices parameter. */
-static unsigned int master_count;         /**< Number of masters. */
-static char *backup_devices[MAX_MASTERS]; /**< Backup devices parameter. */
-static unsigned int backup_count;         /**< Number of backup devices. */
+static char *main_devices[MAX_MASTERS];   /**< 主设备参数。 */
+static unsigned int master_count;         /**< 主站数量。 */
+static char *backup_devices[MAX_MASTERS]; /**< 备份设备参数。 */
+static unsigned int backup_count;         /**< 备份设备数量。 */
 #ifdef EC_EOE
-char *eoe_interfaces[MAX_EOE]; /**< EOE interfaces parameter. */
-unsigned int eoe_count;        /**< Number of EOE interfaces. */
-bool eoe_autocreate = 1;       /**< Auto-create EOE interfaces. */
+char *eoe_interfaces[MAX_EOE]; /**< EOE接口参数。 */
+unsigned int eoe_count;        /**< EOE接口数量。 */
+bool eoe_autocreate = 1;       /**< EOE接口自动创建模式。 */
 #endif
-static unsigned int debug_level; /**< Debug level parameter. */
-unsigned long pcap_size;         /**< Pcap buffer size in bytes. */
+static unsigned int debug_level; /**< 调试级别参数。 */
+unsigned long pcap_size;         /**< Pcap缓冲区大小（字节）。 */
 
-static ec_master_t *masters; /**< Array of masters. */
-static ec_lock_t master_sem; /**< Master semaphore. */
+static ec_master_t *masters; /**< 主站数组。 */
+static ec_lock_t master_sem; /**< 主站信号量。 */
 
-dev_t device_number; /**< Device number for master cdevs. */
-struct class *class; /**< Device class. */
+dev_t device_number; /**< 主站cdev的设备号。 */
+struct class *class; /**< 设备类。 */
 
-static uint8_t macs[MAX_MASTERS][2][ETH_ALEN]; /**< MAC addresses. */
+static uint8_t macs[MAX_MASTERS][2][ETH_ALEN]; /**< MAC地址。 */
 
-char *ec_master_version_str = EC_MASTER_VERSION; /**< Version string. */
+char *ec_master_version_str = EC_MASTER_VERSION; /**< 版本字符串。 */
 
 /*****************************************************************************/
 
 /** \cond */
 
 MODULE_AUTHOR("Florian Pose <fp@igh-essen.com>");
-MODULE_DESCRIPTION("EtherCAT master driver module");
+MODULE_DESCRIPTION("EtherCAT主站驱动模块");
 MODULE_LICENSE("GPL");
 MODULE_VERSION(EC_MASTER_VERSION);
 
 module_param_array(main_devices, charp, &master_count, S_IRUGO);
-MODULE_PARM_DESC(main_devices, "MAC addresses of main devices");
+MODULE_PARM_DESC(main_devices, "主设备的MAC地址");
 module_param_array(backup_devices, charp, &backup_count, S_IRUGO);
-MODULE_PARM_DESC(backup_devices, "MAC addresses of backup devices");
+MODULE_PARM_DESC(backup_devices, "备份设备的MAC地址");
 #ifdef EC_EOE
 module_param_array(eoe_interfaces, charp, &eoe_count, S_IRUGO);
-MODULE_PARM_DESC(eoe_interfaces, "EOE interfaces");
+MODULE_PARM_DESC(eoe_interfaces, "EOE接口");
 module_param_named(eoe_autocreate, eoe_autocreate, bool, S_IRUGO);
-MODULE_PARM_DESC(eoe_autocreate, "EOE atuo create mode");
+MODULE_PARM_DESC(eoe_autocreate, "EOE自动创建模式");
 #endif
 module_param_named(debug_level, debug_level, uint, S_IRUGO);
-MODULE_PARM_DESC(debug_level, "Debug level");
+MODULE_PARM_DESC(debug_level, "调试级别");
 module_param_named(pcap_size, pcap_size, ulong, S_IRUGO);
-MODULE_PARM_DESC(pcap_size, "Pcap buffer size");
+MODULE_PARM_DESC(pcap_size, "Pcap缓冲区大小");
 
 /** \endcond */
 
 /*****************************************************************************/
 
-/** Module initialization.
- *
- * Initializes \a master_count masters.
- * \return 0 on success, else < 0
- */
+/**
+@brief 模块初始化。
+@return 成功返回0，否则返回小于0的值。
+@details 初始化 \a master_count 个主站。
+
+- 打印主站驱动版本信息。
+- 初始化主站的信号量。
+- 如果主站数量不为0：
+  - 获取设备号。
+  - 创建设备类。
+- 清零MAC地址数组。
+- 处理MAC地址参数：
+  - 解析主设备的MAC地址。
+  - 如果备份设备数量不为0，解析备份设备的MAC地址。
+- 初始化静态主站变量。
+- 如果主站数量不为0：
+  - 分配内存空间用于存储主站实例。
+- 初始化每个主站：
+  - 初始化主站实例。
+- 打印等待设备的主站数量。
+
+*/
 int __init ec_init_module(void)
 {
     int i, ret = 0;
 
-    EC_INFO("Master driver %s\n", EC_MASTER_VERSION);
+    EC_INFO("主站驱动程序 %s\n", EC_MASTER_VERSION);
 
     ec_lock_init(&master_sem);
 
@@ -122,7 +139,7 @@ int __init ec_init_module(void)
         if (alloc_chrdev_region(&device_number,
                                 0, master_count, "EtherCAT"))
         {
-            EC_ERR("Failed to obtain device number(s)!\n");
+            EC_ERR("无法获取设备号！\n");
             ret = -EBUSY;
             goto out_return;
         }
@@ -131,15 +148,15 @@ int __init ec_init_module(void)
     class = class_create(THIS_MODULE, "EtherCAT");
     if (IS_ERR(class))
     {
-        EC_ERR("Failed to create device class.\n");
+        EC_ERR("无法创建设备类。\n");
         ret = PTR_ERR(class);
         goto out_cdev;
     }
 
-    // zero MAC addresses
+    // 清零MAC地址
     memset(macs, 0x00, sizeof(uint8_t) * MAX_MASTERS * 2 * ETH_ALEN);
 
-    // process MAC parameters
+    // 处理MAC参数
     for (i = 0; i < master_count; i++)
     {
         ret = ec_mac_parse(macs[i][0], main_devices[i], 0);
@@ -154,7 +171,7 @@ int __init ec_init_module(void)
         }
     }
 
-    // initialize static master variables
+    // 初始化静态主站变量
     ec_master_init_static();
 
     if (master_count)
@@ -162,8 +179,7 @@ int __init ec_init_module(void)
         if (!(masters = kmalloc(sizeof(ec_master_t) * master_count,
                                 GFP_KERNEL)))
         {
-            EC_ERR("Failed to allocate memory"
-                   " for EtherCAT masters.\n");
+            EC_ERR("无法为EtherCAT主站分配内存。\n");
             ret = -ENOMEM;
             goto out_class;
         }
@@ -177,7 +193,7 @@ int __init ec_init_module(void)
             goto out_free_masters;
     }
 
-    EC_INFO("%u master%s waiting for devices.\n",
+    EC_INFO("%u 个主站正在等待设备。\n",
             master_count, (master_count == 1 ? "" : "s"));
     return ret;
 
@@ -196,10 +212,16 @@ out_return:
 
 /*****************************************************************************/
 
-/** Module cleanup.
- *
- * Clears all master instances.
- */
+/**
+@brief 模块清理。
+@details 清除所有主站实例。
+
+- 清除所有主站实例。
+- 如果主站数量不为0，释放主站实例的内存空间。
+- 销毁设备类。
+- 如果主站数量不为0，注销设备号。
+- 打印主模块清理完成的信息。
+*/
 void __exit ec_cleanup_module(void)
 {
     unsigned int i;
@@ -217,28 +239,35 @@ void __exit ec_cleanup_module(void)
     if (master_count)
         unregister_chrdev_region(device_number, master_count);
 
-    EC_INFO("Master module cleaned up.\n");
+    EC_INFO("主模块已清理。\n");
 }
 
 /*****************************************************************************/
 
-/** Get the number of masters.
- */
+/**
+@brief 获取主站数量。
+@return 主站数量。
+*/
 unsigned int ec_master_count(void)
 {
     return master_count;
 }
-
 /*****************************************************************************
  * MAC address functions
  ****************************************************************************/
 
 /**
- * \return true, if two MAC addresses are equal.
+ * @brief 判断两个MAC地址是否相等。
+ *
+ * 该函数用于比较两个MAC地址是否相等。
+ *
+ * @param mac1 第一个MAC地址。
+ * @param mac2 第二个MAC地址。
+ * @return 如果两个MAC地址相等则返回true，否则返回false。
  */
 int ec_mac_equal(
-    const uint8_t *mac1, /**< First MAC address. */
-    const uint8_t *mac2  /**< Second MAC address. */
+    const uint8_t *mac1, /**< 第一个MAC地址。 */
+    const uint8_t *mac2  /**< 第二个MAC地址。 */
 )
 {
     unsigned int i;
@@ -252,19 +281,22 @@ int ec_mac_equal(
 
 /*****************************************************************************/
 
-/** Maximum MAC string size.
+/** MAC地址字符串的最大长度。
  */
 #define EC_MAX_MAC_STRING_SIZE (3 * ETH_ALEN)
 
-/** Print a MAC address to a buffer.
+/** 将MAC地址打印到缓冲区。
  *
- * The buffer size must be at least EC_MAX_MAC_STRING_SIZE.
+ * 该函数将给定的MAC地址打印成字符串形式，并存储到目标缓冲区中。
+ * 目标缓冲区的大小必须至少为EC_MAX_MAC_STRING_SIZE。
  *
- * \return number of bytes written.
+ * @param mac MAC地址。
+ * @param buffer 目标缓冲区。
+ * @return 写入的字节数。
  */
 size_t ec_mac_print(
-    const uint8_t *mac, /**< MAC address */
-    char *buffer        /**< Target buffer. */
+    const uint8_t *mac, /**< MAC地址 */
+    char *buffer        /**< 目标缓冲区。 */
 )
 {
     size_t off = 0;
@@ -283,10 +315,15 @@ size_t ec_mac_print(
 /*****************************************************************************/
 
 /**
- * \return true, if the MAC address is all-zero.
+ * @brief 判断MAC地址是否全为零。
+ *
+ * 该函数用于判断给定的MAC地址是否全为零。
+ *
+ * @param mac MAC地址。
+ * @return 如果MAC地址全为零则返回true，否则返回false。
  */
 int ec_mac_is_zero(
-    const uint8_t *mac /**< MAC address. */
+    const uint8_t *mac /**< MAC地址。 */
 )
 {
     unsigned int i;
@@ -301,10 +338,15 @@ int ec_mac_is_zero(
 /*****************************************************************************/
 
 /**
- * \return true, if the given MAC address is the broadcast address.
+ * @brief 判断给定的MAC地址是否为广播地址。
+ *
+ * 该函数用于判断给定的MAC地址是否为广播地址。
+ *
+ * @param mac MAC地址。
+ * @return 如果给定的MAC地址是广播地址则返回true，否则返回false。
  */
 int ec_mac_is_broadcast(
-    const uint8_t *mac /**< MAC address. */
+    const uint8_t *mac /**< MAC地址。 */
 )
 {
     unsigned int i;
@@ -318,12 +360,15 @@ int ec_mac_is_broadcast(
 
 /*****************************************************************************/
 
-/** Parse a MAC address from a string.
+/** 从字符串解析MAC地址。
  *
- * The MAC address must match the regular expression
- * "([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}".
+ * 该函数用于从字符串中解析出MAC地址。
+ * 解析的MAC地址必须符合正则表达式"([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}"。
  *
- * \return 0 on success, else < 0
+ * @param mac MAC地址存储的目标缓冲区。
+ * @param src 包含MAC地址的字符串。
+ * @param allow_empty 是否允许空的MAC地址。
+ * @return 如果解析成功则返回0，否则返回负数。
  */
 static int ec_mac_parse(uint8_t *mac, const char *src, int allow_empty)
 {
@@ -339,7 +384,7 @@ static int ec_mac_parse(uint8_t *mac, const char *src, int allow_empty)
         }
         else
         {
-            EC_ERR("MAC address may not be empty.\n");
+            EC_ERR("MAC地址不能为空。\n");
             return -EINVAL;
         }
     }
@@ -349,13 +394,13 @@ static int ec_mac_parse(uint8_t *mac, const char *src, int allow_empty)
         value = simple_strtoul(src, &rem, 16);
         if (rem != src + 2 || value > 0xFF || (i < ETH_ALEN - 1 && *rem != ':'))
         {
-            EC_ERR("Invalid MAC address \"%s\".\n", orig);
+            EC_ERR("无效的MAC地址 \"%s\"。\n", orig);
             return -EINVAL;
         }
         mac[i] = value;
         if (i < ETH_ALEN - 1)
         {
-            src = rem + 1; // skip colon
+            src = rem + 1; // 跳过冒号
         }
     }
 
@@ -364,12 +409,15 @@ static int ec_mac_parse(uint8_t *mac, const char *src, int allow_empty)
 
 /*****************************************************************************/
 
-/** Outputs frame contents for debugging purposes.
- * If the data block is larger than 256 bytes, only the first 128
- * and the last 128 bytes will be shown
+/** 输出用于调试目的的数据帧内容。
+ *
+ * 如果数据块的大小大于256字节，则只显示前128字节和后128字节。
+ *
+ * @param data 指向数据的指针。
+ * @param size 要输出的字节数。
  */
-void ec_print_data(const uint8_t *data, /**< pointer to data */
-                   size_t size          /**< number of bytes to output */
+void ec_print_data(const uint8_t *data, /**< 指向数据的指针 */
+                   size_t size          /**< 要输出的字节数 */
 )
 {
     unsigned int i;
@@ -387,7 +435,7 @@ void ec_print_data(const uint8_t *data, /**< pointer to data */
 
         if (i + 1 == 128 && size > 256)
         {
-            printk(KERN_CONT "dropped %zu bytes\n", size - 128 - i);
+            printk(KERN_CONT "丢弃 %zu 字节\n", size - 128 - i);
             i = size - 128;
             EC_DBG("");
         }
@@ -397,11 +445,15 @@ void ec_print_data(const uint8_t *data, /**< pointer to data */
 
 /*****************************************************************************/
 
-/** Outputs frame contents and differences for debugging purposes.
+/** 输出用于调试目的的数据帧内容和差异。
+ *
+ * @param d1 第一个数据。
+ * @param d2 第二个数据。
+ * @param size 要输出的字节数。
  */
-void ec_print_data_diff(const uint8_t *d1, /**< first data */
-                        const uint8_t *d2, /**< second data */
-                        size_t size        /** number of bytes to output */
+void ec_print_data_diff(const uint8_t *d1, /**< 第一个数据 */
+                        const uint8_t *d2, /**< 第二个数据 */
+                        size_t size        /** 要输出的字节数 */
 )
 {
     unsigned int i;
@@ -424,14 +476,17 @@ void ec_print_data_diff(const uint8_t *d1, /**< first data */
 
 /*****************************************************************************/
 
-/** Prints slave states in clear text.
+/** 以明文形式打印从站状态。
  *
- * \return Size of the created string.
+ * @param states 从站状态。
+ * @param buffer 目标缓冲区（至少EC_STATE_STRING_SIZE字节）。
+ * @param multi 显示多状态掩码。
+ * @return 创建的字符串的大小。
  */
-size_t ec_state_string(uint8_t states, /**< slave states */
-                       char *buffer,   /**< target buffer
-                                         (min. EC_STATE_STRING_SIZE bytes) */
-                       uint8_t multi   /**< Show multi-state mask. */
+size_t ec_state_string(uint8_t states, /**< 从站状态 */
+                       char *buffer,   /**< 目标缓冲区
+                                         （至少EC_STATE_STRING_SIZE字节） */
+                       uint8_t multi   /**< 显示多状态掩码 */
 )
 {
     off_t off = 0;
@@ -439,12 +494,12 @@ size_t ec_state_string(uint8_t states, /**< slave states */
 
     if (!states)
     {
-        off += sprintf(buffer + off, "(unknown)");
+        off += sprintf(buffer + off, "(未知)");
         return off;
     }
 
     if (multi)
-    { // multiple slaves
+    { // 多个从站
         if (states & EC_SLAVE_STATE_INIT)
         {
             off += sprintf(buffer + off, "INIT");
@@ -453,26 +508,26 @@ size_t ec_state_string(uint8_t states, /**< slave states */
         if (states & EC_SLAVE_STATE_PREOP)
         {
             if (!first)
-                off += sprintf(buffer + off, ", ");
+                off += sprintf(buffer + off, "，");
             off += sprintf(buffer + off, "PREOP");
             first = 0;
         }
         if (states & EC_SLAVE_STATE_SAFEOP)
         {
             if (!first)
-                off += sprintf(buffer + off, ", ");
+                off += sprintf(buffer + off, "，");
             off += sprintf(buffer + off, "SAFEOP");
             first = 0;
         }
         if (states & EC_SLAVE_STATE_OP)
         {
             if (!first)
-                off += sprintf(buffer + off, ", ");
+                off += sprintf(buffer + off, "，");
             off += sprintf(buffer + off, "OP");
         }
     }
     else
-    { // single slave
+    { // 单个从站
         if ((states & EC_SLAVE_STATE_MASK) == EC_SLAVE_STATE_INIT)
         {
             off += sprintf(buffer + off, "INIT");
@@ -495,7 +550,7 @@ size_t ec_state_string(uint8_t states, /**< slave states */
         }
         else
         {
-            off += sprintf(buffer + off, "(invalid)");
+            off += sprintf(buffer + off, "(无效)");
         }
         first = 0;
     }
@@ -504,7 +559,7 @@ size_t ec_state_string(uint8_t states, /**< slave states */
     {
         if (!first)
             off += sprintf(buffer + off, " + ");
-        off += sprintf(buffer + off, "ERROR");
+        off += sprintf(buffer + off, "错误");
     }
 
     return off;
@@ -514,26 +569,23 @@ size_t ec_state_string(uint8_t states, /**< slave states */
  *  Device interface
  *****************************************************************************/
 
-/** Device names.
- */
-const char *ec_device_names[2] = {
-    "main",
-    "backup"};
-
-/** Offers an EtherCAT device to a certain master.
+/**
+ * @brief 提供一个EtherCAT设备给特定的主站。
  *
- * The master decides, if it wants to use the device for EtherCAT operation,
- * or not. It is important, that the offered net_device is not used by the
- * kernel IP stack. If the master, accepted the offer, the address of the
- * newly created EtherCAT device is returned, else \a NULL is returned.
+ * 主站决定是否要将该设备用于EtherCAT操作。
+ * 重要的是，所提供的net_device不能被内核IP栈使用。
+ * 如果主站接受了该设备的提供，将返回新创建的EtherCAT设备的地址，否则返回NULL。
  *
- * \return Pointer to device, if accepted, or NULL if declined.
- * \ingroup DeviceInterface
+ * @param net_dev 要提供的net_device
+ * @param poll 设备的轮询函数
+ * @param module 指向模块的指针
+ * @return 如果接受了提供，则返回设备的指针；如果拒绝了提供，则返回NULL。
+ * @ingroup DeviceInterface
  */
 ec_device_t *ecdev_offer(
-    struct net_device *net_dev, /**< net_device to offer */
-    ec_pollfunc_t poll,         /**< device poll function */
-    struct module *module       /**< pointer to the module */
+    struct net_device *net_dev, /**< 要提供的net_device */
+    ec_pollfunc_t poll,         /**< 设备的轮询函数 */
+    struct module *module       /**< 指向模块的指针 */
 )
 {
     ec_master_t *master;
@@ -547,7 +599,7 @@ ec_device_t *ecdev_offer(
 
         if (ec_lock_down_interruptible(&master->device_sem))
         {
-            EC_MASTER_WARN(master, "%s() interrupted!\n", __func__);
+            EC_MASTER_WARN(master, "%s() 被中断！\n", __func__);
             return NULL;
         }
 
@@ -557,7 +609,7 @@ ec_device_t *ecdev_offer(
             if (!master->devices[dev_idx].dev && (ec_mac_equal(master->macs[dev_idx], net_dev->dev_addr) || ec_mac_is_broadcast(master->macs[dev_idx])))
             {
 
-                EC_INFO("Accepting %s as %s device for master %u.\n",
+                EC_INFO("接受 %s 作为主站 %u 的%s设备。\n",
                         str, ec_device_names[dev_idx != 0], master->index);
 
                 ec_device_attach(&master->devices[dev_idx],
@@ -567,40 +619,47 @@ ec_device_t *ecdev_offer(
                 snprintf(net_dev->name, IFNAMSIZ, "ec%c%u",
                          ec_device_names[dev_idx != 0][0], master->index);
 
-                return &master->devices[dev_idx]; // offer accepted
+                return &master->devices[dev_idx]; // 提供被接受
             }
         }
 
         ec_lock_up(&master->device_sem);
 
-        EC_MASTER_DBG(master, 1, "Master declined device %s.\n", str);
+        EC_MASTER_DBG(master, 1, "主站拒绝设备 %s。\n", str);
     }
 
-    return NULL; // offer declined
+    return NULL; // 提供被拒绝
 }
 
 /******************************************************************************
  * Application interface
  *****************************************************************************/
 
-/** Request a master.
- *
- * Same as ecrt_request_master(), but with ERR_PTR() return value.
- *
- * \return Requested master.
- */
+/**
+@brief 请求一个主站。
+@param master_index 主站索引。
+@return 请求的主站。
+@details 
+- 请求一个主站，与ecrt_request_master()相同，但返回值为ERR_PTR()。
+- 如果主站索引无效，返回错误指针，并打印错误信息。
+- 如果主站已被占用，返回错误指针，并打印错误信息。
+- 如果无法获取设备模块，返回错误指针，并打印错误信息。
+- 如果无法进入操作阶段，返回错误指针，并打印错误信息。
+- 成功请求主站，返回主站指针。
+*/
+
 ec_master_t *ecrt_request_master_err(
-    unsigned int master_index /**< Master index. */
+    unsigned int master_index /**< 主站索引。 */
 )
 {
     ec_master_t *master, *errptr = NULL;
     unsigned int dev_idx = EC_DEVICE_MAIN;
 
-    EC_INFO("Requesting master %u...\n", master_index);
+    EC_INFO("正在请求主站 %u...\n", master_index);
 
     if (master_index >= master_count)
     {
-        EC_ERR("Invalid master index %u.\n", master_index);
+        EC_ERR("无效的主站索引 %u。\n", master_index);
         errptr = ERR_PTR(-EINVAL);
         goto out_return;
     }
@@ -615,7 +674,7 @@ ec_master_t *ecrt_request_master_err(
     if (master->reserved)
     {
         ec_lock_up(&master_sem);
-        EC_MASTER_ERR(master, "Master already in use!\n");
+        EC_MASTER_ERR(master, "主站已被占用！\n");
         errptr = ERR_PTR(-EBUSY);
         goto out_return;
     }
@@ -631,7 +690,7 @@ ec_master_t *ecrt_request_master_err(
     if (master->phase != EC_IDLE)
     {
         ec_lock_up(&master->device_sem);
-        EC_MASTER_ERR(master, "Master still waiting for devices!\n");
+        EC_MASTER_ERR(master, "主站仍在等待设备！\n");
         errptr = ERR_PTR(-ENODEV);
         goto out_release;
     }
@@ -642,7 +701,7 @@ ec_master_t *ecrt_request_master_err(
         if (!try_module_get(device->module))
         {
             ec_lock_up(&master->device_sem);
-            EC_MASTER_ERR(master, "Device module is unloading!\n");
+            EC_MASTER_ERR(master, "设备模块正在卸载！\n");
             errptr = ERR_PTR(-ENODEV);
             goto out_module_put;
         }
@@ -652,12 +711,12 @@ ec_master_t *ecrt_request_master_err(
 
     if (ec_master_enter_operation_phase(master))
     {
-        EC_MASTER_ERR(master, "Failed to enter OPERATION phase!\n");
+        EC_MASTER_ERR(master, "进入操作阶段失败！\n");
         errptr = ERR_PTR(-EIO);
         goto out_module_put;
     }
 
-    EC_INFO("Successfully requested master %u.\n", master_index);
+    EC_INFO("成功请求主站 %u。\n", master_index);
     return master;
 
 out_module_put:
@@ -674,6 +733,12 @@ out_return:
 
 /*****************************************************************************/
 
+/**
+ * @brief 请求EtherCAT主站
+ * @param master_index 主站索引
+ * @return 返回请求到的EtherCAT主站指针，如果请求失败则返回NULL
+ * @details 请求指定索引的EtherCAT主站，并返回主站指针。如果请求失败，返回NULL。
+ */
 ec_master_t *ecrt_request_master(unsigned int master_index)
 {
     ec_master_t *master = ecrt_request_master_err(master_index);
@@ -682,15 +747,21 @@ ec_master_t *ecrt_request_master(unsigned int master_index)
 
 /*****************************************************************************/
 
+/**
+ * @brief 释放EtherCAT主站
+ * @param master EtherCAT主站指针
+ * @details 释放指定的EtherCAT主站资源。如果主站未被请求，则打印警告信息并返回。
+ *          离开操作阶段，释放主站下的设备模块，将主站的reserved标志置为0。
+ */
 void ecrt_release_master(ec_master_t *master)
 {
     unsigned int dev_idx;
 
-    EC_MASTER_INFO(master, "Releasing master...\n");
+    EC_MASTER_INFO(master, "释放主站...\n");
 
     if (!master->reserved)
     {
-        EC_MASTER_WARN(master, "%s(): Master was was not requested!\n",
+        EC_MASTER_WARN(master, "%s(): 主站未被请求！\n",
                        __func__);
         return;
     }
@@ -705,11 +776,15 @@ void ecrt_release_master(ec_master_t *master)
 
     master->reserved = 0;
 
-    EC_MASTER_INFO(master, "Released.\n");
+    EC_MASTER_INFO(master, "已释放。\n");
 }
 
 /*****************************************************************************/
 
+/**
+ * @brief 获取EtherCAT库的版本号
+ * @return 返回EtherCAT库的版本号
+ */
 unsigned int ecrt_version_magic(void)
 {
     return ECRT_VERSION_MAGIC;
@@ -717,16 +792,17 @@ unsigned int ecrt_version_magic(void)
 
 /*****************************************************************************/
 
-/** Global request state type translation table.
+/**
+ * @brief 全局请求状态类型翻译表
  *
- * Translates an internal request state to an external one.
+ * 将内部请求状态翻译为外部状态。
  */
 const ec_request_state_t ec_request_state_translation_table[] = {
-    EC_REQUEST_UNUSED,  // EC_INT_REQUEST_INIT,
-    EC_REQUEST_BUSY,    // EC_INT_REQUEST_QUEUED,
-    EC_REQUEST_BUSY,    // EC_INT_REQUEST_BUSY,
-    EC_REQUEST_SUCCESS, // EC_INT_REQUEST_SUCCESS,
-    EC_REQUEST_ERROR    // EC_INT_REQUEST_FAILURE
+    EC_REQUEST_UNUSED,  // EC_INT_REQUEST_INIT，未使用
+    EC_REQUEST_BUSY,    // EC_INT_REQUEST_QUEUED，请求已排队
+    EC_REQUEST_BUSY,    // EC_INT_REQUEST_BUSY，请求忙碌中
+    EC_REQUEST_SUCCESS, // EC_INT_REQUEST_SUCCESS，请求成功
+    EC_REQUEST_ERROR    // EC_INT_REQUEST_FAILURE，请求失败
 };
 
 /*****************************************************************************/

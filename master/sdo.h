@@ -44,17 +44,17 @@
 
 /*****************************************************************************/
 
-/** CANopen SDO.
+/** CANopen SDO（服务数据对象）。
  */
 struct ec_sdo
 {
-    struct list_head list;    /**< List item. */
-    ec_slave_t *slave;        /**< Parent slave. */
-    uint16_t index;           /**< SDO index. */
-    uint8_t object_code;      /**< Object code. */
-    char *name;               /**< SDO name. */
-    uint8_t max_subindex;     /**< Maximum subindex. */
-    struct list_head entries; /**< List of entries. */
+    struct list_head list;    /**< 链表项。 */
+    ec_slave_t *slave;        /**< 父从站。 */
+    uint16_t index;           /**< SDO 索引。 */
+    uint8_t object_code;      /**< 对象码。 */
+    char *name;               /**< SDO 名称。 */
+    uint8_t max_subindex;     /**< 最大子索引。 */
+    struct list_head entries; /**< 条目链表。 */
 };
 
 /*****************************************************************************/

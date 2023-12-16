@@ -43,19 +43,18 @@
 
 /*****************************************************************************/
 
-/** Register request.
+/** 寄存器请求。
  */
 struct ec_reg_request
 {
-    struct list_head list;             /**< List item. */
-    size_t mem_size;                   /**< Size of data memory. */
-    uint8_t *data;                     /**< Pointer to data memory. */
-    ec_direction_t dir;                /**< Direction. EC_DIR_OUTPUT means writing to the
-                                         slave, EC_DIR_INPUT means reading from the slave. */
-    uint16_t address;                  /**< Register address. */
-    size_t transfer_size;              /**< Size of the data to transfer. */
-    ec_internal_request_state_t state; /**< Request state. */
-    uint16_t ring_position;            /**< Ring position for emergency requests. */
+    struct list_head list;             /**< 列表项。 */
+    size_t mem_size;                   /**< 数据内存大小。 */
+    uint8_t *data;                     /**< 数据内存指针。 */
+    ec_direction_t dir;                /**< 方向。EC_DIR_OUTPUT 表示向从设备写入数据，EC_DIR_INPUT 表示从从设备读取数据。 */
+    uint16_t address;                  /**< 寄存器地址。 */
+    size_t transfer_size;              /**< 传输数据的大小。 */
+    ec_internal_request_state_t state; /**< 请求状态。 */
+    uint16_t ring_position;            /**< 紧急请求的环位置。 */
 };
 
 /*****************************************************************************/

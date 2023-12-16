@@ -43,30 +43,25 @@
 
 /*****************************************************************************/
 
-/** CANopen SDO request.
+/** CANopen SDO 请求。
  */
 struct ec_sdo_request
 {
-    struct list_head list;             /**< List item. */
-    uint16_t index;                    /**< SDO index. */
-    uint8_t subindex;                  /**< SDO subindex. */
-    uint8_t *data;                     /**< Pointer to SDO data. */
-    size_t mem_size;                   /**< Size of SDO data memory. */
-    size_t data_size;                  /**< Size of SDO data. */
-    uint8_t complete_access;           /**< SDO shall be transferred completely. */
-    uint32_t issue_timeout;            /**< Maximum time in ms, the processing of the
-                                         request may take. */
-    uint32_t response_timeout;         /**< Maximum time in ms, the transfer is
-                                         retried, if the slave does not respond. */
-    ec_direction_t dir;                /**< Direction. EC_DIR_OUTPUT means downloading to
-                                         the slave, EC_DIR_INPUT means uploading from the
-                                         slave. */
-    ec_internal_request_state_t state; /**< SDO request state. */
-    unsigned long jiffies_start;       /**< Jiffies, when the request was issued. */
-    unsigned long jiffies_sent;        /**< Jiffies, when the upload/download
-                                            request was sent. */
-    int errno;                         /**< Error number. */
-    uint32_t abort_code;               /**< SDO request abort code. Zero on success. */
+    struct list_head list;             /**< 链表项。 */
+    uint16_t index;                    /**< SDO 索引。 */
+    uint8_t subindex;                  /**< SDO 子索引。 */
+    uint8_t *data;                     /**< 指向 SDO 数据的指针。 */
+    size_t mem_size;                   /**< SDO 数据内存的大小。 */
+    size_t data_size;                  /**< SDO 数据的大小。 */
+    uint8_t complete_access;           /**< 是否完全传输 SDO。 */
+    uint32_t issue_timeout;            /**< 请求处理的最大时间（以毫秒为单位）。 */
+    uint32_t response_timeout;         /**< 如果从站没有响应，重试传输的最大时间（以毫秒为单位）。 */
+    ec_direction_t dir;                /**< 方向。EC_DIR_OUTPUT 表示向从站下载，EC_DIR_INPUT 表示从从站上传。 */
+    ec_internal_request_state_t state; /**< SDO 请求的状态。 */
+    unsigned long jiffies_start;       /**< 发起请求时的 jiffies 值。 */
+    unsigned long jiffies_sent;        /**< 上传/下载请求发送时的 jiffies 值。 */
+    int errno;                         /**< 错误编号。 */
+    uint32_t abort_code;               /**< SDO 请求的中止码。成功时为零。 */
 };
 
 /*****************************************************************************/

@@ -42,12 +42,20 @@
 
 /*****************************************************************************/
 
-/** Constructor.
+/**
+ * @brief 构造函数。
+ * @param sdo SDO 对象的指针。
+ * @param slave 父从站。
+ * @param index SDO 索引。
+ * @details
+ * - 初始化 SDO 对象的成员变量。
+ * - 将从站指针、索引、对象码、名称和最大子索引设置为初始值。
+ * - 初始化 SDO 条目链表。
  */
 void ec_sdo_init(
-    ec_sdo_t *sdo,     /**< SDO. */
-    ec_slave_t *slave, /**< Parent slave. */
-    uint16_t index     /**< SDO index. */
+    ec_sdo_t *sdo,     /**< SDO 对象。 */
+    ec_slave_t *slave, /**< 父从站。 */
+    uint16_t index     /**< SDO 索引。 */
 )
 {
     sdo->slave = slave;
@@ -60,17 +68,20 @@ void ec_sdo_init(
 
 /*****************************************************************************/
 
-/** SDO destructor.
- *
- * Clears and frees an SDO object.
+/**
+ * @brief SDO 析构函数。
+ * @param sdo SDO 对象的指针。
+ * @details
+ * - 清除并释放 SDO 对象。
+ * - 释放所有 SDO 条目的内存。
  */
 void ec_sdo_clear(
-    ec_sdo_t *sdo /**< SDO. */
+    ec_sdo_t *sdo /**< SDO 对象。 */
 )
 {
     ec_sdo_entry_t *entry, *next;
 
-    // free all entries
+    // 释放所有条目
     list_for_each_entry_safe(entry, next, &sdo->entries, list)
     {
         list_del(&entry->list);
@@ -84,14 +95,16 @@ void ec_sdo_clear(
 
 /*****************************************************************************/
 
-/** Get an SDO entry from an SDO via its subindex.
- *
- * \retval >0 Pointer to the requested SDO entry.
- * \retval NULL SDO entry not found.
+/**
+ * @brief 通过子索引从 SDO 中获取 SDO 条目。
+ * @param sdo SDO 对象的指针。
+ * @param subindex 条目的子索引。
+ * @return 返回请求的 SDO 条目的指针。
+ *         如果未找到 SDO 条目，则返回 NULL。
  */
 ec_sdo_entry_t *ec_sdo_get_entry(
-    ec_sdo_t *sdo,   /**< SDO. */
-    uint8_t subindex /**< Entry subindex. */
+    ec_sdo_t *sdo,   /**< SDO 对象。 */
+    uint8_t subindex /**< 条目的子索引。 */
 )
 {
     ec_sdo_entry_t *entry;
@@ -108,16 +121,18 @@ ec_sdo_entry_t *ec_sdo_get_entry(
 
 /*****************************************************************************/
 
-/** Get an SDO entry from an SDO via its subindex.
- *
- * const version.
- *
- * \retval >0 Pointer to the requested SDO entry.
- * \retval NULL SDO entry not found.
+/**
+ * @brief 通过子索引从 SDO 中获取 SDO 条目。
+ * @param sdo SDO 对象的指针。
+ * @param subindex 条目的子索引。
+ * @return 返回请求的 SDO 条目的指针。
+ *         如果未找到 SDO 条目，则返回 NULL。
+ * @details
+ * - const 版本。
  */
 const ec_sdo_entry_t *ec_sdo_get_entry_const(
-    const ec_sdo_t *sdo, /**< SDO. */
-    uint8_t subindex     /**< Entry subindex. */
+    const ec_sdo_t *sdo, /**< SDO 对象。 */
+    uint8_t subindex     /**< 条目的子索引。 */
 )
 {
     const ec_sdo_entry_t *entry;

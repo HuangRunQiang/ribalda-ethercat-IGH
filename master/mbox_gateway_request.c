@@ -51,10 +51,14 @@ void ec_mbg_request_clear_data(ec_mbg_request_t *);
 
 /*****************************************************************************/
 
-/** Mbox Gateway request constructor.
- */
+/**
+@brief 初始化Mbox Gateway请求。
+@param req Mbox Gateway请求。
+@return 无。
+@details 初始化Mbox Gateway请求的各个字段。
+*/
 void ec_mbg_request_init(
-    ec_mbg_request_t *req /**< Mbox Gateway request. */
+    ec_mbg_request_t *req /**< Mbox Gateway请求。 */
 )
 {
     INIT_LIST_HEAD(&req->list);
@@ -69,10 +73,14 @@ void ec_mbg_request_init(
 
 /*****************************************************************************/
 
-/** Mbox Gateway request destructor.
- */
+/**
+@brief 清除Mbox Gateway请求。
+@param req Mbox Gateway请求。
+@return 无。
+@details 清除Mbox Gateway请求的数据字段。
+*/
 void ec_mbg_request_clear(
-    ec_mbg_request_t *req /**< Mbox Gateway request. */
+    ec_mbg_request_t *req /**< Mbox Gateway请求。 */
 )
 {
     ec_mbg_request_clear_data(req);
@@ -80,10 +88,14 @@ void ec_mbg_request_clear(
 
 /*****************************************************************************/
 
-/** Free allocated memory.
- */
+/**
+@brief 清除分配的内存。
+@param req Mbox Gateway请求。
+@return 无。
+@details 清除Mbox Gateway请求中分配的内存。
+*/
 void ec_mbg_request_clear_data(
-    ec_mbg_request_t *req /**< Mbox Gateway request. */
+    ec_mbg_request_t *req /**< Mbox Gateway请求。 */
 )
 {
     if (req->data)
@@ -98,15 +110,16 @@ void ec_mbg_request_clear_data(
 
 /*****************************************************************************/
 
-/** Pre-allocates the data memory.
- *
- * If the \a mem_size is already bigger than \a size, nothing is done.
- *
- * \return 0 on success, otherwise -ENOMEM.
- */
+/**
+@brief 预分配数据内存。
+@param req Mbox Gateway请求。
+@param size 要分配的数据大小。
+@return 成功返回0，否则返回-ENOMEM。
+@details 如果mem_size已经大于等于size，则不进行任何操作。
+*/
 int ec_mbg_request_alloc(
-    ec_mbg_request_t *req, /**< Mbox Gateway request. */
-    size_t size            /**< Data size to allocate. */
+    ec_mbg_request_t *req, /**< Mbox Gateway请求。 */
+    size_t size            /**< 要分配的数据大小。 */
 )
 {
     if (size <= req->mem_size)
@@ -116,7 +129,7 @@ int ec_mbg_request_alloc(
 
     if (!(req->data = (uint8_t *)kmalloc(size, GFP_KERNEL)))
     {
-        EC_ERR("Failed to allocate %zu bytes of Mbox Gateway memory.\n", size);
+        EC_ERR("无法分配 %zu 字节的Mbox Gateway内存。\n", size);
         return -ENOMEM;
     }
 
@@ -127,17 +140,18 @@ int ec_mbg_request_alloc(
 
 /*****************************************************************************/
 
-/** Copies Mbox Gateway data from an external source.
- *
- * If the \a mem_size is to small, new memory is allocated.
- *
- * \retval  0 Success.
- * \retval <0 Error code.
- */
+/**
+@brief 从外部源复制Mbox Gateway数据。
+@param req Mbox Gateway请求。
+@param source 源数据。
+@param size source中的字节数。
+@return 成功返回0，否则返回错误代码。
+@details 如果mem_size太小，会分配新的内存。
+*/
 int ec_mbg_request_copy_data(
-    ec_mbg_request_t *req, /**< Mbox Gateway request. */
-    const uint8_t *source, /**< Source data. */
-    size_t size            /**< Number of bytes in \a source. */
+    ec_mbg_request_t *req, /**< Mbox Gateway请求。 */
+    const uint8_t *source, /**< 源数据。 */
+    size_t size            /**< source中的字节数。 */
 )
 {
     int ret = ec_mbg_request_alloc(req, size);
@@ -151,10 +165,14 @@ int ec_mbg_request_copy_data(
 
 /*****************************************************************************/
 
-/** Request to run.
- */
+/**
+@brief 请求运行。
+@param req Mbox Gateway请求。
+@return 无。
+@details 设置Mbox Gateway请求的状态为已排队。
+*/
 void ec_mbg_request_run(
-    ec_mbg_request_t *req /**< Mbox Gateway request. */
+    ec_mbg_request_t *req /**< Mbox Gateway请求。 */
 )
 {
     req->state = EC_INT_REQUEST_QUEUED;

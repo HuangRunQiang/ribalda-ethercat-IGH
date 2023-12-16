@@ -47,61 +47,58 @@
 
 /*****************************************************************************/
 
-/** Convenience macro for printing configuration-specific information to
- * syslog.
+/** 用于将配置特定信息打印到系统日志的便捷宏。
  *
- * This will print the message in \a fmt with a prefixed
- * "EtherCAT <INDEX> <ALIAS>:<POSITION>: ", where INDEX is the master index
- * and ALIAS and POSITION identify the configuration.
+ * 这将使用带有前缀的格式为 \a fmt 的消息打印日志，
+ * 前缀格式为 "EtherCAT <INDEX> <ALIAS>:<POSITION>: "，
+ * 其中 INDEX 是主站索引，ALIAS 和 POSITION 标识配置。
  *
- * \param sc EtherCAT slave configuration
- * \param fmt format string (like in printf())
- * \param args arguments (optional)
+ * \param sc EtherCAT 从对象配置
+ * \param fmt 格式字符串（类似于 printf()）
+ * \param args 参数（可选）
  */
 #define EC_CONFIG_INFO(sc, fmt, args...)                               \
         printk(KERN_INFO "EtherCAT %u %u:%u: " fmt, sc->master->index, \
                sc->alias, sc->position, ##args)
 
-/** Convenience macro for printing configuration-specific errors to syslog.
+/** 用于将配置特定错误打印到系统日志的便捷宏。
  *
- * This will print the message in \a fmt with a prefixed
- * "EtherCAT <INDEX> <ALIAS>:<POSITION>: ", where INDEX is the master index
- * and ALIAS and POSITION identify the configuration.
+ * 这将使用带有前缀的格式为 \a fmt 的消息打印日志，
+ * 前缀格式为 "EtherCAT ERROR %u %u:%u: "，
+ * 其中 INDEX 是主站索引，ALIAS 和 POSITION 标识配置。
  *
- * \param sc EtherCAT slave configuration
- * \param fmt format string (like in printf())
- * \param args arguments (optional)
+ * \param sc EtherCAT 从对象配置
+ * \param fmt 格式字符串（类似于 printf()）
+ * \param args 参数（可选）
  */
 #define EC_CONFIG_ERR(sc, fmt, args...)                                     \
         printk(KERN_ERR "EtherCAT ERROR %u %u:%u: " fmt, sc->master->index, \
                sc->alias, sc->position, ##args)
 
-/** Convenience macro for printing configuration-specific warnings to syslog.
+/** 用于将配置特定警告打印到系统日志的便捷宏。
  *
- * This will print the message in \a fmt with a prefixed
- * "EtherCAT <INDEX> <ALIAS>:<POSITION>: ", where INDEX is the master index
- * and ALIAS and POSITION identify the configuration.
+ * 这将使用带有前缀的格式为 \a fmt 的消息打印日志，
+ * 前缀格式为 "EtherCAT WARNING %u %u:%u: "，
+ * 其中 INDEX 是主站索引，ALIAS 和 POSITION 标识配置。
  *
- * \param sc EtherCAT slave configuration
- * \param fmt format string (like in printf())
- * \param args arguments (optional)
+ * \param sc EtherCAT 从对象配置
+ * \param fmt 格式字符串（类似于 printf()）
+ * \param args 参数（可选）
  */
 #define EC_CONFIG_WARN(sc, fmt, args...)                       \
         printk(KERN_WARNING "EtherCAT WARNING %u %u:%u: " fmt, \
                sc->master->index, sc->alias, sc->position, ##args)
 
-/** Convenience macro for printing configuration-specific debug messages to
- * syslog.
+/** 用于将配置特定调试消息打印到系统日志的便捷宏。
  *
- * This will print the message in \a fmt with a prefixed
- * "EtherCAT <INDEX> <ALIAS>:<POSITION>: ", where INDEX is the master index
- * and ALIAS and POSITION identify the configuration.
+ * 这将使用带有前缀的格式为 \a fmt 的消息打印日志，
+ * 前缀格式为 "EtherCAT DEBUG %u %u:%u: "，
+ * 其中 INDEX 是主站索引，ALIAS 和 POSITION 标识配置。
  *
- * \param sc EtherCAT slave configuration
- * \param level Debug level. Master's debug level must be >= \a level for
- * output.
- * \param fmt format string (like in printf())
- * \param args arguments (optional)
+ * \param sc EtherCAT 从对象配置
+ * \param level 调试级别。输出前主站的调试级别必须 >= \a level。
+ * \param fmt 格式字符串（类似于 printf()）
+ * \param args 参数（可选）
  */
 #define EC_CONFIG_DBG(sc, level, fmt, args...)                                      \
         do                                                                          \
@@ -112,47 +109,41 @@
                                sc->master->index, sc->alias, sc->position, ##args); \
                 }                                                                   \
         } while (0)
-
+        
 /*****************************************************************************/
 
-/** EtherCAT slave configuration.
+/** EtherCAT 从对象配置。
  */
 struct ec_slave_config
 {
-        struct list_head list; /**< List item. */
-        ec_master_t *master;   /**< Master owning the slave configuration. */
+        struct list_head list; /**< 列表项。 */
+        ec_master_t *master;   /**< 拥有该从对象配置的主站。 */
 
-        uint16_t alias;        /**< Slave alias. */
-        uint16_t position;     /**< Index after alias. If alias is zero, this is the
-                                 ring position. */
-        uint32_t vendor_id;    /**< Slave vendor ID. */
-        uint32_t product_code; /**< Slave product code. */
+        uint16_t alias;        /**< 从对象别名。 */
+        uint16_t position;     /**< 别名之后的索引。如果别名为零，则为环形位置。 */
+        uint32_t vendor_id;    /**< 从对象厂商ID。 */
+        uint32_t product_code; /**< 从对象产品代码。 */
 
-        uint16_t watchdog_divider;   /**< Watchdog divider as a number of 40ns
-                                       intervals (see spec. reg. 0x0400). */
-        uint16_t watchdog_intervals; /**< Process data watchdog intervals (see
-                                       spec. reg. 0x0420). */
+        uint16_t watchdog_divider;   /**< 看门狗分频器，以40ns间隔的数量表示（参见规范寄存器0x0400）。 */
+        uint16_t watchdog_intervals; /**< 过程数据看门狗间隔（参见规范寄存器0x0420）。 */
 
-        uint8_t allow_overlapping_pdos; /**< Allow input PDOs use the same frame space
-                                      as output PDOs. */
-        ec_slave_t *slave;              /**< Slave pointer. This is \a NULL, if the slave is
-                                          offline. */
+        uint8_t allow_overlapping_pdos; /**< 允许输入PDO使用与输出PDO相同的帧空间。 */
+        ec_slave_t *slave;              /**< 从对象指针。如果从对象离线，则为 \a NULL。 */
 
-        ec_sync_config_t sync_configs[EC_MAX_SYNC_MANAGERS]; /**< Sync manager
-                                                       configurations. */
-        ec_fmmu_config_t fmmu_configs[EC_MAX_FMMUS];         /**< FMMU configurations. */
-        uint8_t used_fmmus;                                  /**< Number of FMMUs used. */
-        uint16_t dc_assign_activate;                         /**< Vendor-specific AssignActivate word. */
-        ec_sync_signal_t dc_sync[EC_SYNC_SIGNAL_COUNT];      /**< DC sync signals. */
+        ec_sync_config_t sync_configs[EC_MAX_SYNC_MANAGERS]; /**< 同步管理器配置。 */
+        ec_fmmu_config_t fmmu_configs[EC_MAX_FMMUS];         /**< FMMU配置。 */
+        uint8_t used_fmmus;                                  /**< 使用的FMMU数量。 */
+        uint16_t dc_assign_activate;                         /**< 厂商特定的AssignActivate字。 */
+        ec_sync_signal_t dc_sync[EC_SYNC_SIGNAL_COUNT];      /**< DC同步信号。 */
 
-        struct list_head sdo_configs;  /**< List of SDO configurations. */
-        struct list_head sdo_requests; /**< List of SDO requests. */
-        struct list_head foe_requests; /**< List of FoE requests. */
-        struct list_head voe_handlers; /**< List of VoE handlers. */
-        struct list_head reg_requests; /**< List of register requests. */
-        struct list_head soe_configs;  /**< List of SoE configurations. */
+        struct list_head sdo_configs;  /**< SDO配置列表。 */
+        struct list_head sdo_requests; /**< SDO请求列表。 */
+        struct list_head foe_requests; /**< FoE请求列表。 */
+        struct list_head voe_handlers; /**< VoE处理程序列表。 */
+        struct list_head reg_requests; /**< 寄存器请求列表。 */
+        struct list_head soe_configs;  /**< SoE配置列表。 */
 
-        ec_coe_emerg_ring_t emerg_ring; /**< CoE emergency ring buffer. */
+        ec_coe_emerg_ring_t emerg_ring; /**< CoE紧急环形缓冲区。 */
 };
 
 /*****************************************************************************/

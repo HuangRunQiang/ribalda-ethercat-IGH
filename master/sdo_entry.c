@@ -40,12 +40,21 @@
 
 /*****************************************************************************/
 
-/** Constructor.
+/**
+ * @brief 初始化 SDO 条目。
+ * @param entry SDO 条目的指针。
+ * @param sdo 父级 SDO 的指针。
+ * @param subindex 子索引。
+ * @details
+ * - 将父级 SDO 的指针赋值给 SDO 条目。
+ * - 设置条目的子索引、数据类型和位长度。
+ * - 初始化条目的读访问权限和写访问权限。
+ * - 将描述设置为 NULL。
  */
 void ec_sdo_entry_init(
-    ec_sdo_entry_t *entry, /**< SDO entry. */
-    ec_sdo_t *sdo,         /**< Parent SDO. */
-    uint8_t subindex       /**< Subindex. */
+    ec_sdo_entry_t *entry, /**< SDO 条目。 */
+    ec_sdo_t *sdo,         /**< 父级 SDO。 */
+    uint8_t subindex       /**< 子索引。 */
 )
 {
         entry->sdo = sdo;
@@ -63,13 +72,16 @@ void ec_sdo_entry_init(
 
 /*****************************************************************************/
 
-/** Destructor.
+/**
+ * @brief 清除 SDO 条目。
+ * @param entry SDO 条目的指针。
+ * @details
+ * - 如果描述不为空，释放描述的内存。
  */
 void ec_sdo_entry_clear(
-    ec_sdo_entry_t *entry /**< SDO entry. */
+    ec_sdo_entry_t *entry /**< SDO 条目。 */
 )
 {
-
         if (entry->description)
                 kfree(entry->description);
 }

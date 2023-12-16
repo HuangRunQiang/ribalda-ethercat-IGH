@@ -44,11 +44,12 @@
 
 /*****************************************************************************/
 
-/** EtherCAT PDO list.
+/**
+ * @brief EtherCAT PDO列表。
  */
 typedef struct
 {
-        struct list_head list; /**< List of PDOs. */
+        struct list_head list; /**< PDO列表。 */
 } ec_pdo_list_t;
 
 /*****************************************************************************/

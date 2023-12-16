@@ -45,10 +45,14 @@
 
 /*****************************************************************************/
 
-/** PDO list constructor.
+/**
+ * @brief 初始化PDO列表。
+ * @param pl PDO列表。
+ * @return 无返回值。
+ * @details 初始化给定的PDO列表。
  */
 void ec_pdo_list_init(
-    ec_pdo_list_t *pl /**< PDO list. */
+    ec_pdo_list_t *pl /**< PDO列表。 */
 )
 {
     INIT_LIST_HEAD(&pl->list);
@@ -56,18 +60,26 @@ void ec_pdo_list_init(
 
 /*****************************************************************************/
 
-/** PDO list destructor.
+/**
+ * @brief 清除PDO列表。
+ * @param pl PDO列表。
+ * @return 无返回值。
+ * @details 清除给定的PDO列表。
  */
-void ec_pdo_list_clear(ec_pdo_list_t *pl /**< PDO list. */)
+void ec_pdo_list_clear(ec_pdo_list_t *pl /**< PDO列表。 */)
 {
     ec_pdo_list_clear_pdos(pl);
 }
 
 /*****************************************************************************/
 
-/** Clears the list of mapped PDOs.
+/**
+ * @brief 清除映射的PDO列表。
+ * @param pl PDO列表。
+ * @return 无返回值。
+ * @details 清除给定的PDO列表中的映射的PDO。
  */
-void ec_pdo_list_clear_pdos(ec_pdo_list_t *pl /**< PDO list. */)
+void ec_pdo_list_clear_pdos(ec_pdo_list_t *pl /**< PDO列表。 */)
 {
     ec_pdo_t *pdo, *next;
 
@@ -81,12 +93,14 @@ void ec_pdo_list_clear_pdos(ec_pdo_list_t *pl /**< PDO list. */)
 
 /*****************************************************************************/
 
-/** Calculates the total size of the mapped PDO entries.
- *
- * \retval Data size in byte.
+/**
+ * @brief 计算映射的PDO条目的总大小。
+ * @param pl PDO列表。
+ * @return 数据大小（字节）。
+ * @details 计算给定PDO列表中映射的PDO条目的总大小。
  */
 uint16_t ec_pdo_list_total_size(
-    const ec_pdo_list_t *pl /**< PDO list. */
+    const ec_pdo_list_t *pl /**< PDO列表。 */
 )
 {
     unsigned int bit_size;
@@ -103,7 +117,7 @@ uint16_t ec_pdo_list_total_size(
         }
     }
 
-    if (bit_size % 8) // round up to full bytes
+    if (bit_size % 8) // 向上取整到整字节
         byte_size = bit_size / 8 + 1;
     else
         byte_size = bit_size / 8;
@@ -113,20 +127,23 @@ uint16_t ec_pdo_list_total_size(
 
 /*****************************************************************************/
 
-/** Add a new PDO to the list.
- *
- * \return Pointer to new PDO, otherwise an ERR_PTR() code.
+/**
+ * @brief 向列表中添加新的PDO。
+ * @param pl PDO列表。
+ * @param index PDO索引。
+ * @return 指向新PDO的指针，否则ERR_PTR()代码。
+ * @details 向给定的PDO列表中添加新的PDO。
  */
 ec_pdo_t *ec_pdo_list_add_pdo(
-    ec_pdo_list_t *pl, /**< PDO list. */
-    uint16_t index     /**< PDO index. */
+    ec_pdo_list_t *pl, /**< PDO列表。 */
+    uint16_t index     /**< PDO索引。 */
 )
 {
     ec_pdo_t *pdo;
 
     if (!(pdo = (ec_pdo_t *)kmalloc(sizeof(ec_pdo_t), GFP_KERNEL)))
     {
-        EC_ERR("Failed to allocate memory for PDO.\n");
+        EC_ERR("无法为PDO分配内存。\n");
         return ERR_PTR(-ENOMEM);
     }
 
@@ -138,30 +155,33 @@ ec_pdo_t *ec_pdo_list_add_pdo(
 
 /*****************************************************************************/
 
-/** Add the copy of an existing PDO to the list.
- *
- * \return 0 on success, else < 0
+/**
+ * @brief 将现有PDO的副本添加到列表中。
+ * @param pl PDO列表。
+ * @param pdo 要添加的PDO。
+ * @return 成功返回0，否则小于0。
+ * @details 将现有PDO的副本添加到给定的PDO列表中。
  */
 int ec_pdo_list_add_pdo_copy(
-    ec_pdo_list_t *pl,  /**< PDO list. */
-    const ec_pdo_t *pdo /**< PDO to add. */
+    ec_pdo_list_t *pl,  /**< PDO列表。 */
+    const ec_pdo_t *pdo /**< 要添加的PDO。 */
 )
 {
     ec_pdo_t *mapped_pdo;
     int ret;
 
-    // PDO already mapped?
+    // PDO已经映射？
     list_for_each_entry(mapped_pdo, &pl->list, list)
     {
         if (mapped_pdo->index != pdo->index)
             continue;
-        EC_ERR("PDO 0x%04X is already mapped!\n", pdo->index);
+        EC_ERR("PDO 0x%04X已经映射！\n", pdo->index);
         return -EEXIST;
     }
 
     if (!(mapped_pdo = kmalloc(sizeof(ec_pdo_t), GFP_KERNEL)))
     {
-        EC_ERR("Failed to allocate PDO memory.\n");
+        EC_ERR("无法分配PDO内存。\n");
         return -ENOMEM;
     }
 
@@ -178,13 +198,16 @@ int ec_pdo_list_add_pdo_copy(
 
 /*****************************************************************************/
 
-/** Makes a deep copy of another PDO list.
- *
- * \return 0 on success, else < 0
+/**
+ * @brief 对另一个PDO列表进行深拷贝。
+ * @param pl PDO列表。
+ * @param other 要拷贝的PDO列表。
+ * @return 成功返回0，否则小于0。
+ * @details 对另一个PDO列表进行深拷贝到给定的PDO列表中。
  */
 int ec_pdo_list_copy(
-    ec_pdo_list_t *pl,         /**< PDO list. */
-    const ec_pdo_list_t *other /**< PDO list to copy from. */
+    ec_pdo_list_t *pl,         /**< PDO列表。 */
+    const ec_pdo_list_t *other /**< 要拷贝的PDO列表。 */
 )
 {
     ec_pdo_t *other_pdo;
@@ -192,7 +215,7 @@ int ec_pdo_list_copy(
 
     ec_pdo_list_clear_pdos(pl);
 
-    // PDO already mapped?
+    // PDO已经映射？
     list_for_each_entry(other_pdo, &other->list, list)
     {
         ret = ec_pdo_list_add_pdo_copy(pl, other_pdo);
@@ -205,17 +228,16 @@ int ec_pdo_list_copy(
 
 /*****************************************************************************/
 
-/** Compares two PDO lists.
- *
- * Only the list is compared, not the PDO entries (i. e. the PDO
- * mapping).
- *
- * \retval 1 The given PDO lists are equal.
- * \retval 0 The given PDO lists differ.
+/**
+ * @brief 比较两个PDO列表。
+ * @param pl1 第一个列表。
+ * @param pl2 第二个列表。
+ * @return 1表示给定的PDO列表相等，0表示不同。
+ * @details 仅比较列表，而不比较PDO条目（即PDO映射）。
  */
 int ec_pdo_list_equal(
-    const ec_pdo_list_t *pl1, /**< First list. */
-    const ec_pdo_list_t *pl2  /**< Second list. */
+    const ec_pdo_list_t *pl1, /**< 第一个列表。 */
+    const ec_pdo_list_t *pl2  /**< 第二个列表。 */
 )
 {
     const struct list_head *h1, *h2, *l1, *l2;
@@ -229,9 +251,9 @@ int ec_pdo_list_equal(
         l1 = l1->next;
         l2 = l2->next;
 
-        if ((l1 == h1) ^ (l2 == h2)) // unequal lengths
+        if ((l1 == h1) ^ (l2 == h2)) // 长度不相等
             return 0;
-        if (l1 == h1) // both finished
+        if (l1 == h1) // 都已完成
             break;
 
         p1 = list_entry(l1, ec_pdo_t, list);
@@ -246,13 +268,16 @@ int ec_pdo_list_equal(
 
 /*****************************************************************************/
 
-/** Finds a PDO with the given index.
- *
- * \return Search result, or NULL.
+/**
+ * @brief 根据索引查找PDO。
+ * @param pl PDO列表。
+ * @param index PDO索引。
+ * @return 搜索结果，或者NULL。
+ * @details 在给定的PDO列表中查找具有给定索引的PDO。
  */
 ec_pdo_t *ec_pdo_list_find_pdo(
-    const ec_pdo_list_t *pl, /**< PDO list. */
-    uint16_t index           /**< PDO index. */
+    const ec_pdo_list_t *pl, /**< PDO列表。 */
+    uint16_t index           /**< PDO索引。 */
 )
 {
     ec_pdo_t *pdo;
@@ -269,13 +294,16 @@ ec_pdo_t *ec_pdo_list_find_pdo(
 
 /*****************************************************************************/
 
-/** Finds a PDO with the given index and returns a const pointer.
- *
- * \return Search result, or NULL.
+/**
+ * @brief 根据索引查找PDO，并返回一个常量指针。
+ * @param pl PDO列表。
+ * @param index PDO索引。
+ * @return 搜索结果，或者NULL。
+ * @details 在给定的PDO列表中查找具有给定索引的PDO，并返回一个常量指针。
  */
 const ec_pdo_t *ec_pdo_list_find_pdo_const(
-    const ec_pdo_list_t *pl, /**< PDO list. */
-    uint16_t index           /**< PDO index. */
+    const ec_pdo_list_t *pl, /**< PDO列表。 */
+    uint16_t index           /**< PDO索引。 */
 )
 {
     const ec_pdo_t *pdo;
@@ -292,15 +320,16 @@ const ec_pdo_t *ec_pdo_list_find_pdo_const(
 
 /*****************************************************************************/
 
-/** Finds a PDO via its position in the list.
- *
- * Const version.
- *
- * \return Zero on success, otherwise a negative error code.
+/**
+ * @brief 根据列表中的位置查找PDO。
+ * @param pl PDO列表。
+ * @param pos 列表中的位置。
+ * @return 成功返回0，否则小于0。
+ * @details 根据给定的位置在列表中查找PDO，并返回一个常量指针。
  */
 const ec_pdo_t *ec_pdo_list_find_pdo_by_pos_const(
-    const ec_pdo_list_t *pl, /**< PDO list. */
-    unsigned int pos         /**< Position in the list. */
+    const ec_pdo_list_t *pl, /**< PDO列表。 */
+    unsigned int pos         /**< 列表中的位置。 */
 )
 {
     const ec_pdo_t *pdo;
@@ -317,12 +346,14 @@ const ec_pdo_t *ec_pdo_list_find_pdo_by_pos_const(
 
 /*****************************************************************************/
 
-/** Get the number of PDOs in the list.
- *
- * \return Number of PDOs.
+/**
+ * @brief 获取列表中PDO的数量。
+ * @param pl PDO列表。
+ * @return PDO的数量。
+ * @details 获取给定PDO列表中的PDO数量。
  */
 unsigned int ec_pdo_list_count(
-    const ec_pdo_list_t *pl /**< PDO list. */
+    const ec_pdo_list_t *pl /**< PDO列表。 */
 )
 {
     const ec_pdo_t *pdo;
@@ -338,17 +369,21 @@ unsigned int ec_pdo_list_count(
 
 /*****************************************************************************/
 
-/** Outputs the PDOs in the list.
+/**
+ * @brief 输出列表中的PDO。
+ * @param pl PDO列表。
+ * @return 无返回值。
+ * @details 输出给定PDO列表中的PDO。
  */
 void ec_pdo_list_print(
-    const ec_pdo_list_t *pl /**< PDO list. */
+    const ec_pdo_list_t *pl /**< PDO列表。 */
 )
 {
     const ec_pdo_t *pdo;
 
     if (list_empty(&pl->list))
     {
-        printk(KERN_CONT "(none)");
+        printk(KERN_CONT "(无)");
     }
     else
     {

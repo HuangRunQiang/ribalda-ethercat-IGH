@@ -27,8 +27,9 @@
  *
  *****************************************************************************/
 
-/** \file
- * Global definitions and macros.
+/** 
+ * \file
+ * 全局定义和宏。
  */
 
 /*****************************************************************************/
@@ -40,143 +41,141 @@
 #include "../include/ecrt.h"
 
 /******************************************************************************
- * EtherCAT master
+ * EtherCAT主站
  *****************************************************************************/
 
-/** Datagram timeout in microseconds. */
+/** 数据报超时时间，单位为微秒。 */
 #define EC_IO_TIMEOUT 500
 
-/** SDO injection timeout in microseconds. */
+/** SDO注入超时时间，单位为微秒。 */
 #define EC_SDO_INJECTION_TIMEOUT 10000
 
-/** Time to send a byte in nanoseconds.
+/** 发送一个字节所需的时间，单位为纳秒。
  *
  * t_ns = 1 / (100 MBit/s / 8 bit/byte) = 80 ns/byte
  */
 #define EC_BYTE_TRANSMISSION_TIME_NS 80
 
-/** Number of state machine retries on datagram timeout. */
+/** 在数据报超时时的状态机重试次数。 */
 #define EC_FSM_RETRIES 3
 
-/** If set, skip fetching SDO dictionary during slave scan. */
+/** 如果设置了此宏，则在从站扫描期间跳过获取SDO字典。 */
 #define EC_SKIP_SDO_DICT 1
 
-/** Minimum size of a buffer used with ec_state_string(). */
+/** 用于ec_state_string()的缓冲区的最小大小。 */
 #define EC_STATE_STRING_SIZE 32
 
-/** Maximum SII size in words, to avoid infinite reading. */
+/** SII的最大大小（以字为单位），以避免无限读取。 */
 #define EC_MAX_SII_SIZE 4096
 
-/** Number of statistic rate intervals to maintain. */
+/** 维护的统计速率间隔数。 */
 #define EC_RATE_COUNT 3
 
 /******************************************************************************
- * EtherCAT protocol
+ * EtherCAT协议
  *****************************************************************************/
 
-/** Size of an EtherCAT frame header. */
+/** EtherCAT帧头的大小。 */
 #define EC_FRAME_HEADER_SIZE 2
 
-/** Size of an EtherCAT datagram header. */
+/** EtherCAT数据报头的大小。 */
 #define EC_DATAGRAM_HEADER_SIZE 10
 
-/** Size of an EtherCAT datagram footer. */
+/** EtherCAT数据报尾的大小。 */
 #define EC_DATAGRAM_FOOTER_SIZE 2
 
-/** Size of the EtherCAT address field. */
+/** EtherCAT地址字段的大小。 */
 #define EC_ADDR_LEN 4
 
-/** Resulting maximum data size of a single datagram in a frame. */
+/** 单个数据报在帧中的最大数据大小。 */
 #ifdef DEBUG_DATAGRAM_OVERFLOW
-// Define a runt datagram which can be easily overflowed on
-// available hardware for use when testing ec_domain_finish()
+// 定义一个小数据报，用于在测试ec_domain_finish()时容易溢出
 #define EC_MAX_DATA_SIZE (128)
 #else
 #define EC_MAX_DATA_SIZE (ETH_DATA_LEN - EC_FRAME_HEADER_SIZE - EC_DATAGRAM_HEADER_SIZE - EC_DATAGRAM_FOOTER_SIZE)
 #endif // DEBUG_DATAGRAM_OVERFLOW
 
-/** Mailbox header size.  */
+/** 邮箱头的大小。 */
 #define EC_MBOX_HEADER_SIZE 6
 
-/** CoE header size.  */
+/** CoE头的大小。 */
 #define EC_COE_HEADER_SIZE 2
 
-/** Mailbox Gateway, Mailbox header slave address offset */
+/** 邮箱网关，邮箱头从站地址偏移量。 */
 #define EC_MBG_SLAVE_ADDR_OFFSET 1000
 
-/** Word offset of first SII category. */
+/** 第一个SII类别的字偏移量。 */
 #define EC_FIRST_SII_CATEGORY_OFFSET 0x40
 
-/** Word offset of SII alias. */
+/** SII别名的字偏移量。 */
 #define EC_ALIAS_SII_OFFSET 0x04
 
-/** Word offset of SII vendor ID. */
+/** SII供应商ID的字偏移量。 */
 #define EC_VENDOR_SII_OFFSET 0x08
 
-/** Word offset of SII product number. */
+/** SII产品编号的字偏移量。 */
 #define EC_PRODUCT_SII_OFFSET 0x0A
 
-/** Word offset of SII revision number. */
+/** SII修订号的字偏移量。 */
 #define EC_REVISION_SII_OFFSET 0x0C
 
-/** Word offset of SII serial number. */
+/** SII序列号的字偏移量。 */
 #define EC_SERIAL_SII_OFFSET 0x0E
 
-/** Size of a sync manager configuration page. */
+/** 同步管理器配置页面的大小。 */
 #define EC_SYNC_PAGE_SIZE 8
 
-/** Maximum number of FMMUs per slave. */
+/** 每个从站的最大FMMU数量。 */
 #define EC_MAX_FMMUS 16
 
-/** Size of an FMMU configuration page. */
+/** FMMU配置页面的大小。 */
 #define EC_FMMU_PAGE_SIZE 16
 
-/** Number of DC sync signals. */
+/** DC同步信号的数量。 */
 #define EC_SYNC_SIGNAL_COUNT 2
 
-/** Size of the datagram description string.
+/** 数据报描述字符串的大小。
  *
- * This is also used as the maximum lenth of EoE device names.
+ * 这也用作EoE设备名称的最大长度。
  **/
 #define EC_DATAGRAM_NAME_SIZE 20
 
-/** Maximum hostname size.
+/** 最大主机名大小。
  *
- * Used inside the EoE set IP parameter request.
+ * 用于EoE设置IP参数请求中。
  */
 #define EC_MAX_HOSTNAME_SIZE 32
 
-/** Slave state mask.
+/** 从站状态的掩码。
  *
- * Apply this mask to a slave state byte to get the slave state without
- * the error flag.
+ * 将此掩码应用于从站状态字节，以获取没有错误标志的从站状态。
  */
 #define EC_SLAVE_STATE_MASK 0x0F
 
-/** State of an EtherCAT slave.
+/**
+ * @brief EtherCAT从站的状态。
  */
 typedef enum
 {
     EC_SLAVE_STATE_UNKNOWN = 0x00,
-    /**< unknown state */
+    /**< 未知状态 */
     EC_SLAVE_STATE_INIT = 0x01,
-    /**< INIT state (no mailbox communication, no IO) */
+    /**< INIT状态（没有邮箱通信，没有IO） */
     EC_SLAVE_STATE_PREOP = 0x02,
-    /**< PREOP state (mailbox communication, no IO) */
+    /**< PREOP状态（邮箱通信，没有IO） */
     EC_SLAVE_STATE_BOOT = 0x03,
-    /**< Bootstrap state (mailbox communication, firmware update) */
+    /**< 引导状态（邮箱通信，固件更新） */
     EC_SLAVE_STATE_SAFEOP = 0x04,
-    /**< SAFEOP (mailbox communication and input update) */
+    /**< SAFEOP（邮箱通信和输入更新） */
     EC_SLAVE_STATE_OP = 0x08,
-    /**< OP (mailbox communication and input/output update) */
+    /**< OP（邮箱通信和输入/输出更新） */
     EC_SLAVE_STATE_ACK_ERR = 0x10
-    /**< Acknowledge/Error bit (no actual state) */
+    /**< 确认/错误位（没有实际状态） */
 } ec_slave_state_t;
 
-/** Supported mailbox protocols.
+/** 支持的邮箱协议。
  *
- * Not to mix up with the mailbox type field in the mailbox header defined in
- * master/mailbox.h.
+ * 不要与邮箱头中定义的邮箱类型字段混淆，该字段在master/mailbox.h中定义。
  */
 enum
 {
@@ -188,155 +187,154 @@ enum
     EC_MBOX_VOE = 0x20  /**< Vendor specific */
 };
 
-/** Slave information interface CANopen over EtherCAT details flags.
+/** CANopen over EtherCAT的从站信息接口详细标志。
  */
 typedef struct
 {
-    uint8_t enable_sdo : 1;                 /**< Enable SDO access. */
-    uint8_t enable_sdo_info : 1;            /**< SDO information service available. */
-    uint8_t enable_pdo_assign : 1;          /**< PDO mapping configurable. */
-    uint8_t enable_pdo_configuration : 1;   /**< PDO configuration possible. */
+    uint8_t enable_sdo : 1;                 /**< 启用SDO访问。 */
+    uint8_t enable_sdo_info : 1;            /**< 可用SDO信息服务。 */
+    uint8_t enable_pdo_assign : 1;          /**< 可配置PDO映射。 */
+    uint8_t enable_pdo_configuration : 1;   /**< 可进行PDO配置。 */
     uint8_t enable_upload_at_startup : 1;   /**< ?. */
-    uint8_t enable_sdo_complete_access : 1; /**< Complete access possible. */
+    uint8_t enable_sdo_complete_access : 1; /**< 可进行完全访问。 */
 } ec_sii_coe_details_t;
 
-/** Slave information interface general flags.
+/** 通用标志的从站信息接口。
  */
 typedef struct
 {
     uint8_t enable_safeop : 1;  /**< ?. */
-    uint8_t enable_not_lrw : 1; /**< Slave does not support LRW. */
+    uint8_t enable_not_lrw : 1; /**< 从站不支持LRW。 */
 } ec_sii_general_flags_t;
 
-/** EtherCAT slave distributed clocks range.
+/** EtherCAT从站的分布式时钟范围。
  */
 typedef enum
 {
-    EC_DC_32, /**< 32 bit. */
-    EC_DC_64  /*< 64 bit for system time, system time offset and
-                port 0 receive time. */
+    EC_DC_32, /**< 32位。 */
+    EC_DC_64  /*< 用于系统时间、系统时间偏移量和
+                端口0接收时间的64位。 */
 } ec_slave_dc_range_t;
 
-/** EtherCAT slave sync signal configuration.
+/** EtherCAT从站同步信号配置。
  */
 typedef struct
 {
-    uint32_t cycle_time; /**< Cycle time [ns]. */
-    int32_t shift_time;  /**< Shift time [ns]. */
+    uint32_t cycle_time; /**< 周期时间[ns]。 */
+    int32_t shift_time;  /**< 偏移时间[ns]。 */
 } ec_sync_signal_t;
 
-/** Access states for SDO entries.
+/** SDO条目的访问状态。
  *
- * The access rights are managed per AL state.
+ * 访问权限是根据AL状态进行管理的。
  */
 enum
 {
-    EC_SDO_ENTRY_ACCESS_PREOP,  /**< Access rights in PREOP. */
-    EC_SDO_ENTRY_ACCESS_SAFEOP, /**< Access rights in SAFEOP. */
-    EC_SDO_ENTRY_ACCESS_OP,     /**< Access rights in OP. */
-    EC_SDO_ENTRY_ACCESS_COUNT   /**< Number of states. */
+    EC_SDO_ENTRY_ACCESS_PREOP,  /**< PREOP状态下的访问权限。 */
+    EC_SDO_ENTRY_ACCESS_SAFEOP, /**< SAFEOP状态下的访问权限。 */
+    EC_SDO_ENTRY_ACCESS_OP,     /**< OP状态下的访问权限。 */
+    EC_SDO_ENTRY_ACCESS_COUNT   /**< 状态数量。 */
 };
 
-/** Master devices.
+/** 主设备和备份设备。
  */
 typedef enum
 {
-    EC_DEVICE_MAIN,  /**< Main device. */
-    EC_DEVICE_BACKUP /**< Backup device */
+    EC_DEVICE_MAIN,  /**< 主设备。 */
+    EC_DEVICE_BACKUP /**< 备份设备 */
 } ec_device_index_t;
 
-extern const char *ec_device_names[2]; // only main and backup!
+extern const char *ec_device_names[2]; // 仅主设备和备份设备！
 
 /*****************************************************************************/
 
-/** Convenience macro for printing EtherCAT-specific information to syslog.
+/** 打印EtherCAT特定信息到syslog的便捷宏。
  *
- * This will print the message in \a fmt with a prefixed "EtherCAT: ".
+ * 这将使用带有前缀“EtherCAT：”的\a fmt打印消息。
  *
- * \param fmt format string (like in printf())
- * \param args arguments (optional)
+ * \param fmt 格式字符串（与printf()中的格式相同）
+ * \param args 参数（可选）
  */
 #define EC_INFO(fmt, args...) \
-    printk(KERN_INFO "EtherCAT: " fmt, ##args)
+    printk(KERN_INFO "EtherCAT： " fmt, ##args)
 
-/** Convenience macro for printing EtherCAT-specific errors to syslog.
+/** 打印EtherCAT特定错误到syslog的便捷宏。
  *
- * This will print the message in \a fmt with a prefixed "EtherCAT ERROR: ".
+ * 这将使用带有前缀“EtherCAT ERROR：”的\a fmt打印消息。
  *
- * \param fmt format string (like in printf())
- * \param args arguments (optional)
+ * \param fmt 格式字符串（与printf()中的格式相同）
+ * \param args 参数（可选）
  */
 #define EC_ERR(fmt, args...) \
-    printk(KERN_ERR "EtherCAT ERROR: " fmt, ##args)
+    printk(KERN_ERR "EtherCAT ERROR： " fmt, ##args)
 
-/** Convenience macro for printing EtherCAT-specific warnings to syslog.
+/** 打印EtherCAT特定警告到syslog的便捷宏。
  *
- * This will print the message in \a fmt with a prefixed "EtherCAT WARNING: ".
+ * 这将使用带有前缀“EtherCAT WARNING：”的\a fmt打印消息。
  *
- * \param fmt format string (like in printf())
- * \param args arguments (optional)
+ * \param fmt 格式字符串（与printf()中的格式相同）
+ * \param args 参数（可选）
  */
 #define EC_WARN(fmt, args...) \
-    printk(KERN_WARNING "EtherCAT WARNING: " fmt, ##args)
+    printk(KERN_WARNING "EtherCAT WARNING： " fmt, ##args)
 
-/** Convenience macro for printing EtherCAT debug messages to syslog.
+/** 打印EtherCAT调试消息到syslog的便捷宏。
  *
- * This will print the message in \a fmt with a prefixed "EtherCAT DEBUG: ".
+ * 这将使用带有前缀“EtherCAT DEBUG：”的\a fmt打印消息。
  *
- * \param fmt format string (like in printf())
- * \param args arguments (optional)
+ * \param fmt 格式字符串（与printf()中的格式相同）
+ * \param args 参数（可选）
  */
 #define EC_DBG(fmt, args...) \
-    printk(KERN_DEBUG "EtherCAT DEBUG: " fmt, ##args)
+    printk(KERN_DEBUG "EtherCAT DEBUG： " fmt, ##args)
 
 /*****************************************************************************/
 
-/** Absolute value.
+/**
+ * @brief 绝对值。
  */
 #define EC_ABS(X) ((X) >= 0 ? (X) : -(X))
 
 /*****************************************************************************/
 
-extern char *ec_master_version_str;
+extern char *ec_master_version_str; // EtherCAT主版本字符串
 
 /*****************************************************************************/
 
-unsigned int ec_master_count(void);
-void ec_print_data(const uint8_t *, size_t);
-void ec_print_data_diff(const uint8_t *, const uint8_t *, size_t);
-size_t ec_state_string(uint8_t, char *, uint8_t);
-size_t ec_mac_print(const uint8_t *, char *);
-int ec_mac_is_zero(const uint8_t *);
+unsigned int ec_master_count(void); // 获取EtherCAT主站数量
+void ec_print_data(const uint8_t *, size_t); // 打印数据
+void ec_print_data_diff(const uint8_t *, const uint8_t *, size_t); // 打印数据差异
+size_t ec_state_string(uint8_t, char *, uint8_t); // 获取状态字符串
+size_t ec_mac_print(const uint8_t *, char *); // 打印MAC地址
+int ec_mac_is_zero(const uint8_t *); // 检查MAC地址是否为零
 
-ec_master_t *ecrt_request_master_err(unsigned int);
+ec_master_t *ecrt_request_master_err(unsigned int); // 请求EtherCAT主站
 
 /*****************************************************************************/
 
 /** Code/Message pair.
  *
- * Some EtherCAT datagrams support reading a status code to display a certain
- * message. This type allows to map a code to a message string.
+ * 某些EtherCAT数据报支持读取状态码以显示特定消息。此类型允许将代码映射到消息字符串。
  */
 typedef struct
 {
-    uint32_t code;       /**< Code. */
-    const char *message; /**< Message belonging to \a code. */
+    uint32_t code;       /**< 代码。 */
+    const char *message; /**< 与 \a code 相关的消息。 */
 } ec_code_msg_t;
 
 /*****************************************************************************/
 
-/** Generic request state.
+/** 通用请求状态。
  *
- * \attention If ever changing this, please be sure to adjust the \a
- * state_table in master/sdo_request.c.
+ * \attention 如果要更改此状态，请确保调整master/sdo_request.c中的 \a state_table。
  */
 typedef enum
 {
-    EC_INT_REQUEST_INIT,
-    EC_INT_REQUEST_QUEUED,
-    EC_INT_REQUEST_BUSY,
-    EC_INT_REQUEST_SUCCESS,
-    EC_INT_REQUEST_FAILURE
+    EC_INT_REQUEST_INIT,    /**< 初始化。 */
+    EC_INT_REQUEST_QUEUED,  /**< 已入队。 */
+    EC_INT_REQUEST_BUSY,    /**< 忙碌。 */
+    EC_INT_REQUEST_SUCCESS, /**< 成功。 */
+    EC_INT_REQUEST_FAILURE  /**< 失败。 */
 } ec_internal_request_state_t;
 
 /*****************************************************************************/
@@ -345,14 +343,13 @@ extern const ec_request_state_t ec_request_state_translation_table[];
 
 /*****************************************************************************/
 
-/** Origin type.
+/** 原始类型。
  */
 typedef enum
 {
-    EC_ORIG_INTERNAL, /**< Internal. */
-    EC_ORIG_EXTERNAL  /**< External. */
+    EC_ORIG_INTERNAL, /**< 内部。 */
+    EC_ORIG_EXTERNAL  /**< 外部。 */
 } ec_origin_t;
-
 /*****************************************************************************/
 
 typedef struct ec_slave ec_slave_t; /**< \see ec_slave. */

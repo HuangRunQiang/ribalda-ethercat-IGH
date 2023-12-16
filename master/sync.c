@@ -41,11 +41,11 @@
 
 /*****************************************************************************/
 
-/** Constructor.
+/** 构造函数。
  */
 void ec_sync_init(
-    ec_sync_t *sync,  /**< EtherCAT sync manager. */
-    ec_slave_t *slave /**< EtherCAT slave. */
+    ec_sync_t *sync,  /**< EtherCAT同步管理器。 */
+    ec_slave_t *slave /**< EtherCAT从站。 */
 )
 {
     sync->slave = slave;
@@ -58,11 +58,11 @@ void ec_sync_init(
 
 /*****************************************************************************/
 
-/** Copy constructor.
+/** 复制构造函数。
  */
 void ec_sync_init_copy(
-    ec_sync_t *sync,       /**< EtherCAT sync manager. */
-    const ec_sync_t *other /**< Sync manager to copy from. */
+    ec_sync_t *sync,       /**< EtherCAT同步管理器。 */
+    const ec_sync_t *other /**< 要复制的同步管理器。 */
 )
 {
     sync->slave = other->slave;
@@ -76,10 +76,10 @@ void ec_sync_init_copy(
 
 /*****************************************************************************/
 
-/** Destructor.
+/** 析构函数。
  */
 void ec_sync_clear(
-    ec_sync_t *sync /**< EtherCAT sync manager. */
+    ec_sync_t *sync /**< EtherCAT同步管理器。 */
 )
 {
     ec_pdo_list_clear(&sync->pdos);
@@ -87,22 +87,20 @@ void ec_sync_clear(
 
 /*****************************************************************************/
 
-/** Initializes a sync manager configuration page.
+/** 初始化同步管理器配置页。
  *
- * The referenced memory (\a data) must be at least \a EC_SYNC_SIZE bytes.
+ * 引用的内存（\a data）必须至少为 \a EC_SYNC_SIZE 字节。
  */
 void ec_sync_page(
-    const ec_sync_t *sync,               /**< Sync manager. */
-    uint8_t sync_index,                  /**< Index of the sync manager. */
-    uint16_t data_size,                  /**< Data size. */
-    const ec_sync_config_t *sync_config, /**< Configuration. */
-    uint8_t pdo_xfer,                    /**< Non-zero, if PDOs will be transferred via this
-                                           sync manager. */
-    uint8_t *data                        /**> Configuration memory. */
+    const ec_sync_t *sync,               /**< 同步管理器。 */
+    uint8_t sync_index,                  /**< 同步管理器的索引。 */
+    uint16_t data_size,                  /**< 数据大小。 */
+    const ec_sync_config_t *sync_config, /**< 配置。 */
+    uint8_t pdo_xfer,                    /**< 非零，如果PDO将通过此同步管理器传输。 */
+    uint8_t *data                        /**> 配置内存。 */
 )
 {
-    // enable only if (SII enable is set or PDO xfer)
-    // and size is > 0 and SM is not virtual
+    // 仅在（SII使能已设置或PDO传输）且大小大于0且SM不是虚拟的情况下启用
     uint16_t enable = ((sync->enable & 0x01) || pdo_xfer) && data_size && ((sync->enable & 0x04) == 0);
     uint8_t control = sync->control_register;
 
@@ -133,27 +131,27 @@ void ec_sync_page(
         }
     }
 
-    EC_SLAVE_DBG(sync->slave, 1, "SM%u: Addr 0x%04X, Size %3u,"
-                                 " Ctrl 0x%02X, En %u\n",
+    EC_SLAVE_DBG(sync->slave, 1, "SM%u: 地址 0x%04X, 大小 %3u,"
+                                 " 控制 0x%02X, 使能 %u\n",
                  sync_index, sync->physical_start_address,
                  data_size, control, enable);
 
     EC_WRITE_U16(data, sync->physical_start_address);
     EC_WRITE_U16(data + 2, data_size);
     EC_WRITE_U8(data + 4, control);
-    EC_WRITE_U8(data + 5, 0x00); // status byte (read only)
+    EC_WRITE_U8(data + 5, 0x00); // 状态字节（只读）
     EC_WRITE_U16(data + 6, enable);
 }
 
 /*****************************************************************************/
 
-/** Adds a PDO to the list of known mapped PDOs.
+/** 将PDO添加到已知映射PDO的列表中。
  *
- * \return 0 on success, else < 0
+ * \return 成功返回0，否则返回 < 0
  */
 int ec_sync_add_pdo(
-    ec_sync_t *sync,    /**< EtherCAT sync manager. */
-    const ec_pdo_t *pdo /**< PDO to map. */
+    ec_sync_t *sync,    /**< EtherCAT同步管理器。 */
+    const ec_pdo_t *pdo /**< 要映射的PDO。 */
 )
 {
     return ec_pdo_list_add_pdo_copy(&sync->pdos, pdo);
@@ -161,12 +159,12 @@ int ec_sync_add_pdo(
 
 /*****************************************************************************/
 
-/** Determines the default direction from the control register.
+/** 根据控制寄存器确定默认方向。
  *
- * \return Direction.
+ * \return 方向。
  */
 ec_direction_t ec_sync_default_direction(
-    const ec_sync_t *sync /**< EtherCAT sync manager. */
+    const ec_sync_t *sync /**< EtherCAT同步管理器。 */
 )
 {
     switch ((sync->control_register & 0x0C) >> 2)

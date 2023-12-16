@@ -40,10 +40,13 @@
 
 /*****************************************************************************/
 
-/** PDO entry constructor.
+/**
+ * @brief PDO条目构造函数
+ *
+ * 初始化PDO条目对象。
  */
 void ec_pdo_entry_init(
-    ec_pdo_entry_t *entry /**< PDO entry. */
+    ec_pdo_entry_t *entry /**< PDO条目对象。 */
 )
 {
     entry->name = NULL;
@@ -51,14 +54,15 @@ void ec_pdo_entry_init(
 
 /*****************************************************************************/
 
-/** PDO entry copy constructor.
+/**
+ * @brief PDO条目复制构造函数
  *
- * \retval  0 Success.
- * \retval <0 Error code.
+ * @retval  0 成功
+ * @retval <0 错误码
  */
 int ec_pdo_entry_init_copy(
-    ec_pdo_entry_t *entry,      /**< PDO entry. */
-    const ec_pdo_entry_t *other /**< PDO entry to copy from. */
+    ec_pdo_entry_t *entry,      /**< 目标PDO条目对象。 */
+    const ec_pdo_entry_t *other /**< 要复制的PDO条目对象。 */
 )
 {
     entry->index = other->index;
@@ -71,9 +75,12 @@ int ec_pdo_entry_init_copy(
 
 /*****************************************************************************/
 
-/** PDO entry destructor.
+/**
+ * @brief PDO条目析构函数
+ *
+ * 清理PDO条目对象的资源。
  */
-void ec_pdo_entry_clear(ec_pdo_entry_t *entry /**< PDO entry. */)
+void ec_pdo_entry_clear(ec_pdo_entry_t *entry /**< PDO条目对象。 */)
 {
     if (entry->name)
         kfree(entry->name);
@@ -81,14 +88,15 @@ void ec_pdo_entry_clear(ec_pdo_entry_t *entry /**< PDO entry. */)
 
 /*****************************************************************************/
 
-/** Set PDO entry name.
+/**
+ * @brief 设置PDO条目名称
  *
- * \retval  0 Success.
- * \retval <0 Error code.
+ * @retval  0 成功
+ * @retval <0 错误码
  */
 int ec_pdo_entry_set_name(
-    ec_pdo_entry_t *entry, /**< PDO entry. */
-    const char *name       /**< New name. */
+    ec_pdo_entry_t *entry, /**< PDO条目对象。 */
+    const char *name       /**< 新名称。 */
 )
 {
     unsigned int len;
@@ -103,7 +111,7 @@ int ec_pdo_entry_set_name(
     {
         if (!(entry->name = (char *)kmalloc(len + 1, GFP_KERNEL)))
         {
-            EC_ERR("Failed to allocate PDO entry name.\n");
+            EC_ERR("分配PDO条目名称失败。\n");
             return -ENOMEM;
         }
         memcpy(entry->name, name, len + 1);
@@ -118,14 +126,15 @@ int ec_pdo_entry_set_name(
 
 /*****************************************************************************/
 
-/** Compares two PDO entries.
+/**
+ * @brief 比较两个PDO条目是否相等
  *
- * \retval 1 The entries are equal.
- * \retval 0 The entries differ.
+ * @retval 1 条目相等
+ * @retval 0 条目不相等
  */
 int ec_pdo_entry_equal(
-    const ec_pdo_entry_t *entry1, /**< First PDO entry. */
-    const ec_pdo_entry_t *entry2  /**< Second PDO entry. */
+    const ec_pdo_entry_t *entry1, /**< 第一个PDO条目。 */
+    const ec_pdo_entry_t *entry2  /**< 第二个PDO条目。 */
 )
 {
     return entry1->index == entry2->index && entry1->subindex == entry2->subindex && entry1->bit_length == entry2->bit_length;

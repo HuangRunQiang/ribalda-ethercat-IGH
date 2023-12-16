@@ -38,10 +38,14 @@
 
 /*****************************************************************************/
 
-/** Constructor.
+/** 构造函数。
+ * 
+ * 初始化同步管理器配置对象。
+ *
+ * @param sync_config 同步管理器配置对象。
  */
 void ec_sync_config_init(
-    ec_sync_config_t *sync_config /**< Sync manager configuration. */
+    ec_sync_config_t *sync_config /**< 同步管理器配置对象。 */
 )
 {
     sync_config->dir = EC_DIR_INVALID;
@@ -51,10 +55,14 @@ void ec_sync_config_init(
 
 /*****************************************************************************/
 
-/** Destructor.
+/** 析构函数。
+ * 
+ * 清除同步管理器配置对象的数据。
+ *
+ * @param sync_config 同步管理器配置对象。
  */
 void ec_sync_config_clear(
-    ec_sync_config_t *sync_config /**< Sync manager configuration. */
+    ec_sync_config_t *sync_config /**< 同步管理器配置对象。 */
 )
 {
     ec_pdo_list_clear(&sync_config->pdos);

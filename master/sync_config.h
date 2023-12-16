@@ -41,13 +41,13 @@
 
 /*****************************************************************************/
 
-/** Sync manager configuration.
+/** 同步管理器配置。
  */
 typedef struct
 {
-    ec_direction_t dir;               /**< Sync manager direction. */
-    ec_watchdog_mode_t watchdog_mode; /**< Watchdog mode. */
-    ec_pdo_list_t pdos;               /**< Current PDO assignment. */
+    ec_direction_t dir;               /**< 同步管理器方向。 */
+    ec_watchdog_mode_t watchdog_mode; /**< 看门狗模式。 */
+    ec_pdo_list_t pdos;               /**< 当前PDO分配。 */
 } ec_sync_config_t;
 
 /*****************************************************************************/

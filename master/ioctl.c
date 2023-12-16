@@ -29,7 +29,7 @@
 
 /**
    \file
-   EtherCAT master character device.
+   EtherCAT主站字符设备。
 */
 
 /*****************************************************************************/
@@ -43,13 +43,13 @@
 #include "ethernet.h"
 #include "ioctl.h"
 
-/** Set to 1 to enable ioctl() latency tracing.
+/** 将其设置为1以启用ioctl()延迟跟踪。
  *
- * Requires CPU timestamp counter!
+ * 需要CPU时间戳计数器！
  */
 #define DEBUG_LATENCY 0
 
-/** Optional compiler attributes fo ioctl() functions.
+/** ioctl()函数的可选编译器属性。
  */
 #if 0
 #define ATTRIBUTES __attribute__((__noinline__))
@@ -57,7 +57,7 @@
 #define ATTRIBUTES
 #endif
 
-/** Ioctl locking is disabled for RTDM as the RT app needs to use RTAI locks.
+/** 对于RTDM，禁用ioctl()锁定，因为RT应用程序需要使用RTAI锁。
  */
 #ifdef EC_IOCTL_RTDM
 #define ec_ioctl_lock_down_interruptible(p) 0
@@ -72,11 +72,19 @@
 
 /*****************************************************************************/
 
-/** Copies a string to an ioctl structure.
+/**
+ * @brief 将一个字符串复制到一个ioctl结构中。
+ *
+ * @param target 目标字符串，用于存储复制后的字符串。
+ * @param source 源字符串，要被复制的字符串。
+ *
+ * @return 无返回值。
+ *
+ * @details 将源字符串复制到目标字符串中，如果源字符串为空，则将目标字符串置为空。
  */
 static void ec_ioctl_strcpy(
-    char *target,      /**< Target. */
-    const char *source /**< Source. */
+    char *target,      /**< 目标字符串。 */
+    const char *source /**< 源字符串。 */
 )
 {
     if (source)
@@ -92,12 +100,17 @@ static void ec_ioctl_strcpy(
 
 /*****************************************************************************/
 
-/** Get module information.
+/**
+ * @brief 获取模块信息。
  *
- * \return Zero on success, otherwise a negative error code.
+ * @param arg 用于存储结果的用户空间地址。
+ *
+ * @return 成功时返回零，否则返回负错误代码。
+ *
+ * @details 获取模块信息，并将结果存储在用户空间地址中。
  */
 static ATTRIBUTES int ec_ioctl_module(
-    void *arg /**< Userspace address to store the results. */
+    void *arg /**< 用于存储结果的用户空间地址。 */
 )
 {
     ec_ioctl_module_t data;
@@ -113,13 +126,19 @@ static ATTRIBUTES int ec_ioctl_module(
 
 /*****************************************************************************/
 
-/** Get master information.
+/**
+ * @brief 获取主站信息。
  *
- * \return Zero on success, otherwise a negative error code.
+ * @param master EtherCAT主站。
+ * @param arg 用于存储结果的用户空间地址。
+ *
+ * @return 成功时返回零，否则返回负错误代码。
+ *
+ * @details 获取主站的各种信息，并将结果存储在用户空间地址中。
  */
 static ATTRIBUTES int ec_ioctl_master(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< Userspace address to store the results. */
+    ec_master_t *master, /**< EtherCAT主站。 */
+    void *arg            /**< 用于存储结果的用户空间地址。 */
 )
 {
     ec_ioctl_master_t io;
@@ -227,13 +246,19 @@ static ATTRIBUTES int ec_ioctl_master(
 
 /*****************************************************************************/
 
-/** Get slave information.
+/**
+ * @brief 获取从站信息。
  *
- * \return Zero on success, otherwise a negative error code.
+ * @param master EtherCAT主站。
+ * @param arg 用于存储结果的用户空间地址。
+ *
+ * @return 成功时返回零，否则返回负错误代码。
+ *
+ * @details 获取从站的各种信息，并将结果存储在用户空间地址中。
  */
 static ATTRIBUTES int ec_ioctl_slave(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< Userspace address to store the results. */
+    ec_master_t *master, /**< EtherCAT主站。 */
+    void *arg            /**< 用于存储结果的用户空间地址。 */
 )
 {
     ec_ioctl_slave_t data;
@@ -358,13 +383,19 @@ static ATTRIBUTES int ec_ioctl_slave(
 
 /*****************************************************************************/
 
-/** Get slave sync manager information.
+/**
+ * @brief 获取从站同步管理器信息。
  *
- * \return Zero on success, otherwise a negative error code.
+ * @param master EtherCAT主站。
+ * @param arg 用于存储结果的用户空间地址。
+ *
+ * @return 成功时返回零，否则返回负错误代码。
+ *
+ * @details 获取从站同步管理器的各种信息，并将结果存储在用户空间地址中。
  */
 static ATTRIBUTES int ec_ioctl_slave_sync(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< Userspace address to store the results. */
+    ec_master_t *master, /**< EtherCAT主站。 */
+    void *arg            /**< 用于存储结果的用户空间地址。 */
 )
 {
     ec_ioctl_slave_sync_t data;
@@ -427,13 +458,29 @@ static ATTRIBUTES int ec_ioctl_slave_sync(
 
 /*****************************************************************************/
 
-/** Get slave sync manager PDO information.
- *
- * \return Zero on success, otherwise a negative error code.
+/**
+ * @brief 获取从站同步管理器PDO信息。
+ * 
+ * @param master EtherCAT主站。
+ * @param arg 用于存储结果的用户空间地址。
+ * @return 成功时返回零，否则返回负错误代码。
+ * @details 
+ * - 从用户空间复制数据到内核空间。
+ * - 锁定主站信号量，以避免中断。
+ * - 查找指定位置的从站。
+ * - 如果从站的SII图像存在：
+ *   - 检查同步索引是否超出范围。
+ *   - 获取同步管理器和PDO。
+ *   - 获取PDO的索引、条目数量和名称。
+ * - 如果从站的SII图像不存在：
+ *   - 输出无法访问SII数据的消息。
+ *   - 设置索引、条目数量和名称为零。
+ * - 解锁主站信号量。
+ * - 将数据从内核空间复制回用户空间。
  */
 static ATTRIBUTES int ec_ioctl_slave_sync_pdo(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< Userspace address to store the results. */
+    ec_master_t *master, /**< EtherCAT主站。 */
+    void *arg            /**< 用于存储结果的用户空间地址。 */
 )
 {
     ec_ioctl_slave_sync_pdo_t data;
@@ -453,7 +500,7 @@ static ATTRIBUTES int ec_ioctl_slave_sync_pdo(
               master, 0, data.slave_position)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Slave %u does not exist!\n",
+        EC_MASTER_ERR(master, "从站 %u 不存在！\n",
                       data.slave_position);
         return -EINVAL;
     }
@@ -463,7 +510,7 @@ static ATTRIBUTES int ec_ioctl_slave_sync_pdo(
         if (data.sync_index >= slave->sii_image->sii.sync_count)
         {
             ec_lock_up(&master->master_sem);
-            EC_SLAVE_ERR(slave, "Sync manager %u does not exist!\n",
+            EC_SLAVE_ERR(slave, "同步管理器 %u 不存在！\n",
                          data.sync_index);
             return -EINVAL;
         }
@@ -473,8 +520,7 @@ static ATTRIBUTES int ec_ioctl_slave_sync_pdo(
                   &sync->pdos, data.pdo_pos)))
         {
             ec_lock_up(&master->master_sem);
-            EC_SLAVE_ERR(slave, "Sync manager %u does not contain a PDO with "
-                                "position %u!\n",
+            EC_SLAVE_ERR(slave, "同步管理器 %u 不包含位置为 %u 的PDO！\n",
                          data.sync_index, data.pdo_pos);
             return -EINVAL;
         }
@@ -485,7 +531,7 @@ static ATTRIBUTES int ec_ioctl_slave_sync_pdo(
     }
     else
     {
-        EC_SLAVE_INFO(slave, "No access to SII data for SyncManager %u!\n",
+        EC_SLAVE_INFO(slave, "无法访问同步管理器 %u 的SII数据！\n",
                       data.sync_index);
 
         data.index = 0;
@@ -502,13 +548,30 @@ static ATTRIBUTES int ec_ioctl_slave_sync_pdo(
 
 /*****************************************************************************/
 
-/** Get slave sync manager PDO entry information.
- *
- * \return Zero on success, otherwise a negative error code.
+/**
+ * @brief 获取从站同步管理器PDO条目信息。
+ * 
+ * @param master EtherCAT主站。
+ * @param arg 用于存储结果的用户空间地址。
+ * @return 成功时返回零，否则返回负错误代码。
+ * @details 
+ * - 从用户空间复制数据到内核空间。
+ * - 锁定主站信号量，以避免中断。
+ * - 查找指定位置的从站。
+ * - 如果从站的SII图像存在：
+ *   - 检查同步索引是否超出范围。
+ *   - 获取同步管理器和PDO。
+ *   - 获取PDO条目。
+ *   - 获取条目的索引、子索引、位长度和名称。
+ * - 如果从站的SII图像不存在：
+ *   - 输出无法访问SII数据的消息。
+ *   - 设置索引、子索引、位长度和名称为零。
+ * - 解锁主站信号量。
+ * - 将数据从内核空间复制回用户空间。
  */
 static ATTRIBUTES int ec_ioctl_slave_sync_pdo_entry(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< Userspace address to store the results. */
+    ec_master_t *master, /**< EtherCAT主站。 */
+    void *arg            /**< 用于存储结果的用户空间地址。 */
 )
 {
     ec_ioctl_slave_sync_pdo_entry_t data;
@@ -529,7 +592,7 @@ static ATTRIBUTES int ec_ioctl_slave_sync_pdo_entry(
               master, 0, data.slave_position)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Slave %u does not exist!\n",
+        EC_MASTER_ERR(master, "从站 %u 不存在！\n",
                       data.slave_position);
         return -EINVAL;
     }
@@ -539,7 +602,7 @@ static ATTRIBUTES int ec_ioctl_slave_sync_pdo_entry(
         if (data.sync_index >= slave->sii_image->sii.sync_count)
         {
             ec_lock_up(&master->master_sem);
-            EC_SLAVE_ERR(slave, "Sync manager %u does not exist!\n",
+            EC_SLAVE_ERR(slave, "同步管理器 %u 不存在！\n",
                          data.sync_index);
             return -EINVAL;
         }
@@ -549,8 +612,7 @@ static ATTRIBUTES int ec_ioctl_slave_sync_pdo_entry(
                   &sync->pdos, data.pdo_pos)))
         {
             ec_lock_up(&master->master_sem);
-            EC_SLAVE_ERR(slave, "Sync manager %u does not contain a PDO with "
-                                "position %u!\n",
+            EC_SLAVE_ERR(slave, "同步管理器 %u 不包含位置为 %u 的PDO！\n",
                          data.sync_index, data.pdo_pos);
             return -EINVAL;
         }
@@ -559,8 +621,7 @@ static ATTRIBUTES int ec_ioctl_slave_sync_pdo_entry(
                   pdo, data.entry_pos)))
         {
             ec_lock_up(&master->master_sem);
-            EC_SLAVE_ERR(slave, "PDO 0x%04X does not contain an entry with "
-                                "position %u!\n",
+            EC_SLAVE_ERR(slave, "PDO 0x%04X 不包含位置为 %u 的条目！\n",
                          data.pdo_pos, data.entry_pos);
             return -EINVAL;
         }
@@ -572,7 +633,7 @@ static ATTRIBUTES int ec_ioctl_slave_sync_pdo_entry(
     }
     else
     {
-        EC_SLAVE_INFO(slave, "No access to SII data for Sync manager %u!\n",
+        EC_SLAVE_INFO(slave, "无法访问同步管理器 %u 的SII数据！\n",
                       data.sync_index);
 
         data.index = 0;
@@ -590,13 +651,24 @@ static ATTRIBUTES int ec_ioctl_slave_sync_pdo_entry(
 
 /*****************************************************************************/
 
-/** Get domain information.
- *
- * \return Zero on success, otherwise a negative error code.
+/**
+ * @brief 获取域信息。
+ * 
+ * @param master EtherCAT主站。
+ * @param arg 用于存储结果的用户空间地址。
+ * @return 成功时返回零，否则返回负错误代码。
+ * @details 
+ * - 从用户空间复制数据到内核空间。
+ * - 锁定主站信号量，以避免中断。
+ * - 查找指定索引的域。
+ * - 获取域的数据大小、逻辑基地址和工作计数器。
+ * - 获取预期的工作计数器和FMMU数量。
+ * - 解锁主站信号量。
+ * - 将数据从内核空间复制回用户空间。
  */
 static ATTRIBUTES int ec_ioctl_domain(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< Userspace address to store the results. */
+    ec_master_t *master, /**< EtherCAT主站。 */
+    void *arg            /**< 用于存储结果的用户空间地址。 */
 )
 {
     ec_ioctl_domain_t data;
@@ -614,7 +686,7 @@ static ATTRIBUTES int ec_ioctl_domain(
     if (!(domain = ec_master_find_domain_const(master, data.index)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Domain %u does not exist!\n", data.index);
+        EC_MASTER_ERR(master, "域 %u 不存在！\n", data.index);
         return -EINVAL;
     }
 
@@ -638,13 +710,24 @@ static ATTRIBUTES int ec_ioctl_domain(
 
 /*****************************************************************************/
 
-/** Get domain FMMU information.
- *
- * \return Zero on success, otherwise a negative error code.
+/**
+ * @brief 获取域FMMU信息。
+ * 
+ * @param master EtherCAT主站。
+ * @param arg 用于存储结果的用户空间地址。
+ * @return 成功时返回零，否则返回负错误代码。
+ * @details 
+ * - 从用户空间复制数据到内核空间。
+ * - 锁定主站信号量，以避免中断。
+ * - 查找指定索引的域。
+ * - 获取FMMU配置。
+ * - 获取FMMU配置的别名、位置、同步索引、方向、逻辑地址和数据大小。
+ * - 解锁主站信号量。
+ * - 将数据从内核空间复制回用户空间。
  */
 static ATTRIBUTES int ec_ioctl_domain_fmmu(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< Userspace address to store the results. */
+    ec_master_t *master, /**< EtherCAT主站。 */
+    void *arg            /**< 用于存储结果的用户空间地址。 */
 )
 {
     ec_ioctl_domain_fmmu_t data;
@@ -662,7 +745,7 @@ static ATTRIBUTES int ec_ioctl_domain_fmmu(
     if (!(domain = ec_master_find_domain_const(master, data.domain_index)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Domain %u does not exist!\n",
+        EC_MASTER_ERR(master, "域 %u 不存在！\n",
                       data.domain_index);
         return -EINVAL;
     }
@@ -670,8 +753,7 @@ static ATTRIBUTES int ec_ioctl_domain_fmmu(
     if (!(fmmu = ec_domain_find_fmmu(domain, data.fmmu_index)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Domain %u has less than %u"
-                              " fmmu configurations.\n",
+        EC_MASTER_ERR(master, "域 %u 的FMMU配置少于 %u 个。\n",
                       data.domain_index, data.fmmu_index + 1);
         return -EINVAL;
     }
@@ -693,13 +775,23 @@ static ATTRIBUTES int ec_ioctl_domain_fmmu(
 
 /*****************************************************************************/
 
-/** Get domain data.
- *
- * \return Zero on success, otherwise a negative error code.
+/**
+ * @brief 获取域数据。
+ * 
+ * @param master EtherCAT主站。
+ * @param arg 用于存储结果的用户空间地址。
+ * @return 成功时返回零，否则返回负错误代码。
+ * @details 
+ * - 从用户空间复制数据到内核空间。
+ * - 锁定主站信号量，以避免中断。
+ * - 查找指定索引的域。
+ * - 检查数据大小是否匹配。
+ * - 将数据从域复制到用户空间。
+ * - 解锁主站信号量。
  */
 static ATTRIBUTES int ec_ioctl_domain_data(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< Userspace address to store the results. */
+    ec_master_t *master, /**< EtherCAT主站。 */
+    void *arg            /**< 用于存储结果的用户空间地址。 */
 )
 {
     ec_ioctl_domain_data_t data;
@@ -716,7 +808,7 @@ static ATTRIBUTES int ec_ioctl_domain_data(
     if (!(domain = ec_master_find_domain_const(master, data.domain_index)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Domain %u does not exist!\n",
+        EC_MASTER_ERR(master, "域 %u 不存在！\n",
                       data.domain_index);
         return -EINVAL;
     }
@@ -724,7 +816,7 @@ static ATTRIBUTES int ec_ioctl_domain_data(
     if (domain->data_size != data.data_size)
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Data size mismatch %u/%zu!\n",
+        EC_MASTER_ERR(master, "数据大小不匹配 %u/%zu！\n",
                       data.data_size, domain->data_size);
         return -EFAULT;
     }
@@ -742,94 +834,120 @@ static ATTRIBUTES int ec_ioctl_domain_data(
 
 /*****************************************************************************/
 
-/** Get pcap data.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+
+@brief 获取pcap数据。
+
+@param master EtherCAT主站。
+
+@param arg 用于存储结果的用户空间地址。
+
+@return 成功时返回零，否则返回负错误代码。
+
+@details
+
+检查是否支持pcap数据。
+从用户空间复制数据到内核空间。
+锁定主站信号量，以避免中断。
+获取pcap数据大小和总大小。
+检查数据大小是否足够。
+填充pcap头并将其复制到用户内存。
+将pcap数据复制到用户内存。
+如果请求了重置数据，则重置pcap当前数据位置。
+解锁主站信号量。
+*/
 static ATTRIBUTES int ec_ioctl_pcap_data(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< Userspace address to store the results. */
+ec_master_t *master, /< EtherCAT主站。 */
+void *arg /< 用于存储结果的用户空间地址。 */
 )
 {
-    ec_ioctl_pcap_data_t data;
-    pcap_hdr_t pcaphdr;
-    size_t data_size;
-    size_t total_size;
-    void *curr_data;
+ec_ioctl_pcap_data_t data;
+pcap_hdr_t pcaphdr;
+size_t data_size;
+size_t total_size;
+void *curr_data;
+// 检查是否支持pcap数据
+if (!master->pcap_data)
+{
+return -EOPNOTSUPP;
+}
 
-    if (!master->pcap_data)
-    {
-        return -EOPNOTSUPP;
-    }
+// 从用户空间复制数据到内核空间
+if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+{
+return -EFAULT;
+}
 
-    if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
-    {
-        return -EFAULT;
-    }
+// 锁定主站信号量，以避免中断
+if (ec_lock_down_interruptible(&master->master_sem))
+return -EINTR;
 
-    if (ec_lock_down_interruptible(&master->master_sem))
-        return -EINTR;
+curr_data = master->pcap_curr_data;
+data_size = curr_data - master->pcap_data;
+total_size = sizeof(pcap_hdr_t) + data_size;
 
-    curr_data = master->pcap_curr_data;
-    data_size = curr_data - master->pcap_data;
-    total_size = sizeof(pcap_hdr_t) + data_size;
-    if (data.data_size < sizeof(pcap_hdr_t))
-    {
-        ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Pcap data size too small %u/%zu!\n",
-                      data.data_size, sizeof(pcap_hdr_t));
-        return -EFAULT;
-    }
-    if (data.data_size > total_size)
-    {
-        data.data_size = total_size;
-    }
+// 检查数据大小是否足够
+if (data.data_size < sizeof(pcap_hdr_t))
+{
+ec_lock_up(&master->master_sem);
+EC_MASTER_ERR(master, "Pcap数据大小太小 %u/%zu！\n",
+data.data_size, sizeof(pcap_hdr_t));
+return -EFAULT;
+}
+if (data.data_size > total_size)
+{
+data.data_size = total_size;
+}
 
-    // fill in pcap header and copy to user mem
-    pcaphdr.magic_number = 0xa1b2c3d4;
-    pcaphdr.version_major = 2;
-    pcaphdr.version_minor = 4;
-    pcaphdr.thiszone = 0;
-    pcaphdr.sigfigs = 0;
-    pcaphdr.snaplen = 65535;
-    pcaphdr.network = 1;
-    if (copy_to_user((void __user *)data.target, &pcaphdr,
-                     sizeof(pcap_hdr_t)))
-    {
-        ec_lock_up(&master->master_sem);
-        return -EFAULT;
-    }
+// 填充pcap头并将其复制到用户内存
+pcaphdr.magic_number = 0xa1b2c3d4;
+pcaphdr.version_major = 2;
+pcaphdr.version_minor = 4;
+pcaphdr.thiszone = 0;
+pcaphdr.sigfigs = 0;
+pcaphdr.snaplen = 65535;
+pcaphdr.network = 1;
+if (copy_to_user((void __user *)data.target, &pcaphdr,
+sizeof(pcap_hdr_t)))
+{
+ec_lock_up(&master->master_sem);
+return -EFAULT;
+}
 
-    // copy pcap data, up to requested size; also copy updated data_size
-    if ((data_size > 0) &&
-        (copy_to_user((void __user *)(data.target + sizeof(pcap_hdr_t)),
-                      master->pcap_data, data.data_size - sizeof(pcap_hdr_t)) ||
-         copy_to_user((void __user *)arg, &data, sizeof(data))))
-    {
-        ec_lock_up(&master->master_sem);
-        return -EFAULT;
-    }
+// 复制pcap数据，直到请求的大小；同时复制更新后的数据大小
+if ((data_size > 0) &&
+(copy_to_user((void __user *)(data.target + sizeof(pcap_hdr_t)),
+master->pcap_data, data.data_size - sizeof(pcap_hdr_t)) ||
+copy_to_user((void __user *)arg, &data, sizeof(data))))
+{
+ec_lock_up(&master->master_sem);
+return -EFAULT;
+}
 
-    // remove copied data?
-    // Note: will remove any data that has not been copied
-    if (data.reset_data)
-    {
-        master->pcap_curr_data = master->pcap_data;
-    }
+// 是否删除已复制的数据？
+// 注意：将删除未复制的任何数据
+if (data.reset_data)
+{
+master->pcap_curr_data = master->pcap_data;
+}
 
-    ec_lock_up(&master->master_sem);
-    return 0;
+ec_lock_up(&master->master_sem);
+return 0;
 }
 
 /*****************************************************************************/
 
-/** Set master debug level.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 设置主控制器的调试级别。
+@param master EtherCAT主控制器。
+@param arg ioctl()参数。
+@return 成功返回零，否则返回负错误代码。
+@details
+- 调用ec_master_debug_level()函数设置主控制器的调试级别。
+*/
 static ATTRIBUTES int ec_ioctl_master_debug(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< ioctl() argument. */
+    ec_master_t *master, /**< EtherCAT主控制器。 */
+    void *arg            /**< ioctl()参数。 */
 )
 {
     return ec_master_debug_level(master, (unsigned long)arg);
@@ -837,13 +955,15 @@ static ATTRIBUTES int ec_ioctl_master_debug(
 
 /*****************************************************************************/
 
-/** Issue a bus scan.
- *
- * \return Always zero (success).
- */
+/**
+@brief 发起总线扫描。
+@return 总是返回零（成功）。
+@details
+- 将master->fsm.rescan_required设置为1，表示需要进行总线扫描。
+*/
 static ATTRIBUTES int ec_ioctl_master_rescan(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< ioctl() argument. */
+    ec_master_t *master, /**< EtherCAT主控制器。 */
+    void *arg            /**< ioctl()参数。 */
 )
 {
     master->fsm.rescan_required = 1;
@@ -852,13 +972,21 @@ static ATTRIBUTES int ec_ioctl_master_rescan(
 
 /*****************************************************************************/
 
-/** Set slave state.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 设置从站状态。
+@return 成功返回零，否则返回负错误代码。
+@details
+- 从用户空间复制数据到ec_ioctl_slave_state_t结构体变量data。
+- 如果复制失败，返回-EFAULT。
+- 如果无法获取主控制器的锁，返回-EINTR。
+- 调用ec_master_find_slave()函数查找从站。
+- 如果从站不存在，释放主控制器的锁，打印错误信息并返回-EINVAL。
+- 调用ec_slave_request_state()函数设置从站状态。
+- 释放主控制器的锁。
+*/
 static ATTRIBUTES int ec_ioctl_slave_state(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< ioctl() argument. */
+    ec_master_t *master, /**< EtherCAT主控制器。 */
+    void *arg            /**< ioctl()参数。 */
 )
 {
     ec_ioctl_slave_state_t data;
@@ -876,7 +1004,7 @@ static ATTRIBUTES int ec_ioctl_slave_state(
               master, 0, data.slave_position)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Slave %u does not exist!\n",
+        EC_MASTER_ERR(master, "从站 %u 不存在！\n",
                       data.slave_position);
         return -EINVAL;
     }
@@ -889,13 +1017,22 @@ static ATTRIBUTES int ec_ioctl_slave_state(
 
 /*****************************************************************************/
 
-/** Reboot a slave (if supported).
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 重启从站（如果支持）。
+@return 成功返回零，否则返回负错误代码。
+@details
+- 从用户空间复制数据到ec_ioctl_slave_reboot_t结构体变量io。
+- 如果复制失败，返回-EFAULT。
+- 如果无法获取主控制器的锁，返回-EINTR。
+- 如果广播标志为真，则调用ec_master_reboot_slaves()函数重启所有从站。
+- 否则，调用ec_master_find_slave()函数查找指定的从站。
+- 如果从站不存在，释放主控制器的锁，打印错误信息并返回-EINVAL。
+- 调用ec_slave_request_reboot()函数重启从站。
+- 释放主控制器的锁。
+*/
 static ATTRIBUTES int ec_ioctl_slave_reboot(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< ioctl() argument. */
+    ec_master_t *master, /**< EtherCAT主控制器。 */
+    void *arg            /**< ioctl()参数。 */
 )
 {
     ec_ioctl_slave_reboot_t io;
@@ -920,7 +1057,7 @@ static ATTRIBUTES int ec_ioctl_slave_reboot(
         if (!(slave = ec_master_find_slave(master, 0, io.slave_position)))
         {
             ec_lock_up(&master->master_sem);
-            EC_MASTER_ERR(master, "Slave %u does not exist!\n",
+            EC_MASTER_ERR(master, "从站 %u 不存在！\n",
                           io.slave_position);
             return -EINVAL;
         }
@@ -935,13 +1072,27 @@ static ATTRIBUTES int ec_ioctl_slave_reboot(
 
 /*****************************************************************************/
 
-/** Get slave SDO information.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 获取从站的SDO信息。
+@param master EtherCAT主控制器。
+@param arg ioctl()参数。
+@return 成功返回零，否则返回负错误代码。
+@details
+- 从用户空间复制数据到ec_ioctl_slave_sdo_t结构体变量data。
+- 如果复制失败，返回-EFAULT。
+- 如果无法获取主控制器的锁，返回-EINTR。
+- 调用ec_master_find_slave_const()函数查找从站。
+- 如果从站不存在，释放主控制器的锁，打印错误信息并返回-EINVAL。
+- 调用ec_slave_get_sdo_by_pos_const()函数获取SDO。
+- 如果SDO不存在，释放主控制器的锁，打印错误信息并返回-EINVAL。
+- 将SDO的索引、最大子索引和名称赋值给data。
+- 将SDO的名称复制到data的name数组中。
+- 释放主控制器的锁。
+- 将data复制到用户空间的arg中。
+*/
 static ATTRIBUTES int ec_ioctl_slave_sdo(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< ioctl() argument. */
+    ec_master_t *master, /**< EtherCAT主控制器。 */
+    void *arg            /**< ioctl()参数。 */
 )
 {
     ec_ioctl_slave_sdo_t data;
@@ -960,7 +1111,7 @@ static ATTRIBUTES int ec_ioctl_slave_sdo(
               master, 0, data.slave_position)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Slave %u does not exist!\n",
+        EC_MASTER_ERR(master, "从站 %u 不存在！\n",
                       data.slave_position);
         return -EINVAL;
     }
@@ -969,7 +1120,7 @@ static ATTRIBUTES int ec_ioctl_slave_sdo(
               slave, data.sdo_position)))
     {
         ec_lock_up(&master->master_sem);
-        EC_SLAVE_ERR(slave, "SDO %u does not exist!\n", data.sdo_position);
+        EC_SLAVE_ERR(slave, "SDO %u 不存在！\n", data.sdo_position);
         return -EINVAL;
     }
 
@@ -987,13 +1138,31 @@ static ATTRIBUTES int ec_ioctl_slave_sdo(
 
 /*****************************************************************************/
 
-/** Get slave SDO entry information.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 获取从站的SDO条目信息。
+@param master EtherCAT主控制器。
+@param arg ioctl()参数。
+@return 成功返回零，否则返回负错误代码。
+@details
+- 从用户空间复制数据到ec_ioctl_slave_sdo_entry_t结构体变量data。
+- 如果复制失败，返回-EFAULT。
+- 如果无法获取主控制器的锁，返回-EINTR。
+- 调用ec_master_find_slave_const()函数查找从站。
+- 如果从站不存在，释放主控制器的锁，打印错误信息并返回-EINVAL。
+- 如果sdo_spec小于等于0，则调用ec_slave_get_sdo_by_pos_const()函数获取SDO。
+- 如果SDO不存在，释放主控制器的锁，打印错误信息并返回-EINVAL。
+- 如果sdo_spec大于0，则调用ec_slave_get_sdo_const()函数获取SDO。
+- 如果SDO不存在，释放主控制器的锁，打印错误信息并返回-EINVAL。
+- 调用ec_sdo_get_entry_const()函数获取SDO条目。
+- 如果SDO条目不存在，释放主控制器的锁，打印错误信息并返回-EINVAL。
+- 将SDO条目的数据类型、位长度、读取访问权限和写入访问权限赋值给data。
+- 将SDO条目的描述复制到data的description数组中。
+- 释放主控制器的锁。
+- 将data复制到用户空间的arg中。
+*/
 static ATTRIBUTES int ec_ioctl_slave_sdo_entry(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< ioctl() argument. */
+    ec_master_t *master, /**< EtherCAT主控制器。 */
+    void *arg            /**< ioctl()参数。 */
 )
 {
     ec_ioctl_slave_sdo_entry_t data;
@@ -1013,7 +1182,7 @@ static ATTRIBUTES int ec_ioctl_slave_sdo_entry(
               master, 0, data.slave_position)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Slave %u does not exist!\n",
+        EC_MASTER_ERR(master, "从站 %u 不存在！\n",
                       data.slave_position);
         return -EINVAL;
     }
@@ -1024,7 +1193,7 @@ static ATTRIBUTES int ec_ioctl_slave_sdo_entry(
                   slave, -data.sdo_spec)))
         {
             ec_lock_up(&master->master_sem);
-            EC_SLAVE_ERR(slave, "SDO %u does not exist!\n", -data.sdo_spec);
+            EC_SLAVE_ERR(slave, "SDO %u 不存在！\n", -data.sdo_spec);
             return -EINVAL;
         }
     }
@@ -1034,7 +1203,7 @@ static ATTRIBUTES int ec_ioctl_slave_sdo_entry(
                   slave, data.sdo_spec)))
         {
             ec_lock_up(&master->master_sem);
-            EC_SLAVE_ERR(slave, "SDO 0x%04X does not exist!\n",
+            EC_SLAVE_ERR(slave, "SDO 0x%04X 不存在！\n",
                          data.sdo_spec);
             return -EINVAL;
         }
@@ -1044,7 +1213,7 @@ static ATTRIBUTES int ec_ioctl_slave_sdo_entry(
               sdo, data.sdo_entry_subindex)))
     {
         ec_lock_up(&master->master_sem);
-        EC_SLAVE_ERR(slave, "SDO entry 0x%04X:%02X does not exist!\n",
+        EC_SLAVE_ERR(slave, "SDO条目 0x%04X:%02X 不存在！\n",
                      sdo->index, data.sdo_entry_subindex);
         return -EINVAL;
     }
@@ -1075,13 +1244,27 @@ static ATTRIBUTES int ec_ioctl_slave_sdo_entry(
 
 /*****************************************************************************/
 
-/** Upload SDO.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 上传SDO。
+@param master EtherCAT主控制器。
+@param arg ioctl()参数。
+@return 成功返回零，否则返回负错误代码。
+@details
+- 从用户空间复制数据到ec_ioctl_slave_sdo_upload_t结构体变量data。
+- 如果复制失败，返回-EFAULT。
+- 使用kmalloc()函数分配内存给target。
+- 如果内存分配失败，打印错误信息并返回-ENOMEM。
+- 如果complete_access为真，则调用ecrt_master_sdo_upload_complete()函数进行完整的SDO上传。
+- 否则，调用ecrt_master_sdo_upload()函数进行SDO上传。
+- 如果上传成功，将上传的数据复制到用户空间的data.target中。
+- 释放target的内存。
+- 如果复制失败，返回-EFAULT。
+- 将data复制到用户空间的arg中。
+- 返回上传的结果。
+*/
 static ATTRIBUTES int ec_ioctl_slave_sdo_upload(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< ioctl() argument. */
+    ec_master_t *master, /**< EtherCAT主控制器。 */
+    void *arg            /**< ioctl()参数。 */
 )
 {
     ec_ioctl_slave_sdo_upload_t data;
@@ -1095,8 +1278,7 @@ static ATTRIBUTES int ec_ioctl_slave_sdo_upload(
 
     if (!(target = kmalloc(data.target_size, GFP_KERNEL)))
     {
-        EC_MASTER_ERR(master, "Failed to allocate %zu bytes"
-                              " for SDO upload.\n",
+        EC_MASTER_ERR(master, "分配 %zu 字节用于SDO上传失败。\n",
                       data.target_size);
         return -ENOMEM;
     }
@@ -1136,13 +1318,28 @@ static ATTRIBUTES int ec_ioctl_slave_sdo_upload(
 
 /*****************************************************************************/
 
-/** Download SDO.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 下载SDO。
+@param master EtherCAT主控制器。
+@param arg ioctl()参数。
+@return 成功返回零，否则返回负错误代码。
+@details
+- 从用户空间复制数据到ec_ioctl_slave_sdo_download_t结构体变量data。
+- 如果复制失败，返回-EFAULT。
+- 使用kmalloc()函数分配内存给sdo_data。
+- 如果内存分配失败，打印错误信息并返回-ENOMEM。
+- 从用户空间复制SDO数据到sdo_data。
+- 如果复制失败，释放sdo_data的内存并返回-EFAULT。
+- 如果complete_access为真，则调用ecrt_master_sdo_download_complete()函数进行完整的SDO下载。
+- 否则，调用ecrt_master_sdo_download()函数进行SDO下载。
+- 释放sdo_data的内存。
+- 如果复制失败，将retval设置为-EFAULT。
+- 将data复制到用户空间的arg中。
+- 返回retval。
+*/
 static ATTRIBUTES int ec_ioctl_slave_sdo_download(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< ioctl() argument. */
+    ec_master_t *master, /**< EtherCAT主控制器。 */
+    void *arg            /**< ioctl()参数。 */
 )
 {
     ec_ioctl_slave_sdo_download_t data;
@@ -1156,8 +1353,7 @@ static ATTRIBUTES int ec_ioctl_slave_sdo_download(
 
     if (!(sdo_data = kmalloc(data.data_size, GFP_KERNEL)))
     {
-        EC_MASTER_ERR(master, "Failed to allocate %zu bytes"
-                              " for SDO download.\n",
+        EC_MASTER_ERR(master, "分配 %zu 字节用于SDO下载失败。\n",
                       data.data_size);
         return -ENOMEM;
     }
@@ -1192,13 +1388,27 @@ static ATTRIBUTES int ec_ioctl_slave_sdo_download(
 
 /*****************************************************************************/
 
-/** Read a slave's SII.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 读取从站的SII。
+@param master EtherCAT主控制器。
+@param arg ioctl()参数。
+@return 成功返回零，否则返回负错误代码。
+@details
+- 从用户空间复制数据到ec_ioctl_slave_sii_t结构体变量data。
+- 如果复制失败，返回-EFAULT。
+- 如果无法获取主控制器的锁，返回-EINTR。
+- 调用ec_master_find_slave_const()函数查找从站。
+- 如果从站不存在，释放主控制器的锁，打印错误信息并返回-EINVAL。
+- 如果从站的sii_image为空，则打印提示信息并返回-EAGAIN。
+- 如果nwords为零或者offset+nwords大于sii_image的nwords，则释放主控制器的锁，打印错误信息并返回-EINVAL。
+- 将sii_image中的数据复制到用户空间的data.words中。
+- 如果复制失败，将retval设置为-EFAULT。
+- 释放主控制器的锁。
+- 返回retval。
+*/
 static ATTRIBUTES int ec_ioctl_slave_sii_read(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< ioctl() argument. */
+    ec_master_t *master, /**< EtherCAT主控制器。 */
+    void *arg            /**< ioctl()参数。 */
 )
 {
     ec_ioctl_slave_sii_t data;
@@ -1217,22 +1427,21 @@ static ATTRIBUTES int ec_ioctl_slave_sii_read(
               master, 0, data.slave_position)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Slave %u does not exist!\n",
+        EC_MASTER_ERR(master, "从站 %u 不存在！\n",
                       data.slave_position);
         return -EINVAL;
     }
 
     if (!slave->sii_image)
     {
-        EC_SLAVE_INFO(slave, "No access to SII data. Try again!\n");
+        EC_SLAVE_INFO(slave, "无法访问SII数据。请重试！\n");
         return -EAGAIN;
     }
 
     if (!data.nwords || data.offset + data.nwords > slave->sii_image->nwords)
     {
         ec_lock_up(&master->master_sem);
-        EC_SLAVE_ERR(slave, "Invalid SII read offset/size %u/%u for slave SII"
-                            " size %zu!\n",
+        EC_SLAVE_ERR(slave, "对于从站SII，读取偏移量/大小 %u/%u 无效，SII大小为 %zu！\n",
                      data.offset, data.nwords, slave->sii_image->nwords);
         return -EINVAL;
     }
@@ -1249,13 +1458,38 @@ static ATTRIBUTES int ec_ioctl_slave_sii_read(
 
 /*****************************************************************************/
 
-/** Write a slave's SII.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 写入从站的SII。
+@param master EtherCAT主控制器。
+@param arg ioctl()参数。
+@return 成功返回零，否则返回负错误代码。
+@details
+- 从用户空间复制数据到ec_ioctl_slave_sii_t结构体变量data。
+- 如果复制失败，返回-EFAULT。
+- 如果nwords为零，直接返回零。
+- 计算字节大小byte_size。
+- 使用kmalloc()函数分配内存给words。
+- 如果内存分配失败，打印错误信息并返回-ENOMEM。
+- 从用户空间复制SII内容到words。
+- 如果复制失败，释放words的内存并返回-EFAULT。
+- 如果无法获取主控制器的锁，释放words的内存并返回-EINTR。
+- 调用ec_master_find_slave()函数查找从站。
+- 如果从站不存在，释放主控制器的锁，打印错误信息并返回-EINVAL。
+- 初始化SII写入请求。
+- 将从站、words、offset和nwords赋值给请求的相应字段。
+- 将请求添加到主控制器的sii_requests链表中。
+- 释放主控制器的锁。
+- 等待请求在FSM中处理。
+- 如果被信号中断，释放主控制器的锁。
+- 如果请求仍处于队列中，删除请求并释放主控制器的锁，并释放words的内存，返回-EINTR。
+- 释放主控制器的锁。
+- 等待主控制器FSM完成处理。
+- 释放words的内存。
+- 如果请求状态为EC_INT_REQUEST_SUCCESS，将返回零，否则返回-EIO。
+*/
 static ATTRIBUTES int ec_ioctl_slave_sii_write(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< ioctl() argument. */
+    ec_master_t *master, /**< EtherCAT主控制器。 */
+    void *arg            /**< ioctl()参数。 */
 )
 {
     ec_ioctl_slave_sii_t data;
@@ -1277,8 +1511,7 @@ static ATTRIBUTES int ec_ioctl_slave_sii_write(
     byte_size = sizeof(uint16_t) * data.nwords;
     if (!(words = kmalloc(byte_size, GFP_KERNEL)))
     {
-        EC_MASTER_ERR(master, "Failed to allocate %u bytes"
-                              " for SII contents.\n",
+        EC_MASTER_ERR(master, "分配 %u 字节用于SII内容失败。\n",
                       byte_size);
         return -ENOMEM;
     }
@@ -1300,13 +1533,13 @@ static ATTRIBUTES int ec_ioctl_slave_sii_write(
               master, 0, data.slave_position)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Slave %u does not exist!\n",
+        EC_MASTER_ERR(master, "从站 %u 不存在！\n",
                       data.slave_position);
         kfree(words);
         return -EINVAL;
     }
 
-    // init SII write request
+    // 初始化SII写入请求
     INIT_LIST_HEAD(&request.list);
     request.slave = slave;
     request.words = words;
@@ -1314,20 +1547,20 @@ static ATTRIBUTES int ec_ioctl_slave_sii_write(
     request.nwords = data.nwords;
     request.state = EC_INT_REQUEST_QUEUED;
 
-    // schedule SII write request.
+    // 调度SII写入请求。
     list_add_tail(&request.list, &master->sii_requests);
 
     ec_lock_up(&master->master_sem);
 
-    // wait for processing through FSM
+    // 等待FSM处理
     if (wait_event_interruptible(master->request_queue,
                                  request.state != EC_INT_REQUEST_QUEUED))
     {
-        // interrupted by signal
+        // 被信号中断
         ec_lock_down(&master->master_sem);
         if (request.state == EC_INT_REQUEST_QUEUED)
         {
-            // abort request
+            // 中止请求
             list_del(&request.list);
             ec_lock_up(&master->master_sem);
             kfree(words);
@@ -1336,7 +1569,7 @@ static ATTRIBUTES int ec_ioctl_slave_sii_write(
         ec_lock_up(&master->master_sem);
     }
 
-    // wait until master FSM has finished processing
+    // 等待主控制器FSM完成处理
     wait_event(master->request_queue, request.state != EC_INT_REQUEST_BUSY);
 
     kfree(words);
@@ -1346,13 +1579,35 @@ static ATTRIBUTES int ec_ioctl_slave_sii_write(
 
 /*****************************************************************************/
 
-/** Read a slave's registers.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 读取从站的寄存器。
+@param master EtherCAT主控制器。
+@param arg ioctl()参数。
+@return 成功返回零，否则返回负错误代码。
+@details
+- 从用户空间复制数据到ec_ioctl_slave_reg_t结构体变量io。
+- 如果复制失败，返回-EFAULT。
+- 如果size为零，直接返回零。
+- 初始化寄存器请求。
+- 调用ec_reg_request_init()函数初始化请求，并将size传递给它。
+- 调用ecrt_reg_request_read()函数设置请求的读取操作。
+- 如果无法获取主控制器的锁，清除请求并返回-EINTR。
+- 调用ec_master_find_slave()函数查找从站。
+- 如果从站不存在，释放主控制器的锁，清除请求，打印错误信息并返回-EINVAL。
+- 将请求添加到从站的reg_requests链表中。
+- 释放主控制器的锁。
+- 等待请求在FSM中处理。
+- 如果被信号中断，释放主控制器的锁。
+- 如果请求仍处于队列中，删除请求并释放主控制器的锁，并清除请求，返回-EINTR。
+- 释放主控制器的锁。
+- 等待主控制器FSM完成处理。
+- 如果请求状态为EC_INT_REQUEST_SUCCESS，将请求的数据复制到用户空间的io.data中，如果复制失败，返回-EFAULT。
+- 清除请求。
+- 如果请求状态为EC_INT_REQUEST_SUCCESS，返回零，否则返回-EIO。
+*/
 static ATTRIBUTES int ec_ioctl_slave_reg_read(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< ioctl() argument. */
+    ec_master_t *master, /**< EtherCAT主控制器。 */
+    void *arg            /**< ioctl()参数。 */
 )
 {
     ec_ioctl_slave_reg_t io;
@@ -1370,7 +1625,7 @@ static ATTRIBUTES int ec_ioctl_slave_reg_read(
         return 0;
     }
 
-    // init register request
+    // 初始化寄存器请求
     ret = ec_reg_request_init(&request, io.size);
     if (ret)
     {
@@ -1390,25 +1645,25 @@ static ATTRIBUTES int ec_ioctl_slave_reg_read(
     {
         ec_lock_up(&master->master_sem);
         ec_reg_request_clear(&request);
-        EC_MASTER_ERR(master, "Slave %u does not exist!\n",
+        EC_MASTER_ERR(master, "从站 %u 不存在！\n",
                       io.slave_position);
         return -EINVAL;
     }
 
-    // schedule request.
+    // 调度请求。
     list_add_tail(&request.list, &slave->reg_requests);
 
     ec_lock_up(&master->master_sem);
 
-    // wait for processing through FSM
+    // 等待FSM处理
     if (wait_event_interruptible(master->request_queue,
                                  request.state != EC_INT_REQUEST_QUEUED))
     {
-        // interrupted by signal
+        // 被信号中断
         ec_lock_down(&master->master_sem);
         if (request.state == EC_INT_REQUEST_QUEUED)
         {
-            // abort request
+            // 中止请求
             list_del(&request.list);
             ec_lock_up(&master->master_sem);
             ec_reg_request_clear(&request);
@@ -1417,7 +1672,7 @@ static ATTRIBUTES int ec_ioctl_slave_reg_read(
         ec_lock_up(&master->master_sem);
     }
 
-    // wait until master FSM has finished processing
+    // 等待主控制器FSM完成处理
     wait_event(master->request_queue, request.state != EC_INT_REQUEST_BUSY);
 
     if (request.state == EC_INT_REQUEST_SUCCESS)
@@ -1434,13 +1689,37 @@ static ATTRIBUTES int ec_ioctl_slave_reg_read(
 
 /*****************************************************************************/
 
-/** Write a slave's registers.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 写入从站的寄存器。
+@param master EtherCAT主控制器。
+@param arg ioctl()参数。
+@return 成功返回零，否则返回负错误代码。
+@details
+- 从用户空间复制数据到ec_ioctl_slave_reg_t结构体变量io。
+- 如果复制失败，返回-EFAULT。
+- 如果size为零，直接返回零。
+- 初始化寄存器请求。
+- 调用ec_reg_request_init()函数初始化请求，并将size传递给它。
+- 从用户空间复制寄存器数据到请求的data字段。
+- 如果复制失败，清除请求并返回-EFAULT。
+- 调用ecrt_reg_request_write()函数设置请求的写入操作。
+- 如果无法获取主控制器的锁，清除请求并返回-EINTR。
+- 如果emergency为真，则将请求的ring_position设置为slave_position，并将请求添加到主控制器的emerg_reg_requests链表中。
+- 否则，调用ec_master_find_slave()函数查找从站。
+- 如果从站不存在，释放主控制器的锁，清除请求，打印错误信息并返回-EINVAL。
+- 将请求添加到从站的reg_requests链表中。
+- 释放主控制器的锁。
+- 等待请求在FSM中处理。
+- 如果被信号中断，释放主控制器的锁。
+- 如果请求仍处于队列中，删除请求并释放主控制器的锁，并清除请求，返回-EINTR。
+- 释放主控制器的锁。
+- 等待主控制器FSM完成处理。
+- 清除请求。
+- 如果请求状态为EC_INT_REQUEST_SUCCESS，返回零，否则返回-EIO。
+*/
 static ATTRIBUTES int ec_ioctl_slave_reg_write(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< ioctl() argument. */
+    ec_master_t *master, /**< EtherCAT主控制器。 */
+    void *arg            /**< ioctl()参数。 */
 )
 {
     ec_ioctl_slave_reg_t io;
@@ -1458,7 +1737,7 @@ static ATTRIBUTES int ec_ioctl_slave_reg_write(
         return 0;
     }
 
-    // init register request
+    // 初始化寄存器请求
     ret = ec_reg_request_init(&request, io.size);
     if (ret)
     {
@@ -1482,7 +1761,7 @@ static ATTRIBUTES int ec_ioctl_slave_reg_write(
     if (io.emergency)
     {
         request.ring_position = io.slave_position;
-        // schedule request.
+        // 调度请求。
         list_add_tail(&request.list, &master->emerg_reg_requests);
     }
     else
@@ -1491,26 +1770,26 @@ static ATTRIBUTES int ec_ioctl_slave_reg_write(
         {
             ec_lock_up(&master->master_sem);
             ec_reg_request_clear(&request);
-            EC_MASTER_ERR(master, "Slave %u does not exist!\n",
+            EC_MASTER_ERR(master, "从站 %u 不存在！\n",
                           io.slave_position);
             return -EINVAL;
         }
 
-        // schedule request.
+        // 调度请求。
         list_add_tail(&request.list, &slave->reg_requests);
     }
 
     ec_lock_up(&master->master_sem);
 
-    // wait for processing through FSM
+    // 等待FSM处理
     if (wait_event_interruptible(master->request_queue,
                                  request.state != EC_INT_REQUEST_QUEUED))
     {
-        // interrupted by signal
+        // 被信号中断
         ec_lock_down(&master->master_sem);
         if (request.state == EC_INT_REQUEST_QUEUED)
         {
-            // abort request
+            // 中止请求
             list_del(&request.list);
             ec_lock_up(&master->master_sem);
             ec_reg_request_clear(&request);
@@ -1519,7 +1798,7 @@ static ATTRIBUTES int ec_ioctl_slave_reg_write(
         ec_lock_up(&master->master_sem);
     }
 
-    // wait until master FSM has finished processing
+    // 等待主控制器FSM完成处理
     wait_event(master->request_queue, request.state != EC_INT_REQUEST_BUSY);
 
     ec_reg_request_clear(&request);
@@ -1529,13 +1808,38 @@ static ATTRIBUTES int ec_ioctl_slave_reg_write(
 
 /*****************************************************************************/
 
-/** Read & Write a slave's registers.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 读写从站的寄存器。
+@param master EtherCAT主控制器。
+@param arg ioctl()参数。
+@return 成功返回零，否则返回负错误代码。
+@details
+- 从用户空间复制数据到ec_ioctl_slave_reg_t结构体变量io。
+- 如果复制失败，返回-EFAULT。
+- 如果size为零，直接返回零。
+- 初始化寄存器请求。
+- 调用ec_reg_request_init()函数初始化请求，并将size传递给它。
+- 从用户空间复制寄存器数据到请求的data字段。
+- 如果复制失败，清除请求并返回-EFAULT。
+- 调用ecrt_reg_request_readwrite()函数设置请求的读写操作。
+- 如果无法获取主控制器的锁，清除请求并返回-EINTR。
+- 如果emergency为真，则将请求的ring_position设置为slave_position，并将请求添加到主控制器的emerg_reg_requests链表中。
+- 否则，调用ec_master_find_slave()函数查找从站。
+- 如果从站不存在，释放主控制器的锁，清除请求，打印错误信息并返回-EINVAL。
+- 将请求添加到从站的reg_requests链表中。
+- 释放主控制器的锁。
+- 等待请求在FSM中处理。
+- 如果被信号中断，释放主控制器的锁。
+- 如果请求仍处于队列中，删除请求并释放主控制器的锁，并清除请求，返回-EINTR。
+- 释放主控制器的锁。
+- 等待主控制器FSM完成处理。
+- 如果请求状态为EC_INT_REQUEST_SUCCESS，将请求的数据复制到用户空间的io.data中，如果复制失败，返回-EFAULT。
+- 清除请求。
+- 如果请求状态为EC_INT_REQUEST_SUCCESS，返回零，否则返回-EIO。
+*/
 static ATTRIBUTES int ec_ioctl_slave_reg_readwrite(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< ioctl() argument. */
+    ec_master_t *master, /**< EtherCAT主控制器。 */
+    void *arg            /**< ioctl()参数。 */
 )
 {
     ec_ioctl_slave_reg_t io;
@@ -1553,7 +1857,7 @@ static ATTRIBUTES int ec_ioctl_slave_reg_readwrite(
         return 0;
     }
 
-    // init register request
+    // 初始化寄存器请求
     ret = ec_reg_request_init(&request, io.size);
     if (ret)
     {
@@ -1577,7 +1881,7 @@ static ATTRIBUTES int ec_ioctl_slave_reg_readwrite(
     if (io.emergency)
     {
         request.ring_position = io.slave_position;
-        // schedule request.
+        // 调度请求。
         list_add_tail(&request.list, &master->emerg_reg_requests);
     }
     else
@@ -1586,26 +1890,26 @@ static ATTRIBUTES int ec_ioctl_slave_reg_readwrite(
         {
             ec_lock_up(&master->master_sem);
             ec_reg_request_clear(&request);
-            EC_MASTER_ERR(master, "Slave %u does not exist!\n",
+            EC_MASTER_ERR(master, "从站 %u 不存在！\n",
                           io.slave_position);
             return -EINVAL;
         }
 
-        // schedule request.
+        // 调度请求。
         list_add_tail(&request.list, &slave->reg_requests);
     }
 
     ec_lock_up(&master->master_sem);
 
-    // wait for processing through FSM
+    // 等待FSM处理
     if (wait_event_interruptible(master->request_queue,
                                  request.state != EC_INT_REQUEST_QUEUED))
     {
-        // interrupted by signal
+        // 被信号中断
         ec_lock_down(&master->master_sem);
         if (request.state == EC_INT_REQUEST_QUEUED)
         {
-            // abort request
+            // 中止请求
             list_del(&request.list);
             ec_lock_up(&master->master_sem);
             ec_reg_request_clear(&request);
@@ -1614,7 +1918,7 @@ static ATTRIBUTES int ec_ioctl_slave_reg_readwrite(
         ec_lock_up(&master->master_sem);
     }
 
-    // wait until master FSM has finished processing
+    // 等待主控制器FSM完成处理
     wait_event(master->request_queue, request.state != EC_INT_REQUEST_BUSY);
 
     if (request.state == EC_INT_REQUEST_SUCCESS)
@@ -1631,13 +1935,29 @@ static ATTRIBUTES int ec_ioctl_slave_reg_readwrite(
 
 /*****************************************************************************/
 
-/** Get slave configuration information.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 获取从站的配置信息。
+@param master EtherCAT主控制器。
+@param arg ioctl()参数。
+@return 成功返回零，否则返回负错误代码。
+@details
+- 从用户空间复制数据到ec_ioctl_config_t结构体变量data。
+- 如果复制失败，返回-EFAULT。
+- 如果无法获取主控制器的锁，返回-EINTR。
+- 调用ec_master_get_config_const()函数获取从站配置。
+- 如果从站配置不存在，释放主控制器的锁，打印错误信息并返回-EINVAL。
+- 将从站配置的字段复制到data中。
+- 使用ec_pdo_list_count()函数计算同步管理器的PDO数量。
+- 使用ec_slave_config_sdo_count()函数计算从站的SDO数量。
+- 使用ec_slave_config_idn_count()函数计算从站的IDN数量。
+- 如果从站存在，将从站的ring_position赋值给data的slave_position字段，否则将其设置为-1。
+- 释放主控制器的锁。
+- 将data复制到用户空间的arg中。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_config(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< ioctl() argument. */
+    ec_master_t *master, /**< EtherCAT主控制器。 */
+    void *arg            /**< ioctl()参数。 */
 )
 {
     ec_ioctl_config_t data;
@@ -1656,7 +1976,7 @@ static ATTRIBUTES int ec_ioctl_config(
               master, data.config_index)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Slave config %u does not exist!\n",
+        EC_MASTER_ERR(master, "从站配置 %u 不存在！\n",
                       data.config_index);
         return -EINVAL;
     }
@@ -1693,13 +2013,28 @@ static ATTRIBUTES int ec_ioctl_config(
 
 /*****************************************************************************/
 
-/** Get slave configuration PDO information.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 获取从站配置的PDO信息。
+@param master EtherCAT主控制器。
+@param arg ioctl()参数。
+@return 成功返回零，否则返回负错误代码。
+@details
+- 从用户空间复制数据到ec_ioctl_config_pdo_t结构体变量data。
+- 如果复制失败，返回-EFAULT。
+- 如果sync_index大于等于EC_MAX_SYNC_MANAGERS，打印错误信息并返回-EINVAL。
+- 如果无法获取主控制器的锁，返回-EINTR。
+- 调用ec_master_get_config_const()函数获取从站配置。
+- 如果从站配置不存在，释放主控制器的锁，打印错误信息并返回-EINVAL。
+- 调用ec_pdo_list_find_pdo_by_pos_const()函数查找PDO。
+- 如果PDO不存在，释放主控制器的锁，打印错误信息并返回-EINVAL。
+- 将PDO的字段复制到data中。
+- 释放主控制器的锁。
+- 将data复制到用户空间的arg中。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_config_pdo(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< ioctl() argument. */
+    ec_master_t *master, /**< EtherCAT主控制器。 */
+    void *arg            /**< ioctl()参数。 */
 )
 {
     ec_ioctl_config_pdo_t data;
@@ -1713,7 +2048,7 @@ static ATTRIBUTES int ec_ioctl_config_pdo(
 
     if (data.sync_index >= EC_MAX_SYNC_MANAGERS)
     {
-        EC_MASTER_ERR(master, "Invalid sync manager index %u!\n",
+        EC_MASTER_ERR(master, "无效的同步管理器索引 %u！\n",
                       data.sync_index);
         return -EINVAL;
     }
@@ -1725,7 +2060,7 @@ static ATTRIBUTES int ec_ioctl_config_pdo(
               master, data.config_index)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Slave config %u does not exist!\n",
+        EC_MASTER_ERR(master, "从站配置 %u 不存在！\n",
                       data.config_index);
         return -EINVAL;
     }
@@ -1735,7 +2070,7 @@ static ATTRIBUTES int ec_ioctl_config_pdo(
               data.pdo_pos)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Invalid PDO position!\n");
+        EC_MASTER_ERR(master, "无效的PDO位置！\n");
         return -EINVAL;
     }
 
@@ -1753,13 +2088,30 @@ static ATTRIBUTES int ec_ioctl_config_pdo(
 
 /*****************************************************************************/
 
-/** Get slave configuration PDO entry information.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 获取从站配置PDO条目信息。
+@param master EtherCAT主控制器。
+@param arg ioctl()参数。
+@return 成功返回零，否则返回负错误代码。
+@details
+- 从用户空间复制数据到ec_ioctl_config_pdo_entry_t结构体变量data。
+- 如果复制失败，返回-EFAULT。
+- 如果sync_index大于等于EC_MAX_SYNC_MANAGERS，打印错误信息并返回-EINVAL。
+- 如果无法获取主控制器的锁，返回-EINTR。
+- 调用ec_master_get_config_const()函数获取从站配置。
+- 如果从站配置不存在，释放主控制器的锁，打印错误信息并返回-EINVAL。
+- 调用ec_pdo_list_find_pdo_by_pos_const()函数查找PDO。
+- 如果PDO不存在，释放主控制器的锁，打印错误信息并返回-EINVAL。
+- 调用ec_pdo_find_entry_by_pos_const()函数查找PDO条目。
+- 如果条目不存在，释放主控制器的锁，打印错误信息并返回-EINVAL。
+- 将条目的字段复制到data中。
+- 释放主控制器的锁。
+- 将data复制到用户空间的arg中。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_config_pdo_entry(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< ioctl() argument. */
+    ec_master_t *master, /**< EtherCAT主控制器。 */
+    void *arg            /**< ioctl()参数。 */
 )
 {
     ec_ioctl_config_pdo_entry_t data;
@@ -1774,7 +2126,7 @@ static ATTRIBUTES int ec_ioctl_config_pdo_entry(
 
     if (data.sync_index >= EC_MAX_SYNC_MANAGERS)
     {
-        EC_MASTER_ERR(master, "Invalid sync manager index %u!\n",
+        EC_MASTER_ERR(master, "无效的同步管理器索引 %u！\n",
                       data.sync_index);
         return -EINVAL;
     }
@@ -1786,7 +2138,7 @@ static ATTRIBUTES int ec_ioctl_config_pdo_entry(
               master, data.config_index)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Slave config %u does not exist!\n",
+        EC_MASTER_ERR(master, "从站配置 %u 不存在！\n",
                       data.config_index);
         return -EINVAL;
     }
@@ -1796,7 +2148,7 @@ static ATTRIBUTES int ec_ioctl_config_pdo_entry(
               data.pdo_pos)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Invalid PDO position!\n");
+        EC_MASTER_ERR(master, "无效的PDO位置！\n");
         return -EINVAL;
     }
 
@@ -1804,7 +2156,7 @@ static ATTRIBUTES int ec_ioctl_config_pdo_entry(
               pdo, data.entry_pos)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Entry not found!\n");
+        EC_MASTER_ERR(master, "条目未找到！\n");
         return -EINVAL;
     }
 
@@ -1823,13 +2175,30 @@ static ATTRIBUTES int ec_ioctl_config_pdo_entry(
 
 /*****************************************************************************/
 
-/** Get slave configuration SDO information.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 获取从站配置的SDO信息。
+@param master EtherCAT主控制器。
+@param arg ioctl()参数。
+@return 成功返回零，否则返回负错误代码。
+@details
+- 分配内存给ec_ioctl_config_sdo_t结构体变量ioctl。
+- 如果分配失败，返回-ENOMEM。
+- 从用户空间复制数据到ioctl。
+- 如果复制失败，释放内存并返回-EFAULT。
+- 如果无法获取主控制器的锁，释放内存并返回-EINTR。
+- 调用ec_master_get_config_const()函数获取从站配置。
+- 如果从站配置不存在，释放主控制器的锁，打印错误信息并释放内存，返回-EINVAL。
+- 调用ec_slave_config_get_sdo_by_pos_const()函数获取SDO请求。
+- 如果SDO请求不存在，释放主控制器的锁，打印错误信息并释放内存，返回-EINVAL。
+- 将SDO请求的字段复制到ioctl中。
+- 释放主控制器的锁。
+- 将ioctl复制到用户空间的arg中。
+- 释放内存。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_config_sdo(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< ioctl() argument. */
+    ec_master_t *master, /**< EtherCAT主控制器。 */
+    void *arg            /**< ioctl()参数。 */
 )
 {
     ec_ioctl_config_sdo_t *ioctl;
@@ -1857,7 +2226,7 @@ static ATTRIBUTES int ec_ioctl_config_sdo(
               master, ioctl->config_index)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Slave config %u does not exist!\n",
+        EC_MASTER_ERR(master, "从站配置 %u 不存在！\n",
                       ioctl->config_index);
         kfree(ioctl);
         return -EINVAL;
@@ -1867,7 +2236,7 @@ static ATTRIBUTES int ec_ioctl_config_sdo(
               sc, ioctl->sdo_pos)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Invalid SDO position!\n");
+        EC_MASTER_ERR(master, "无效的SDO位置！\n");
         kfree(ioctl);
         return -EINVAL;
     }
@@ -1893,13 +2262,30 @@ static ATTRIBUTES int ec_ioctl_config_sdo(
 
 /*****************************************************************************/
 
-/** Get slave configuration IDN information.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 获取从站配置的IDN信息。
+@param master EtherCAT主控制器。
+@param arg ioctl()参数。
+@return 成功返回零，否则返回负错误代码。
+@details
+- 分配内存给ec_ioctl_config_idn_t结构体变量ioctl。
+- 如果分配失败，返回-ENOMEM。
+- 从用户空间复制数据到ioctl。
+- 如果复制失败，释放内存并返回-EFAULT。
+- 如果无法获取主控制器的锁，释放内存并返回-EINTR。
+- 调用ec_master_get_config_const()函数获取从站配置。
+- 如果从站配置不存在，释放主控制器的锁，打印错误信息并释放内存，返回-EINVAL。
+- 调用ec_slave_config_get_idn_by_pos_const()函数获取IDN请求。
+- 如果IDN请求不存在，释放主控制器的锁，打印错误信息并释放内存，返回-EINVAL。
+- 将IDN请求的字段复制到ioctl中。
+- 释放主控制器的锁。
+- 将ioctl复制到用户空间的arg中。
+- 释放内存。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_config_idn(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< ioctl() argument. */
+    ec_master_t *master, /**< EtherCAT主控制器。 */
+    void *arg            /**< ioctl()参数。 */
 )
 {
     ec_ioctl_config_idn_t *ioctl;
@@ -1927,7 +2313,7 @@ static ATTRIBUTES int ec_ioctl_config_idn(
               master, ioctl->config_index)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Slave config %u does not exist!\n",
+        EC_MASTER_ERR(master, "从站配置 %u 不存在！\n",
                       ioctl->config_index);
         kfree(ioctl);
         return -EINVAL;
@@ -1937,7 +2323,7 @@ static ATTRIBUTES int ec_ioctl_config_idn(
               sc, ioctl->idn_pos)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Invalid IDN position!\n");
+        EC_MASTER_ERR(master, "无效的IDN位置！\n");
         kfree(ioctl);
         return -EINVAL;
     }
@@ -1965,13 +2351,35 @@ static ATTRIBUTES int ec_ioctl_config_idn(
 
 #ifdef EC_EOE
 
-/** Get EoE handler information.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 获取EoE处理程序信息。
+@param master EtherCAT主控制器。
+@param arg ioctl()参数。
+@return 成功返回零，否则返回负错误代码。
+@details
+- 从用户空间复制数据到ec_ioctl_eoe_handler_t结构体变量data。
+- 如果复制失败，返回-EFAULT。
+- 如果无法获取主控制器的锁，返回-EINTR。
+- 调用ec_master_get_eoe_handler_const()函数获取EoE处理程序。
+- 如果EoE处理程序不存在，释放主控制器的锁，打印错误信息并返回-EINVAL。
+- 如果EoE处理程序的从站存在，将从站的环位置赋值给data的slave_position字段。
+- 否则，将0xffff赋值给data的slave_position字段。
+- 将EoE处理程序的设备名称复制到data的name字段。
+- 将EoE处理程序的opened字段赋值给data的open字段。
+- 将EoE处理程序的接收字节数赋值给data的rx_bytes字段。
+- 将EoE处理程序的接收速率赋值给data的rx_rate字段。
+- 将EoE处理程序的发送字节数赋值给data的tx_bytes字段。
+- 将EoE处理程序的发送速率赋值给data的tx_rate字段。
+- 调用ec_eoe_tx_queued_frames()函数获取EoE处理程序的发送队列中的帧数，并赋值给data的tx_queued_frames字段。
+- 将EoE处理程序的发送队列大小赋值给data的tx_queue_size字段。
+- 打印EoE处理程序的信息。
+- 释放主控制器的锁。
+- 将data复制到用户空间的arg中。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_eoe_handler(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< ioctl() argument. */
+    ec_master_t *master, /**< EtherCAT主控制器。 */
+    void *arg            /**< ioctl()参数。 */
 )
 {
     ec_ioctl_eoe_handler_t data;
@@ -1988,7 +2396,7 @@ static ATTRIBUTES int ec_ioctl_eoe_handler(
     if (!(eoe = ec_master_get_eoe_handler_const(master, data.eoe_index)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "EoE handler %u does not exist!\n",
+        EC_MASTER_ERR(master, "EoE处理程序 %u 不存在！\n",
                       data.eoe_index);
         return -EINVAL;
     }
@@ -2010,7 +2418,7 @@ static ATTRIBUTES int ec_ioctl_eoe_handler(
     data.tx_queued_frames = ec_eoe_tx_queued_frames(eoe);
     data.tx_queue_size = eoe->tx_ring_count;
 
-    EC_MASTER_DBG(master, 1, "EOE %s Info:\n", eoe->dev->name);
+    EC_MASTER_DBG(master, 1, "EoE %s 信息:\n", eoe->dev->name);
     EC_MASTER_DBG(master, 1, "  opened:               %u\n", eoe->opened);
     EC_MASTER_DBG(master, 1, "  rate_jiffies:         %lu\n", eoe->rate_jiffies);
     EC_MASTER_DBG(master, 1, "  queue_datagram:       %u\n", eoe->queue_datagram);
@@ -2049,13 +2457,36 @@ static ATTRIBUTES int ec_ioctl_eoe_handler(
 /*****************************************************************************/
 
 #ifdef EC_EOE
-/** Request EoE IP parameter setting.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 请求设置EoE IP参数。
+@param master EtherCAT主控制器。
+@param arg ioctl()参数。
+@return 成功返回零，否则返回负错误代码。
+@details
+- 从用户空间复制数据到ec_ioctl_slave_eoe_ip_t结构体变量io。
+- 如果复制失败，返回-EFAULT。
+- 初始化EoE请求。
+- 将io的字段复制到req中。
+- 将req的状态设置为EC_INT_REQUEST_QUEUED。
+- 如果无法获取主控制器的锁，返回-EINTR。
+- 调用ec_master_find_slave()函数查找从站。
+- 如果从站不存在，释放主控制器的锁，打印错误信息并返回-EINVAL。
+- 打印调试信息。
+- 将请求添加到从站的EoE请求列表中。
+- 释放主控制器的锁。
+- 等待请求在FSM中处理。
+- 如果被信号中断，获取主控制器的锁。
+- 如果请求仍处于EC_INT_REQUEST_QUEUED状态，删除请求，释放主控制器的锁，返回-EINTR。
+- 释放主控制器的锁。
+- 等待主控制器的FSM完成处理。
+- 将req的result字段赋值给io的result字段。
+- 将io复制到用户空间的arg中。
+- 如果复制失败，返回-EFAULT。
+- 如果请求的状态为EC_INT_REQUEST_SUCCESS，返回零，否则返回-EIO。
+*/
 static ATTRIBUTES int ec_ioctl_slave_eoe_ip_param(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< ioctl() argument. */
+    ec_master_t *master, /**< EtherCAT主控制器。 */
+    void *arg            /**< ioctl()参数。 */
 )
 {
     ec_ioctl_slave_eoe_ip_t io;
@@ -2067,7 +2498,7 @@ static ATTRIBUTES int ec_ioctl_slave_eoe_ip_param(
         return -EFAULT;
     }
 
-    // init EoE request
+    // 初始化EoE请求
     ec_eoe_request_init(&req);
 
     req.mac_address_included = io.mac_address_included;
@@ -2095,27 +2526,27 @@ static ATTRIBUTES int ec_ioctl_slave_eoe_ip_param(
               master, 0, io.slave_position)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Slave %u does not exist!\n",
+        EC_MASTER_ERR(master, "从站 %u 不存在！\n",
                       io.slave_position);
         return -EINVAL;
     }
 
-    EC_MASTER_DBG(master, 1, "Scheduling EoE request.\n");
+    EC_MASTER_DBG(master, 1, "调度EoE请求。\n");
 
-    // schedule request.
+    // 调度请求
     list_add_tail(&req.list, &slave->eoe_requests);
 
     ec_lock_up(&master->master_sem);
 
-    // wait for processing through FSM
+    // 等待FSM处理
     if (wait_event_interruptible(master->request_queue,
                                  req.state != EC_INT_REQUEST_QUEUED))
     {
-        // interrupted by signal
+        // 被信号中断
         ec_lock_down(&master->master_sem);
         if (req.state == EC_INT_REQUEST_QUEUED)
         {
-            // abort request
+            // 中止请求
             list_del(&req.list);
             ec_lock_up(&master->master_sem);
             return -EINTR;
@@ -2123,7 +2554,7 @@ static ATTRIBUTES int ec_ioctl_slave_eoe_ip_param(
         ec_lock_up(&master->master_sem);
     }
 
-    // wait until master FSM has finished processing
+    // 等待主控制器FSM完成处理
     wait_event(master->request_queue, req.state != EC_INT_REQUEST_BUSY);
 
     io.result = req.result;
@@ -2139,14 +2570,19 @@ static ATTRIBUTES int ec_ioctl_slave_eoe_ip_param(
 
 /*****************************************************************************/
 
-/** Request the master from userspace.
- *
- * \return Zero on success, otherwise a negative error code.
+/**
+ * @brief 请求用户空间中的主站。
+ * 
+ * @param master EtherCAT主站。
+ * @param arg ioctl()参数。
+ * @param ctx 文件句柄的私有数据结构。
+ * @return 成功时返回零，否则返回负错误代码。
+ * @details 请求用户空间中的主站，如果请求成功，则将ctx->requested设置为1。
  */
 static ATTRIBUTES int ec_ioctl_request(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主站。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_master_t *m;
@@ -2169,15 +2605,18 @@ static ATTRIBUTES int ec_ioctl_request(
 
 #if defined(EC_RTDM) && defined(EC_EOE)
 
-/** Check if any EOE handlers are open.
- *
- * \return 1 if any eoe handlers are open, zero if not,
- *   otherwise a negative error code.
+/** 
+ * @brief 检查是否有任何EOE处理程序处于打开状态。
+ * 
+ * @param master EtherCAT主站。
+ * @param arg ioctl()参数。
+ * @param ctx 文件句柄的私有数据结构。
+ * @return 如果有任何EOE处理程序处于打开状态，则返回1；如果没有，则返回零；否则返回负错误代码。
  */
 static ATTRIBUTES int ec_ioctl_eoe_is_open(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主站。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     if (unlikely(!ctx->requested))
@@ -2190,15 +2629,18 @@ static ATTRIBUTES int ec_ioctl_eoe_is_open(
 
 /*****************************************************************************/
 
-/** Check if any EOE handlers are open.
- *
- * \return 1 if something to send +
- *   2 if an eoe handler has something still pending
+/** 
+ * @brief 检查是否有任何EOE处理程序处于打开状态。
+ * 
+ * @param master EtherCAT主站。
+ * @param arg ioctl()参数。
+ * @param ctx 文件句柄的私有数据结构。
+ * @return 如果有待发送的内容，则返回1；如果有EOE处理程序仍有待处理的内容，则返回2。
  */
 static ATTRIBUTES int ec_ioctl_eoe_process(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主站。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     if (unlikely(!ctx->requested))
@@ -2213,14 +2655,22 @@ static ATTRIBUTES int ec_ioctl_eoe_process(
 
 /*****************************************************************************/
 
-/** Create a domain.
- *
- * \return Domain index on success, otherwise a negative error code.
- */
+/**
+@brief 创建一个域。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回域索引，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 创建一个域。
+- 如果创建失败，返回错误代码。
+- 返回域的索引。
+*/
 static ATTRIBUTES int ec_ioctl_create_domain(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_domain_t *domain;
@@ -2237,14 +2687,30 @@ static ATTRIBUTES int ec_ioctl_create_domain(
 
 /*****************************************************************************/
 
-/** Create a slave configuration.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 创建从站配置。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 使用提供的数据创建从站配置。
+- 如果创建失败，返回错误代码。
+- 设置配置索引为零。
+- 锁定主机。
+- 遍历主机的配置列表。
+- 如果当前配置与创建的配置相同，则跳出循环。
+- 增加配置索引。
+- 解锁主机。
+- 从内核空间复制数据到用户空间。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_create_slave_config(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_config_t data;
@@ -2285,14 +2751,25 @@ static ATTRIBUTES int ec_ioctl_create_slave_config(
 
 /*****************************************************************************/
 
-/** Select the DC reference clock.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 选择DC参考时钟。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 锁定主机。
+- 如果配置索引不是0xFFFFFFFF。
+  - 如果获取配置失败，返回错误代码。
+- 选择参考时钟。
+- 解锁主机。
+- 返回结果。
+*/
 static ATTRIBUTES int ec_ioctl_select_ref_clock(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     unsigned long config_index = (unsigned long)arg;
@@ -2330,14 +2807,39 @@ out_return:
 
 /*****************************************************************************/
 
-/** Sets up domain memory.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 设置域内存。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 如果没有处理数据。
+  - 设置处理数据为NULL。
+  - 获取域的处理数据大小之和。
+  - 锁定主机。
+  - 遍历主机的域列表。
+  - 增加处理数据大小。
+  - 解锁主机。
+  - 如果处理数据大小不为零。
+    - 分配处理数据内存。
+    - 如果分配失败，返回错误代码。
+    - 设置域的外部处理数据内存。
+    - 设置偏移量。
+    - 遍历主机的域列表。
+    - 设置域的外部处理数据内存。
+  - 设置处理数据大小。
+- 否则，
+  - 设置处理数据为NULL。
+  - 设置处理数据大小为零。
+- 如果从用户空间复制数据到内核空间失败，返回错误代码。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_setup_domain_memory(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_master_activate_t io;
@@ -2354,7 +2856,7 @@ static ATTRIBUTES int ec_ioctl_setup_domain_memory(
     {
         io.process_data = NULL;
 
-        /* Get the sum of the domains' process data sizes. */
+        /* 获取域的处理数据大小之和。 */
 
         ctx->process_data_size = 0;
 
@@ -2377,9 +2879,7 @@ static ATTRIBUTES int ec_ioctl_setup_domain_memory(
                 return -ENOMEM;
             }
 
-            /* Set the memory as external process data memory for the
-             * domains.
-             */
+            /* 设置域的外部处理数据内存。 */
             offset = 0;
             list_for_each_entry(domain, &master->domains, list)
             {
@@ -2389,9 +2889,7 @@ static ATTRIBUTES int ec_ioctl_setup_domain_memory(
             }
 
 #ifdef EC_IOCTL_RTDM
-            /* RTDM uses a different approach for memory-mapping, which has to be
-             * initiated by the kernel.
-             */
+            /* RTDM使用不同的内存映射方法，需要由内核发起初始化。 */
             ret = ec_rtdm_mmap(ctx, &io.process_data);
             if (ret < 0)
             {
@@ -2420,14 +2918,43 @@ static ATTRIBUTES int ec_ioctl_setup_domain_memory(
 
 /*****************************************************************************/
 
-/** Activates the master.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 激活主机。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 如果没有处理数据。
+  - 设置处理数据为NULL。
+  - 获取域的处理数据大小之和。
+  - 锁定主机。
+  - 遍历主机的域列表。
+  - 增加处理数据大小。
+  - 解锁主机。
+  - 如果处理数据大小不为零。
+    - 分配处理数据内存。
+    - 如果分配失败，返回错误代码。
+    - 设置域的外部处理数据内存。
+    - 设置偏移量。
+    - 遍历主机的域列表。
+    - 设置域的外部处理数据内存。
+  - 设置处理数据大小。
+- 否则，
+  - 设置处理数据为NULL。
+  - 设置处理数据大小为零。
+- 如果从用户空间复制数据到内核空间失败，返回错误代码。
+- 设置主机的回调函数。
+- 激活主机。
+- 如果激活失败，返回错误代码。
+- 如果从用户空间复制数据到内核空间失败，返回错误代码。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_activate(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_master_activate_t io;
@@ -2442,7 +2969,7 @@ static ATTRIBUTES int ec_ioctl_activate(
     {
         io.process_data = NULL;
 
-        /* Get the sum of the domains' process data sizes. */
+        /* 获取域的处理数据大小之和。 */
 
         ctx->process_data_size = 0;
 
@@ -2465,9 +2992,7 @@ static ATTRIBUTES int ec_ioctl_activate(
                 return -ENOMEM;
             }
 
-            /* Set the memory as external process data memory for the
-             * domains.
-             */
+            /* 设置域的外部处理数据内存。 */
             offset = 0;
             list_for_each_entry(domain, &master->domains, list)
             {
@@ -2477,9 +3002,7 @@ static ATTRIBUTES int ec_ioctl_activate(
             }
 
 #ifdef EC_IOCTL_RTDM
-            /* RTDM uses a different approach for memory-mapping, which has to be
-             * initiated by the kernel.
-             */
+            /* RTDM使用不同的内存映射方法，需要由内核发起初始化。 */
             ret = ec_rtdm_mmap(ctx, &io.process_data);
             if (ret < 0)
             {
@@ -2517,14 +3040,21 @@ static ATTRIBUTES int ec_ioctl_activate(
 
 /*****************************************************************************/
 
-/** Deactivates the slaves.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 停用从站。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 停用从站。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_deactivate_slaves(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     if (unlikely(!ctx->requested))
@@ -2536,14 +3066,21 @@ static ATTRIBUTES int ec_ioctl_deactivate_slaves(
 
 /*****************************************************************************/
 
-/** Deactivates the master.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 停用主机。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 停用主机。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_deactivate(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     if (unlikely(!ctx->requested))
@@ -2555,14 +3092,24 @@ static ATTRIBUTES int ec_ioctl_deactivate(
 
 /*****************************************************************************/
 
-/** Set max. number of databytes in a cycle
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 设置循环中的最大数据字节数。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 锁定主机。
+- 设置发送间隔。
+- 解锁主机。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_set_send_interval(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     size_t send_interval;
@@ -2589,14 +3136,29 @@ static ATTRIBUTES int ec_ioctl_set_send_interval(
 
 /*****************************************************************************/
 
-/** Send frames.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 发送帧。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 锁定主机。
+- 如果定义了发送回调函数。
+  - 调用发送回调函数。
+  - 设置发送字节数为零。
+- 否则，
+  - 发送帧。
+  - 设置发送字节数为零。
+- 解锁主机。
+- 从内核空间复制数据到用户空间。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_send(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     size_t sent_bytes;
@@ -2606,8 +3168,7 @@ static ATTRIBUTES int ec_ioctl_send(
         return -EPERM;
     }
 
-    /* Locking added as send is likely to be used by more than
-        one application tasks */
+    /* 锁定，因为发送可能被多个应用程序任务使用 */
     if (ec_ioctl_lock_down_interruptible(&master->master_sem))
         return -EINTR;
 
@@ -2635,14 +3196,26 @@ static ATTRIBUTES int ec_ioctl_send(
 
 /*****************************************************************************/
 
-/** Receive frames.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 接收帧。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 锁定主机。
+- 如果定义了接收回调函数。
+  - 调用接收回调函数。
+- 否则，
+  - 接收帧。
+- 解锁主机。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_receive(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     if (unlikely(!ctx->requested))
@@ -2650,8 +3223,7 @@ static ATTRIBUTES int ec_ioctl_receive(
         return -EPERM;
     }
 
-    /* Locking added as receive is likely to be used by more than
-       one application tasks */
+    /* 锁定，因为接收可能被多个应用程序任务使用 */
     if (ec_ioctl_lock_down_interruptible(&master->master_sem))
         return -EINTR;
 
@@ -2673,14 +3245,23 @@ static ATTRIBUTES int ec_ioctl_receive(
 
 #if defined(EC_RTDM) && defined(EC_EOE)
 
-/** Send frames ext.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 发送帧扩展。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 发送帧扩展。
+- 从内核空间复制数据到用户空间。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_send_ext(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     size_t sent_bytes;
@@ -2688,6 +3269,12 @@ static ATTRIBUTES int ec_ioctl_send_ext(
     if (unlikely(!ctx->requested))
     {
         return -EPERM;
+    }
+
+    if (copy_from_user(&sent_bytes, (void __user *)arg,
+                       sizeof(sent_bytes)))
+    {
+        return -EFAULT;
     }
 
     sent_bytes = ecrt_master_send_ext(master);
@@ -2704,14 +3291,21 @@ static ATTRIBUTES int ec_ioctl_send_ext(
 
 /*****************************************************************************/
 
-/** Get the master state.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 获取主机状态。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 获取主机状态。
+- 从内核空间复制数据到用户空间。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_master_state(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_master_state_t data;
@@ -2726,14 +3320,23 @@ static ATTRIBUTES int ec_ioctl_master_state(
 
 /*****************************************************************************/
 
-/** Get the link state.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 获取链路状态。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 从用户空间复制数据到内核空间。
+- 获取链路状态。
+- 如果返回值小于零，返回该错误代码。
+- 从内核空间复制数据到用户空间。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_master_link_state(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_link_state_t ioctl;
@@ -2761,14 +3364,22 @@ static ATTRIBUTES int ec_ioctl_master_link_state(
 
 /*****************************************************************************/
 
-/** Set the master DC application time.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 设置主机DC应用时间。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 设置主机应用时间。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_app_time(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     uint64_t time;
@@ -2787,14 +3398,21 @@ static ATTRIBUTES int ec_ioctl_app_time(
 
 /*****************************************************************************/
 
-/** Sync the reference clock.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 同步参考时钟。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 同步参考时钟。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_sync_ref(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     if (unlikely(!ctx->requested))
@@ -2808,14 +3426,22 @@ static ATTRIBUTES int ec_ioctl_sync_ref(
 
 /*****************************************************************************/
 
-/** Sync the reference clock.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 同步参考时钟到指定时间。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 同步参考时钟到指定时间。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_sync_ref_to(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     uint64_t time;
@@ -2834,14 +3460,21 @@ static ATTRIBUTES int ec_ioctl_sync_ref_to(
 
 /*****************************************************************************/
 
-/** Sync the slave clocks.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 同步从站时钟。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 同步从站时钟。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_sync_slaves(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     if (unlikely(!ctx->requested))
@@ -2855,14 +3488,23 @@ static ATTRIBUTES int ec_ioctl_sync_slaves(
 
 /*****************************************************************************/
 
-/** Get the system time of the reference clock.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 获取参考时钟的系统时间。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 获取参考时钟的系统时间。
+- 如果返回值不为零，返回该错误代码。
+- 从内核空间复制数据到用户空间。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_ref_clock_time(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     uint32_t time;
@@ -2889,14 +3531,21 @@ static ATTRIBUTES int ec_ioctl_ref_clock_time(
 
 /*****************************************************************************/
 
-/** Queue the 64bit dc reference slave clock datagram.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 队列化64位DC参考从站时钟数据报文。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 队列化64位DC参考从站时钟数据报文。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_64bit_ref_clock_time_queue(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     if (unlikely(!ctx->requested))
@@ -2910,14 +3559,23 @@ static ATTRIBUTES int ec_ioctl_64bit_ref_clock_time_queue(
 
 /*****************************************************************************/
 
-/** Get the 64bit system time of the reference clock.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 获取64位参考时钟的系统时间。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 获取64位参考时钟的系统时间。
+- 如果返回值不为零，返回该错误代码。
+- 从内核空间复制数据到用户空间。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_64bit_ref_clock_time(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     uint64_t time;
@@ -2944,14 +3602,21 @@ static ATTRIBUTES int ec_ioctl_64bit_ref_clock_time(
 
 /*****************************************************************************/
 
-/** Queue the sync monitoring datagram.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 队列化同步监控数据报文。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 队列化同步监控数据报文。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_sync_mon_queue(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     if (unlikely(!ctx->requested))
@@ -2965,14 +3630,22 @@ static ATTRIBUTES int ec_ioctl_sync_mon_queue(
 
 /*****************************************************************************/
 
-/** Processes the sync monitoring datagram.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 处理同步监控数据报文。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 处理同步监控数据报文。
+- 从内核空间复制数据到用户空间。
+- 返回零。
+*/
 static ATTRIBUTES int ec_ioctl_sync_mon_process(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     uint32_t time_diff;
@@ -2990,15 +3663,23 @@ static ATTRIBUTES int ec_ioctl_sync_mon_process(
 
 /*****************************************************************************/
 
-/** Call to set whether processing slave requests explicitly from the
- * application is active or not.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 设置是否显式激活从站请求处理。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 锁定主机信号量，以免被中断。
+- 设置是否显式激活从站请求处理。
+- 解锁主机信号量。
+- 返回相应的错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_rt_slave_requests(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     unsigned long rt_slave_requests = (unsigned long)arg;
@@ -3026,14 +3707,17 @@ out_return:
 
 /*****************************************************************************/
 
-/** Call to process slave requests explicitly from application.
- *
- * \return Always zero (success).
- */
+/**
+@brief 显式从应用程序处理从站请求。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 总是返回零（成功）。
+*/
 static ATTRIBUTES int ec_ioctl_exec_slave_requests(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     if (unlikely(!ctx->requested))
@@ -3048,14 +3732,14 @@ static ATTRIBUTES int ec_ioctl_exec_slave_requests(
 
 /*****************************************************************************/
 
-/** Reset configuration.
- *
- * \return Always zero (success).
- */
+/**
+@brief 重置配置。
+@return 总是返回零（成功）。
+*/
 static ATTRIBUTES int ec_ioctl_reset(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_lock_down(&master->master_sem);
@@ -3066,14 +3750,25 @@ static ATTRIBUTES int ec_ioctl_reset(
 
 /*****************************************************************************/
 
-/** Configure a sync manager.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 配置同步管理器。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 锁定主机信号量，以免被中断。
+- 获取配置索引对应的从站配置。
+- 遍历同步管理器配置数组，如果配置有效，则配置同步管理器。
+- 解锁主机信号量。
+- 返回相应的错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sc_sync(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_config_t data;
@@ -3126,14 +3821,25 @@ out_return:
 
 /*****************************************************************************/
 
-/** Configure a slave's watchdogs.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 配置从站的看门狗。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 锁定主机信号量，以免被中断。
+- 获取配置索引对应的从站配置。
+- 配置从站的看门狗。
+- 解锁主机信号量。
+- 返回相应的错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sc_watchdog(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_config_t data;
@@ -3175,12 +3881,25 @@ out_return:
 
 /*****************************************************************************/
 
-/** Configure wether a slave allows overlapping PDOs.
- */
+/**
+@brief 配置从站是否允许重叠PDO。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 锁定主机信号量，以免被中断。
+- 获取配置索引对应的从站配置。
+- 配置从站是否允许重叠PDO。
+- 解锁主机信号量。
+- 返回相应的错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sc_allow_overlapping_pdos(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_config_t data;
@@ -3221,14 +3940,25 @@ out_return:
 }
 /*****************************************************************************/
 
-/** Add a PDO to the assignment.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 添加一个PDO到分配中。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 锁定主机信号量，以免被中断。
+- 获取配置索引对应的从站配置。
+- 解锁主机信号量。
+- 添加一个PDO到分配中。
+- 返回相应的错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sc_add_pdo(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_config_pdo_t data;
@@ -3256,14 +3986,25 @@ static ATTRIBUTES int ec_ioctl_sc_add_pdo(
 
 /*****************************************************************************/
 
-/** Clears the PDO assignment.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 清除PDO分配。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 锁定主机信号量，以免被中断。
+- 获取配置索引对应的从站配置。
+- 解锁主机信号量。
+- 清除PDO分配。
+- 返回相应的错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sc_clear_pdos(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_config_pdo_t data;
@@ -3292,14 +4033,25 @@ static ATTRIBUTES int ec_ioctl_sc_clear_pdos(
 
 /*****************************************************************************/
 
-/** Add an entry to a PDO's mapping.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 向PDO映射中添加一个条目。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 锁定主机信号量，以免被中断。
+- 获取配置索引对应的从站配置。
+- 解锁主机信号量。
+- 向PDO映射中添加一个条目。
+- 返回相应的错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sc_add_entry(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_add_pdo_entry_t data;
@@ -3328,14 +4080,25 @@ static ATTRIBUTES int ec_ioctl_sc_add_entry(
 
 /*****************************************************************************/
 
-/** Clears the mapping of a PDO.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 清除PDO的映射。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 锁定主机信号量，以免被中断。
+- 获取配置索引对应的从站配置。
+- 解锁主机信号量。
+- 清除PDO的映射。
+- 返回相应的错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sc_clear_entries(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_config_pdo_t data;
@@ -3364,14 +4127,27 @@ static ATTRIBUTES int ec_ioctl_sc_clear_entries(
 
 /*****************************************************************************/
 
-/** Registers a PDO entry.
- *
- * \return Process data offset on success, otherwise a negative error code.
- */
+/**
+@brief 注册PDO条目。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回过程数据偏移量，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 锁定主机信号量，以免被中断。
+- 获取配置索引对应的从站配置。
+- 获取域索引对应的域。
+- 解锁主机信号量。
+- 注册PDO条目。
+- 从内核空间复制数据到用户空间。
+- 返回相应的错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sc_reg_pdo_entry(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_reg_pdo_entry_t data;
@@ -3413,14 +4189,27 @@ static ATTRIBUTES int ec_ioctl_sc_reg_pdo_entry(
 
 /*****************************************************************************/
 
-/** Registers a PDO entry by its position.
- *
- * \return Process data offset on success, otherwise a negative error code.
- */
+/**
+@brief 通过位置注册PDO条目。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回过程数据偏移量，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 锁定主机信号量，以免被中断。
+- 获取配置索引对应的从站配置。
+- 获取域索引对应的域。
+- 解锁主机信号量。
+- 通过位置注册PDO条目。
+- 从内核空间复制数据到用户空间。
+- 返回相应的错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sc_reg_pdo_pos(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_reg_pdo_pos_t io;
@@ -3468,14 +4257,25 @@ static ATTRIBUTES int ec_ioctl_sc_reg_pdo_pos(
 
 /*****************************************************************************/
 
-/** Sets the DC AssignActivate word and the sync signal times.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 设置DC AssignActivate字和同步信号时间。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 锁定主机信号量，以免被中断。
+- 获取配置索引对应的从站配置。
+- 解锁主机信号量。
+- 设置DC AssignActivate字和同步信号时间。
+- 返回相应的错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sc_dc(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_config_t data;
@@ -3509,14 +4309,29 @@ static ATTRIBUTES int ec_ioctl_sc_dc(
 
 /*****************************************************************************/
 
-/** Configures an SDO.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 配置SDO。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 检查数据大小是否为零。
+- 分配内存空间。
+- 从用户空间复制数据到内核空间。
+- 锁定主机信号量，以免被中断。
+- 获取配置索引对应的从站配置。
+- 解锁主机信号量。
+- 配置SDO。
+- 释放内存空间。
+- 返回相应的错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sc_sdo(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_sc_sdo_t data;
@@ -3575,14 +4390,25 @@ static ATTRIBUTES int ec_ioctl_sc_sdo(
 
 /*****************************************************************************/
 
-/** Set the emergency ring buffer size.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 设置紧急环形缓冲区大小。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 锁定主机信号量，以免被中断。
+- 获取配置索引对应的从站配置。
+- 解锁主机信号量。
+- 设置紧急环形缓冲区大小。
+- 返回相应的错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sc_emerg_size(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_sc_emerg_t io;
@@ -3615,14 +4441,25 @@ static ATTRIBUTES int ec_ioctl_sc_emerg_size(
 
 /*****************************************************************************/
 
-/** Get an emergency message from the ring.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 从环形缓冲区中获取紧急消息。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 获取配置索引对应的从站配置。
+- 检查配置是否存在。
+- 从环形缓冲区中获取紧急消息。
+- 如果成功，从内核空间复制数据到用户空间。
+- 返回相应的错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sc_emerg_pop(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_sc_emerg_t io;
@@ -3664,14 +4501,25 @@ static ATTRIBUTES int ec_ioctl_sc_emerg_pop(
 
 /*****************************************************************************/
 
-/** Clear the emergency ring.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 清除紧急环形缓冲区。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 锁定主机信号量，以免被中断。
+- 获取配置索引对应的从站配置。
+- 解锁主机信号量。
+- 清除紧急环形缓冲区。
+- 返回相应的错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sc_emerg_clear(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_sc_emerg_t io;
@@ -3687,8 +4535,10 @@ static ATTRIBUTES int ec_ioctl_sc_emerg_clear(
         return -EFAULT;
     }
 
-    /* no locking of master_sem needed, because configuration will not be
-     * deleted in the meantime. */
+    if (ec_lock_down_interruptible(&master->master_sem))
+    {
+        return -EINTR;
+    }
 
     if (!(sc = ec_master_get_config(master, io.config_index)))
     {
@@ -3700,14 +4550,26 @@ static ATTRIBUTES int ec_ioctl_sc_emerg_clear(
 
 /*****************************************************************************/
 
-/** Get the number of emergency overruns.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 获取紧急消息溢出次数。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 锁定主机信号量，以免被中断。
+- 获取配置索引对应的从站配置。
+- 解锁主机信号量。
+- 获取紧急消息溢出次数。
+- 如果成功，从内核空间复制数据到用户空间。
+- 返回相应的错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sc_emerg_overruns(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_sc_emerg_t io;
@@ -3724,8 +4586,10 @@ static ATTRIBUTES int ec_ioctl_sc_emerg_overruns(
         return -EFAULT;
     }
 
-    /* no locking of master_sem needed, because configuration will not be
-     * deleted in the meantime. */
+    if (ec_lock_down_interruptible(&master->master_sem))
+    {
+        return -EINTR;
+    }
 
     if (!(sc = ec_master_get_config(master, io.config_index)))
     {
@@ -3750,14 +4614,29 @@ static ATTRIBUTES int ec_ioctl_sc_emerg_overruns(
 
 /*****************************************************************************/
 
-/** Create an SDO request.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 创建一个SDO请求。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 检查数据大小是否为零。
+- 分配内存空间。
+- 从用户空间复制数据到内核空间。
+- 锁定主机信号量，以免被中断。
+- 获取配置索引对应的从站配置。
+- 解锁主机信号量。
+- 创建SDO请求。
+- 如果成功，从内核空间复制数据到用户空间。
+- 返回相应的错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sc_create_sdo_request(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_sdo_request_t data;
@@ -3765,7 +4644,9 @@ static ATTRIBUTES int ec_ioctl_sc_create_sdo_request(
     ec_sdo_request_t *req;
 
     if (unlikely(!ctx->requested))
+    {
         return -EPERM;
+    }
 
     if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
     {
@@ -3775,7 +4656,9 @@ static ATTRIBUTES int ec_ioctl_sc_create_sdo_request(
     data.request_index = 0;
 
     if (ec_lock_down_interruptible(&master->master_sem))
+    {
         return -EINTR;
+    }
 
     sc = ec_master_get_config(master, data.config_index);
     if (!sc)
@@ -3794,24 +4677,40 @@ static ATTRIBUTES int ec_ioctl_sc_create_sdo_request(
     req = ecrt_slave_config_create_sdo_request_err(sc, data.sdo_index,
                                                    data.sdo_subindex, data.complete_access, data.size);
     if (IS_ERR(req))
+    {
         return PTR_ERR(req);
+    }
 
     if (copy_to_user((void __user *)arg, &data, sizeof(data)))
+    {
         return -EFAULT;
+    }
 
     return 0;
 }
 
 /*****************************************************************************/
 
-/** Create an FoE request.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 创建一个FoE请求。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 锁定主机信号量，以免被中断。
+- 获取配置索引对应的从站配置。
+- 解锁主机信号量。
+- 创建FoE请求。
+- 如果成功，从内核空间复制数据到用户空间。
+- 返回相应的错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sc_create_foe_request(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_foe_request_t data;
@@ -3819,7 +4718,9 @@ static ATTRIBUTES int ec_ioctl_sc_create_foe_request(
     ec_foe_request_t *req;
 
     if (unlikely(!ctx->requested))
+    {
         return -EPERM;
+    }
 
     if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
     {
@@ -3829,7 +4730,9 @@ static ATTRIBUTES int ec_ioctl_sc_create_foe_request(
     data.request_index = 0;
 
     if (ec_lock_down_interruptible(&master->master_sem))
+    {
         return -EINTR;
+    }
 
     sc = ec_master_get_config(master, data.config_index);
     if (!sc)
@@ -3847,24 +4750,40 @@ static ATTRIBUTES int ec_ioctl_sc_create_foe_request(
 
     req = ecrt_slave_config_create_foe_request_err(sc, data.size);
     if (IS_ERR(req))
+    {
         return PTR_ERR(req);
+    }
 
     if (copy_to_user((void __user *)arg, &data, sizeof(data)))
+    {
         return -EFAULT;
+    }
 
     return 0;
 }
 
 /*****************************************************************************/
 
-/** Create a register request.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 创建一个寄存器请求。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 锁定主机信号量，以免被中断。
+- 获取配置索引对应的从站配置。
+- 解锁主机信号量。
+- 创建寄存器请求。
+- 如果成功，从内核空间复制数据到用户空间。
+- 返回相应的错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sc_create_reg_request(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_reg_request_t io;
@@ -3918,14 +4837,26 @@ static ATTRIBUTES int ec_ioctl_sc_create_reg_request(
 
 /*****************************************************************************/
 
-/** Create a VoE handler.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 创建一个VoE处理程序。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 锁定主机信号量，以免被中断。
+- 获取配置索引对应的从站配置。
+- 解锁主机信号量。
+- 创建VoE处理程序。
+- 如果成功，从内核空间复制数据到用户空间。
+- 返回相应的错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sc_create_voe_handler(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_voe_t data;
@@ -3933,7 +4864,9 @@ static ATTRIBUTES int ec_ioctl_sc_create_voe_handler(
     ec_voe_handler_t *voe;
 
     if (unlikely(!ctx->requested))
+    {
         return -EPERM;
+    }
 
     if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
     {
@@ -3943,7 +4876,9 @@ static ATTRIBUTES int ec_ioctl_sc_create_voe_handler(
     data.voe_index = 0;
 
     if (ec_lock_down_interruptible(&master->master_sem))
+    {
         return -EINTR;
+    }
 
     sc = ec_master_get_config(master, data.config_index);
     if (!sc)
@@ -3961,24 +4896,40 @@ static ATTRIBUTES int ec_ioctl_sc_create_voe_handler(
 
     voe = ecrt_slave_config_create_voe_handler_err(sc, data.size);
     if (IS_ERR(voe))
+    {
         return PTR_ERR(voe);
+    }
 
     if (copy_to_user((void __user *)arg, &data, sizeof(data)))
+    {
         return -EFAULT;
+    }
 
     return 0;
 }
 
 /*****************************************************************************/
 
-/** Get the slave configuration's state.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 获取从站配置的状态。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 锁定主机信号量，以免被中断。
+- 获取配置索引对应的从站配置。
+- 解锁主机信号量。
+- 获取从站配置的状态。
+- 如果成功，从内核空间复制数据到用户空间。
+- 返回相应的错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sc_state(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_sc_state_t data;
@@ -3986,15 +4937,14 @@ static ATTRIBUTES int ec_ioctl_sc_state(
     ec_slave_config_state_t state;
 
     if (unlikely(!ctx->requested))
+    {
         return -EPERM;
+    }
 
     if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
     {
         return -EFAULT;
     }
-
-    /* no locking of master_sem needed, because sc will not be deleted in the
-     * meantime. */
 
     if (!(sc = ec_master_get_config_const(master, data.config_index)))
     {
@@ -4004,21 +4954,38 @@ static ATTRIBUTES int ec_ioctl_sc_state(
     ecrt_slave_config_state(sc, &state);
 
     if (copy_to_user((void __user *)data.state, &state, sizeof(state)))
+    {
         return -EFAULT;
+    }
 
     return 0;
 }
 
 /*****************************************************************************/
 
-/** Configures an IDN.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 配置IDN。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 检查数据大小是否为零。
+- 分配内存空间。
+- 从用户空间复制数据到内核空间。
+- 锁定主机信号量，以免被中断。
+- 获取配置索引对应的从站配置。
+- 解锁主机信号量。
+- 配置IDN。
+- 释放内存空间。
+- 返回相应的错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sc_idn(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_sc_idn_t ioctl;
@@ -4027,13 +4994,19 @@ static ATTRIBUTES int ec_ioctl_sc_idn(
     int ret;
 
     if (unlikely(!ctx->requested))
+    {
         return -EPERM;
+    }
 
     if (copy_from_user(&ioctl, (void __user *)arg, sizeof(ioctl)))
+    {
         return -EFAULT;
+    }
 
     if (!ioctl.size)
+    {
         return -EINVAL;
+    }
 
     if (!(data = kmalloc(ioctl.size, GFP_KERNEL)))
     {
@@ -4069,14 +5042,23 @@ static ATTRIBUTES int ec_ioctl_sc_idn(
 
 /*****************************************************************************/
 
-/** Gets the domain's data size.
- *
- * \return Domain size, or a negative error code.
- */
+/**
+@brief 获取域的数据大小。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 域的大小，或负错误代码。
+@details
+- 检查是否有请求。
+- 锁定主机信号量，以免被中断。
+- 遍历域链表，查找匹配的域。
+- 解锁主机信号量。
+- 返回域的大小或错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_domain_size(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     const ec_domain_t *domain;
@@ -4107,21 +5089,32 @@ static ATTRIBUTES int ec_ioctl_domain_size(
 
 /*****************************************************************************/
 
-/** Gets the domain's offset in the total process data.
- *
- * \return Domain offset, or a negative error code.
- */
+/**
+@brief 获取域在总过程数据中的偏移量。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 域的偏移量，或负错误代码。
+@details
+- 检查是否有请求。
+- 锁定主机信号量，以免被中断。
+- 遍历域链表，查找匹配的域。
+- 解锁主机信号量。
+- 返回域的偏移量或错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_domain_offset(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     int offset = 0;
     const ec_domain_t *domain;
 
     if (unlikely(!ctx->requested))
+    {
         return -EPERM;
+    }
 
     if (ec_lock_down_interruptible(&master->master_sem))
     {
@@ -4144,23 +5137,34 @@ static ATTRIBUTES int ec_ioctl_domain_offset(
 
 /*****************************************************************************/
 
-/** Process the domain.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 处理域。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 锁定主机信号量，以免被中断。
+- 查找匹配的域。
+- 解锁主机信号量。
+- 处理域。
+- 返回相应的错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_domain_process(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_domain_t *domain;
 
     if (unlikely(!ctx->requested))
+    {
         return -EPERM;
+    }
 
-    /* Locking added as domain processing is likely to be used by more than
-       one application tasks */
+    /* 添加锁定，因为域处理可能由多个应用任务使用 */
     if (ec_ioctl_lock_down_interruptible(&master->master_sem))
     {
         return -EINTR;
@@ -4179,25 +5183,38 @@ static ATTRIBUTES int ec_ioctl_domain_process(
 
 /*****************************************************************************/
 
-/** Queue the domain.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 将域加入队列。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 锁定主机信号量，以免被中断。
+- 查找匹配的域。
+- 解锁主机信号量。
+- 将域加入队列。
+- 返回相应的错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_domain_queue(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_domain_t *domain;
 
     if (unlikely(!ctx->requested))
+    {
         return -EPERM;
+    }
 
-    /* Locking added as domain queing is likely to be used by more than
-       one application tasks */
+    /* 添加锁定，因为域队列可能由多个应用任务使用 */
     if (ec_ioctl_lock_down_interruptible(&master->master_sem))
+    {
         return -EINTR;
+    }
 
     if (!(domain = ec_master_find_domain(master, (unsigned long)arg)))
     {
@@ -4206,7 +5223,6 @@ static ATTRIBUTES int ec_ioctl_domain_queue(
     }
 
     ecrt_domain_queue(domain);
-
     ec_ioctl_lock_up(&master->master_sem);
 
     return 0;
@@ -4214,14 +5230,26 @@ static ATTRIBUTES int ec_ioctl_domain_queue(
 
 /*****************************************************************************/
 
-/** Get the domain state.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 获取域的状态。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+@details
+- 检查是否有请求。
+- 从用户空间复制数据到内核空间。
+- 锁定主机信号量，以免被中断。
+- 查找匹配的域。
+- 解锁主机信号量。
+- 获取域的状态。
+- 如果成功，从内核空间复制数据到用户空间。
+- 返回相应的错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_domain_state(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_domain_state_t data;
@@ -4229,15 +5257,16 @@ static ATTRIBUTES int ec_ioctl_domain_state(
     ec_domain_state_t state;
 
     if (unlikely(!ctx->requested))
+    {
         return -EPERM;
+    }
 
     if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
     {
         return -EFAULT;
     }
 
-    /* no locking of master_sem needed, because domain will not be deleted in
-     * the meantime. */
+    /* 不需要锁定master_sem，因为域不会在此期间被删除。 */
 
     if (!(domain = ec_master_find_domain_const(master, data.domain_index)))
     {
@@ -4247,21 +5276,26 @@ static ATTRIBUTES int ec_ioctl_domain_state(
     ecrt_domain_state(domain, &state);
 
     if (copy_to_user((void __user *)data.state, &state, sizeof(state)))
+    {
         return -EFAULT;
+    }
 
     return 0;
 }
 
 /*****************************************************************************/
 
-/** Sets an SDO request's SDO index and subindex.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 设置SDO请求的SDO索引和子索引。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sdo_request_index(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_sdo_request_t data;
@@ -4269,13 +5303,16 @@ static ATTRIBUTES int ec_ioctl_sdo_request_index(
     ec_sdo_request_t *req;
 
     if (unlikely(!ctx->requested))
+    {
         return -EPERM;
+    }
 
     if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+    {
         return -EFAULT;
+    }
 
-    /* no locking of master_sem needed, because neither sc nor req will not be
-     * deleted in the meantime. */
+    /* 不需要锁定master_sem，因为sc和req在此期间都不会被删除。 */
 
     if (!(sc = ec_master_get_config(master, data.config_index)))
     {
@@ -4295,19 +5332,23 @@ static ATTRIBUTES int ec_ioctl_sdo_request_index(
     {
         ecrt_sdo_request_index(req, data.sdo_index, data.sdo_subindex);
     }
+
     return 0;
 }
 
 /*****************************************************************************/
 
-/** Sets an SDO request's timeout.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 设置SDO请求的超时时间。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sdo_request_timeout(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_sdo_request_t data;
@@ -4315,13 +5356,16 @@ static ATTRIBUTES int ec_ioctl_sdo_request_timeout(
     ec_sdo_request_t *req;
 
     if (unlikely(!ctx->requested))
+    {
         return -EPERM;
+    }
 
     if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+    {
         return -EFAULT;
+    }
 
-    /* no locking of master_sem needed, because neither sc nor req will not be
-     * deleted in the meantime. */
+    /* 不需要锁定master_sem，因为sc和req在此期间都不会被删除。 */
 
     if (!(sc = ec_master_get_config(master, data.config_index)))
     {
@@ -4339,14 +5383,17 @@ static ATTRIBUTES int ec_ioctl_sdo_request_timeout(
 
 /*****************************************************************************/
 
-/** Gets an SDO request's state.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 获取SDO请求的状态。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sdo_request_state(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_sdo_request_t data;
@@ -4354,13 +5401,16 @@ static ATTRIBUTES int ec_ioctl_sdo_request_state(
     ec_sdo_request_t *req;
 
     if (unlikely(!ctx->requested))
+    {
         return -EPERM;
+    }
 
     if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+    {
         return -EFAULT;
+    }
 
-    /* no locking of master_sem needed, because neither sc nor req will not be
-     * deleted in the meantime. */
+    /* 不需要锁定master_sem，因为sc和req在此期间都不会被删除。 */
 
     if (!(sc = ec_master_get_config(master, data.config_index)))
     {
@@ -4374,26 +5424,35 @@ static ATTRIBUTES int ec_ioctl_sdo_request_state(
 
     data.state = ecrt_sdo_request_state(req);
     if (data.state == EC_REQUEST_SUCCESS && req->dir == EC_DIR_INPUT)
+    {
         data.size = ecrt_sdo_request_data_size(req);
+    }
     else
+    {
         data.size = 0;
+    }
 
     if (copy_to_user((void __user *)arg, &data, sizeof(data)))
+    {
         return -EFAULT;
+    }
 
     return 0;
 }
 
 /*****************************************************************************/
 
-/** Starts an SDO read operation.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 启动SDO读取操作。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sdo_request_read(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_sdo_request_t data;
@@ -4401,13 +5460,16 @@ static ATTRIBUTES int ec_ioctl_sdo_request_read(
     ec_sdo_request_t *req;
 
     if (unlikely(!ctx->requested))
+    {
         return -EPERM;
+    }
 
     if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+    {
         return -EFAULT;
+    }
 
-    /* no locking of master_sem needed, because neither sc nor req will not be
-     * deleted in the meantime. */
+    /* 不需要锁定master_sem，因为sc和req在此期间都不会被删除。 */
 
     if (!(sc = ec_master_get_config(master, data.config_index)))
     {
@@ -4425,14 +5487,17 @@ static ATTRIBUTES int ec_ioctl_sdo_request_read(
 
 /*****************************************************************************/
 
-/** Starts an SDO write operation.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 启动SDO写入操作。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sdo_request_write(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_sdo_request_t data;
@@ -4441,19 +5506,22 @@ static ATTRIBUTES int ec_ioctl_sdo_request_write(
     int ret;
 
     if (unlikely(!ctx->requested))
+    {
         return -EPERM;
+    }
 
     if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+    {
         return -EFAULT;
+    }
 
     if (!data.size)
     {
-        EC_MASTER_ERR(master, "SDO download: Data size may not be zero!\n");
+        EC_MASTER_ERR(master, "SDO下载：数据大小不能为零！\n");
         return -EINVAL;
     }
 
-    /* no locking of master_sem needed, because neither sc nor req will not be
-     * deleted in the meantime. */
+    /* 不需要锁定master_sem，因为sc和req在此期间都不会被删除。 */
 
     if (!(sc = ec_master_get_config(master, data.config_index)))
     {
@@ -4467,10 +5535,14 @@ static ATTRIBUTES int ec_ioctl_sdo_request_write(
 
     ret = ec_sdo_request_alloc(req, data.size);
     if (ret)
+    {
         return ret;
+    }
 
     if (copy_from_user(req->data, (void __user *)data.data, data.size))
+    {
         return -EFAULT;
+    }
 
     req->data_size = data.size;
     ecrt_sdo_request_write(req);
@@ -4479,14 +5551,17 @@ static ATTRIBUTES int ec_ioctl_sdo_request_write(
 
 /*****************************************************************************/
 
-/** Read SDO data.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 读取SDO数据。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_sdo_request_data(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_sdo_request_t data;
@@ -4494,13 +5569,16 @@ static ATTRIBUTES int ec_ioctl_sdo_request_data(
     ec_sdo_request_t *req;
 
     if (unlikely(!ctx->requested))
+    {
         return -EPERM;
+    }
 
     if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+    {
         return -EFAULT;
+    }
 
-    /* no locking of master_sem needed, because neither sc nor req will not be
-     * deleted in the meantime. */
+    /* 不需要锁定master_sem，因为sc和req在此期间都不会被删除。 */
 
     if (!(sc = ec_master_get_config(master, data.config_index)))
     {
@@ -4514,21 +5592,26 @@ static ATTRIBUTES int ec_ioctl_sdo_request_data(
 
     if (copy_to_user((void __user *)data.data, ecrt_sdo_request_data(req),
                      ecrt_sdo_request_data_size(req)))
+    {
         return -EFAULT;
+    }
 
     return 0;
 }
 
 /*****************************************************************************/
 
-/** Sets an FoE request's FoE filename and password.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 设置FoE请求的FoE文件名和密码。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_foe_request_file(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_foe_request_t data;
@@ -4536,13 +5619,16 @@ static ATTRIBUTES int ec_ioctl_foe_request_file(
     ec_foe_request_t *req;
 
     if (unlikely(!ctx->requested))
+    {
         return -EPERM;
+    }
 
     if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+    {
         return -EFAULT;
+    }
 
-    /* no locking of master_sem needed, because neither sc nor req will not be
-     * deleted in the meantime. */
+    /* 不需要锁定master_sem，因为sc和req在此期间都不会被删除。 */
 
     if (!(sc = ec_master_get_config(master, data.config_index)))
     {
@@ -4560,14 +5646,17 @@ static ATTRIBUTES int ec_ioctl_foe_request_file(
 
 /*****************************************************************************/
 
-/** Sets an FoE request's timeout.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 设置FoE请求的超时时间。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_foe_request_timeout(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_foe_request_t data;
@@ -4575,13 +5664,16 @@ static ATTRIBUTES int ec_ioctl_foe_request_timeout(
     ec_foe_request_t *req;
 
     if (unlikely(!ctx->requested))
+    {
         return -EPERM;
+    }
 
     if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+    {
         return -EFAULT;
+    }
 
-    /* no locking of master_sem needed, because neither sc nor req will not be
-     * deleted in the meantime. */
+    /* 不需要锁定master_sem，因为sc和req在此期间都不会被删除。 */
 
     if (!(sc = ec_master_get_config(master, data.config_index)))
     {
@@ -4599,14 +5691,17 @@ static ATTRIBUTES int ec_ioctl_foe_request_timeout(
 
 /*****************************************************************************/
 
-/** Gets an FoE request's state.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 获取FoE请求的状态。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_foe_request_state(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_foe_request_t data;
@@ -4614,13 +5709,16 @@ static ATTRIBUTES int ec_ioctl_foe_request_state(
     ec_foe_request_t *req;
 
     if (unlikely(!ctx->requested))
+    {
         return -EPERM;
+    }
 
     if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+    {
         return -EFAULT;
+    }
 
-    /* no locking of master_sem needed, because neither sc nor req will not be
-     * deleted in the meantime. */
+    /* 不需要锁定master_sem，因为sc和req在此期间都不会被删除。 */
 
     if (!(sc = ec_master_get_config(master, data.config_index)))
     {
@@ -4635,28 +5733,37 @@ static ATTRIBUTES int ec_ioctl_foe_request_state(
     data.state = ecrt_foe_request_state(req);
     data.progress = ecrt_foe_request_progress(req);
     if (data.state == EC_REQUEST_SUCCESS && req->dir == EC_DIR_INPUT)
+    {
         data.size = ecrt_foe_request_data_size(req);
+    }
     else
+    {
         data.size = 0;
+    }
     data.result = req->result;
     data.error_code = req->error_code;
 
     if (copy_to_user((void __user *)arg, &data, sizeof(data)))
+    {
         return -EFAULT;
+    }
 
     return 0;
 }
 
 /*****************************************************************************/
 
-/** Starts an FoE read operation.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 启动FoE读取操作。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_foe_request_read(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_foe_request_t data;
@@ -4664,13 +5771,16 @@ static ATTRIBUTES int ec_ioctl_foe_request_read(
     ec_foe_request_t *req;
 
     if (unlikely(!ctx->requested))
+    {
         return -EPERM;
+    }
 
     if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+    {
         return -EFAULT;
+    }
 
-    /* no locking of master_sem needed, because neither sc nor req will not be
-     * deleted in the meantime. */
+    /* 不需要锁定master_sem，因为sc和req在此期间都不会被删除。 */
 
     if (!(sc = ec_master_get_config(master, data.config_index)))
     {
@@ -4688,14 +5798,17 @@ static ATTRIBUTES int ec_ioctl_foe_request_read(
 
 /*****************************************************************************/
 
-/** Starts an FoE write operation.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 启动FoE写入操作。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_foe_request_write(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_foe_request_t data;
@@ -4704,13 +5817,16 @@ static ATTRIBUTES int ec_ioctl_foe_request_write(
     int ret;
 
     if (unlikely(!ctx->requested))
+    {
         return -EPERM;
+    }
 
     if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+    {
         return -EFAULT;
+    }
 
-    /* no locking of master_sem needed, because neither sc nor req will not be
-     * deleted in the meantime. */
+    /* 不需要锁定master_sem，因为sc和req在此期间都不会被删除。 */
 
     if (!(sc = ec_master_get_config(master, data.config_index)))
     {
@@ -4724,10 +5840,14 @@ static ATTRIBUTES int ec_ioctl_foe_request_write(
 
     ret = ec_foe_request_alloc(req, data.size);
     if (ret)
+    {
         return ret;
+    }
 
     if (copy_from_user(ecrt_foe_request_data(req), (void __user *)data.data, data.size))
+    {
         return -EFAULT;
+    }
 
     ecrt_foe_request_write(req, data.size);
     return 0;
@@ -4735,14 +5855,17 @@ static ATTRIBUTES int ec_ioctl_foe_request_write(
 
 /*****************************************************************************/
 
-/** Read FoE data.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 读取FoE数据。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_foe_request_data(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_foe_request_t data;
@@ -4750,13 +5873,16 @@ static ATTRIBUTES int ec_ioctl_foe_request_data(
     ec_foe_request_t *req;
 
     if (unlikely(!ctx->requested))
+    {
         return -EPERM;
+    }
 
     if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+    {
         return -EFAULT;
+    }
 
-    /* no locking of master_sem needed, because neither sc nor req will not be
-     * deleted in the meantime. */
+    /* 不需要锁定master_sem，因为sc和req在此期间都不会被删除。 */
 
     if (!(sc = ec_master_get_config(master, data.config_index)))
     {
@@ -4770,21 +5896,26 @@ static ATTRIBUTES int ec_ioctl_foe_request_data(
 
     if (copy_to_user((void __user *)data.data, ecrt_foe_request_data(req),
                      ecrt_foe_request_data_size(req)))
+    {
         return -EFAULT;
+    }
 
     return 0;
 }
 
 /*****************************************************************************/
 
-/** Read register data.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 读取寄存器数据。
+@param master EtherCAT主机。
+@param arg ioctl()参数。
+@param ctx 文件句柄的私有数据结构。
+@return 成功时返回零，否则返回负错误代码。
+*/
 static ATTRIBUTES int ec_ioctl_reg_request_data(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主机。 */
+    void *arg,              /**< ioctl()参数。 */
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。 */
 )
 {
     ec_ioctl_reg_request_t io;
@@ -4806,8 +5937,7 @@ static ATTRIBUTES int ec_ioctl_reg_request_data(
         return 0;
     }
 
-    /* no locking of master_sem needed, because neither sc nor reg will not be
-     * deleted in the meantime. */
+    /* 不需要锁定master_sem，因为sc和reg在此期间都不会被删除。 */
 
     if (!(sc = ec_master_get_config(master, io.config_index)))
     {
@@ -4830,14 +5960,26 @@ static ATTRIBUTES int ec_ioctl_reg_request_data(
 
 /*****************************************************************************/
 
-/** Gets an register request's state.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 获取一个寄存器请求的状态。
+@param master：EtherCAT主站。
+@param arg：ioctl()参数。
+@param ctx：文件句柄的私有数据结构。
+@return：成功返回零，否则返回负错误代码。
+@details：
+- 检查请求是否有效，如果无效返回-EPERM。
+- 从用户空间复制请求数据到内核空间，如果失败返回-EFAULT。
+- 不需要对master_sem进行加锁，因为sc和reg在此期间都不会被删除。
+- 通过io.config_index获取对应的sc（从master获取）。
+- 通过io.request_index获取对应的reg（从sc获取）。
+- 获取reg的状态，并根据状态判断是否有新数据。
+- 将更新后的io数据复制回用户空间，如果失败返回-EFAULT。
+- 返回0表示成功。
+*/
 static ATTRIBUTES int ec_ioctl_reg_request_state(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主站。*/
+    void *arg,              /**< ioctl()参数。*/
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。*/
 )
 {
     ec_ioctl_reg_request_t io;
@@ -4854,8 +5996,7 @@ static ATTRIBUTES int ec_ioctl_reg_request_state(
         return -EFAULT;
     }
 
-    /* no locking of master_sem needed, because neither sc nor reg will not be
-     * deleted in the meantime. */
+    /* 不需要对master_sem进行加锁，因为sc和reg在此期间都不会被删除。 */
 
     if (!(sc = ec_master_get_config(master, io.config_index)))
     {
@@ -4881,14 +6022,27 @@ static ATTRIBUTES int ec_ioctl_reg_request_state(
 
 /*****************************************************************************/
 
-/** Starts an register write operation.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 开始一个寄存器写操作。
+@param master：EtherCAT主站。
+@param arg：ioctl()参数。
+@param ctx：文件句柄的私有数据结构。
+@return：成功返回零，否则返回负错误代码。
+@details：
+- 检查请求是否有效，如果无效返回-EPERM。
+- 从用户空间复制请求数据到内核空间，如果失败返回-EFAULT。
+- 不需要对master_sem进行加锁，因为sc和reg在此期间都不会被删除。
+- 通过io.config_index获取对应的sc（从master获取）。
+- 通过io.request_index获取对应的reg（从sc获取）。
+- 检查传输大小是否超过reg的内存大小，如果超过返回-EOVERFLOW。
+- 从用户空间复制数据到reg的data字段，如果失败返回-EFAULT。
+- 调用ecrt_reg_request_write()执行寄存器写操作。
+- 返回0表示成功。
+*/
 static ATTRIBUTES int ec_ioctl_reg_request_write(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主站。*/
+    void *arg,              /**< ioctl()参数。*/
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。*/
 )
 {
     ec_ioctl_reg_request_t io;
@@ -4905,8 +6059,7 @@ static ATTRIBUTES int ec_ioctl_reg_request_write(
         return -EFAULT;
     }
 
-    /* no locking of master_sem needed, because neither sc nor reg will not be
-     * deleted in the meantime. */
+    /* 不需要对master_sem进行加锁，因为sc和reg在此期间都不会被删除。 */
 
     if (!(sc = ec_master_get_config(master, io.config_index)))
     {
@@ -4935,14 +6088,26 @@ static ATTRIBUTES int ec_ioctl_reg_request_write(
 
 /*****************************************************************************/
 
-/** Starts an register read operation.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 开始一个寄存器读操作。
+@param master：EtherCAT主站。
+@param arg：ioctl()参数。
+@param ctx：文件句柄的私有数据结构。
+@return：成功返回零，否则返回负错误代码。
+@details：
+- 检查请求是否有效，如果无效返回-EPERM。
+- 从用户空间复制请求数据到内核空间，如果失败返回-EFAULT。
+- 不需要对master_sem进行加锁，因为sc和reg在此期间都不会被删除。
+- 通过io.config_index获取对应的sc（从master获取）。
+- 通过io.request_index获取对应的reg（从sc获取）。
+- 检查传输大小是否超过reg的内存大小，如果超过返回-EOVERFLOW。
+- 调用ecrt_reg_request_read()执行寄存器读操作。
+- 返回0表示成功。
+*/
 static ATTRIBUTES int ec_ioctl_reg_request_read(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主站。*/
+    void *arg,              /**< ioctl()参数。*/
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。*/
 )
 {
     ec_ioctl_reg_request_t io;
@@ -4959,8 +6124,7 @@ static ATTRIBUTES int ec_ioctl_reg_request_read(
         return -EFAULT;
     }
 
-    /* no locking of master_sem needed, because neither sc nor reg will not be
-     * deleted in the meantime. */
+    /* 不需要对master_sem进行加锁，因为sc和reg在此期间都不会被删除。 */
 
     if (!(sc = ec_master_get_config(master, io.config_index)))
     {
@@ -4983,14 +6147,27 @@ static ATTRIBUTES int ec_ioctl_reg_request_read(
 
 /*****************************************************************************/
 
-/** Starts an register read-write operation.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 开始一个寄存器读写操作。
+@param master：EtherCAT主站。
+@param arg：ioctl()参数。
+@param ctx：文件句柄的私有数据结构。
+@return：成功返回零，否则返回负错误代码。
+@details：
+- 检查请求是否有效，如果无效返回-EPERM。
+- 从用户空间复制请求数据到内核空间，如果失败返回-EFAULT。
+- 不需要对master_sem进行加锁，因为sc和reg在此期间都不会被删除。
+- 通过io.config_index获取对应的sc（从master获取）。
+- 通过io.request_index获取对应的reg（从sc获取）。
+- 检查传输大小是否超过reg的内存大小，如果超过返回-EOVERFLOW。
+- 从用户空间复制数据到reg的data字段，如果失败返回-EFAULT。
+- 调用ecrt_reg_request_readwrite()执行寄存器读写操作。
+- 返回0表示成功。
+*/
 static ATTRIBUTES int ec_ioctl_reg_request_readwrite(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主站。*/
+    void *arg,              /**< ioctl()参数。*/
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。*/
 )
 {
     ec_ioctl_reg_request_t io;
@@ -5007,8 +6184,7 @@ static ATTRIBUTES int ec_ioctl_reg_request_readwrite(
         return -EFAULT;
     }
 
-    /* no locking of master_sem needed, because neither sc nor reg will not be
-     * deleted in the meantime. */
+    /* 不需要对master_sem进行加锁，因为sc和reg在此期间都不会被删除。 */
 
     if (!(sc = ec_master_get_config(master, io.config_index)))
     {
@@ -5037,14 +6213,25 @@ static ATTRIBUTES int ec_ioctl_reg_request_readwrite(
 
 /*****************************************************************************/
 
-/** Sets the VoE send header.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 设置VoE发送头。
+@param master：EtherCAT主站。
+@param arg：ioctl()参数。
+@param ctx：文件句柄的私有数据结构。
+@return：成功返回零，否则返回负错误代码。
+@details：
+- 检查请求是否有效，如果无效返回-EPERM。
+- 从用户空间复制请求数据到内核空间，如果失败返回-EFAULT。
+- 不需要对master_sem进行加锁，因为sc和voe在此期间都不会被删除。
+- 通过data.config_index获取对应的sc（从master获取）。
+- 通过data.voe_index获取对应的voe（从sc获取）。
+- 调用ecrt_voe_handler_send_header()设置VoE发送头。
+- 返回0表示成功。
+*/
 static ATTRIBUTES int ec_ioctl_voe_send_header(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主站。*/
+    void *arg,              /**< ioctl()参数。*/
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。*/
 )
 {
     ec_ioctl_voe_t data;
@@ -5065,8 +6252,7 @@ static ATTRIBUTES int ec_ioctl_voe_send_header(
     if (get_user(vendor_type, data.vendor_type))
         return -EFAULT;
 
-    /* no locking of master_sem needed, because neither sc nor voe will not be
-     * deleted in the meantime. */
+    /* 不需要对master_sem进行加锁，因为sc和voe在此期间都不会被删除。 */
 
     if (!(sc = ec_master_get_config(master, data.config_index)))
     {
@@ -5084,14 +6270,26 @@ static ATTRIBUTES int ec_ioctl_voe_send_header(
 
 /*****************************************************************************/
 
-/** Gets the received VoE header.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 获取接收到的VoE头。
+@param master：EtherCAT主站。
+@param arg：ioctl()参数。
+@param ctx：文件句柄的私有数据结构。
+@return：成功返回零，否则返回负错误代码。
+@details：
+- 检查请求是否有效，如果无效返回-EPERM。
+- 从用户空间复制请求数据到内核空间，如果失败返回-EFAULT。
+- 不需要对master_sem进行加锁，因为sc和voe在此期间都不会被删除。
+- 通过data.config_index获取对应的sc（从master获取）。
+- 通过data.voe_index获取对应的voe（从sc获取）。
+- 调用ecrt_voe_handler_received_header()获取接收到的VoE头。
+- 将vendor_id和vendor_type复制回用户空间，如果失败返回-EFAULT。
+- 返回0表示成功。
+*/
 static ATTRIBUTES int ec_ioctl_voe_rec_header(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主站。*/
+    void *arg,              /**< ioctl()参数。*/
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。*/
 )
 {
     ec_ioctl_voe_t data;
@@ -5106,8 +6304,7 @@ static ATTRIBUTES int ec_ioctl_voe_rec_header(
     if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
         return -EFAULT;
 
-    /* no locking of master_sem needed, because neither sc nor voe will not be
-     * deleted in the meantime. */
+    /* 不需要对master_sem进行加锁，因为sc和voe在此期间都不会被删除。 */
 
     if (!(sc = ec_master_get_config(master, data.config_index)))
     {
@@ -5134,14 +6331,25 @@ static ATTRIBUTES int ec_ioctl_voe_rec_header(
 
 /*****************************************************************************/
 
-/** Starts a VoE read operation.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 开始一个VoE读操作。
+@param master：EtherCAT主站。
+@param arg：ioctl()参数。
+@param ctx：文件句柄的私有数据结构。
+@return：成功返回零，否则返回负错误代码。
+@details：
+- 检查请求是否有效，如果无效返回-EPERM。
+- 从用户空间复制请求数据到内核空间，如果失败返回-EFAULT。
+- 不需要对master_sem进行加锁，因为sc和voe在此期间都不会被删除。
+- 通过data.config_index获取对应的sc（从master获取）。
+- 通过data.voe_index获取对应的voe（从sc获取）。
+- 调用ecrt_voe_handler_read()执行VoE读操作。
+- 返回0表示成功。
+*/
 static ATTRIBUTES int ec_ioctl_voe_read(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主站。*/
+    void *arg,              /**< ioctl()参数。*/
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。*/
 )
 {
     ec_ioctl_voe_t data;
@@ -5154,8 +6362,7 @@ static ATTRIBUTES int ec_ioctl_voe_read(
     if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
         return -EFAULT;
 
-    /* no locking of master_sem needed, because neither sc nor voe will not be
-     * deleted in the meantime. */
+    /* 不需要对master_sem进行加锁，因为sc和voe在此期间都不会被删除。 */
 
     if (!(sc = ec_master_get_config(master, data.config_index)))
     {
@@ -5173,14 +6380,25 @@ static ATTRIBUTES int ec_ioctl_voe_read(
 
 /*****************************************************************************/
 
-/** Starts a VoE read operation without sending a sync message first.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 开始一个不发送同步消息的VoE读操作。
+@param master：EtherCAT主站。
+@param arg：ioctl()参数。
+@param ctx：文件句柄的私有数据结构。
+@return：成功返回零，否则返回负错误代码。
+@details：
+- 检查请求是否有效，如果无效返回-EPERM。
+- 从用户空间复制请求数据到内核空间，如果失败返回-EFAULT。
+- 不需要对master_sem进行加锁，因为sc和voe在此期间都不会被删除。
+- 通过data.config_index获取对应的sc（从master获取）。
+- 通过data.voe_index获取对应的voe（从sc获取）。
+- 调用ecrt_voe_handler_read_nosync()执行不发送同步消息的VoE读操作。
+- 返回0表示成功。
+*/
 static ATTRIBUTES int ec_ioctl_voe_read_nosync(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主站。*/
+    void *arg,              /**< ioctl()参数。*/
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。*/
 )
 {
     ec_ioctl_voe_t data;
@@ -5193,8 +6411,7 @@ static ATTRIBUTES int ec_ioctl_voe_read_nosync(
     if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
         return -EFAULT;
 
-    /* no locking of master_sem needed, because neither sc nor voe will not be
-     * deleted in the meantime. */
+    /* 不需要对master_sem进行加锁，因为sc和voe在此期间都不会被删除。 */
 
     if (!(sc = ec_master_get_config(master, data.config_index)))
     {
@@ -5212,14 +6429,28 @@ static ATTRIBUTES int ec_ioctl_voe_read_nosync(
 
 /*****************************************************************************/
 
-/** Starts a VoE write operation.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 开始一个VoE写操作。
+@param master：EtherCAT主站。
+@param arg：ioctl()参数。
+@param ctx：文件句柄的私有数据结构。
+@return：成功返回零，否则返回负错误代码。
+@details：
+- 检查请求是否有效，如果无效返回-EPERM。
+- 从用户空间复制请求数据到内核空间，如果失败返回-EFAULT。
+- 不需要对master_sem进行加锁，因为sc和voe在此期间都不会被删除。
+- 通过data.config_index获取对应的sc（从master获取）。
+- 通过data.voe_index获取对应的voe（从sc获取）。
+- 检查data.size是否为非零，如果是则进行数据复制。
+- 检查data.size是否超过voe的内存大小，如果超过返回-EOVERFLOW。
+- 从用户空间复制数据到voe的data字段，如果失败返回-EFAULT。
+- 调用ecrt_voe_handler_write()执行VoE写操作。
+- 返回0表示成功。
+*/
 static ATTRIBUTES int ec_ioctl_voe_write(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主站。*/
+    void *arg,              /**< ioctl()参数。*/
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。*/
 )
 {
     ec_ioctl_voe_t data;
@@ -5232,8 +6463,7 @@ static ATTRIBUTES int ec_ioctl_voe_write(
     if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
         return -EFAULT;
 
-    /* no locking of master_sem needed, because neither sc nor voe will not be
-     * deleted in the meantime. */
+    /* 不需要对master_sem进行加锁，因为sc和voe在此期间都不会被删除。 */
 
     if (!(sc = ec_master_get_config(master, data.config_index)))
     {
@@ -5261,14 +6491,26 @@ static ATTRIBUTES int ec_ioctl_voe_write(
 
 /*****************************************************************************/
 
-/** Executes the VoE state machine.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 执行VoE状态机。
+@param master：EtherCAT主站。
+@param arg：ioctl()参数。
+@param ctx：文件句柄的私有数据结构。
+@return：成功返回零，否则返回负错误代码。
+@details：
+- 检查请求是否有效，如果无效返回-EPERM。
+- 从用户空间复制请求数据到内核空间，如果失败返回-EFAULT。
+- 不需要对master_sem进行加锁，因为sc和voe在此期间都不会被删除。
+- 通过data.config_index获取对应的sc（从master获取）。
+- 通过data.voe_index获取对应的voe（从sc获取）。
+- 调用ecrt_voe_handler_execute()执行VoE状态机。
+- 将更新后的数据复制回用户空间，如果失败返回-EFAULT。
+- 返回0表示成功。
+*/
 static ATTRIBUTES int ec_ioctl_voe_exec(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主站。*/
+    void *arg,              /**< ioctl()参数。*/
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。*/
 )
 {
     ec_ioctl_voe_t data;
@@ -5281,8 +6523,7 @@ static ATTRIBUTES int ec_ioctl_voe_exec(
     if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
         return -EFAULT;
 
-    /* no locking of master_sem needed, because neither sc nor voe will not be
-     * deleted in the meantime. */
+    /* 不需要对master_sem进行加锁，因为sc和voe在此期间都不会被删除。 */
 
     if (!(sc = ec_master_get_config(master, data.config_index)))
     {
@@ -5308,14 +6549,25 @@ static ATTRIBUTES int ec_ioctl_voe_exec(
 
 /*****************************************************************************/
 
-/** Reads the received VoE data.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 读取接收到的VoE数据。
+@param master：EtherCAT主站。
+@param arg：ioctl()参数。
+@param ctx：文件句柄的私有数据结构。
+@return：成功返回零，否则返回负错误代码。
+@details：
+- 检查请求是否有效，如果无效返回-EPERM。
+- 从用户空间复制请求数据到内核空间，如果失败返回-EFAULT。
+- 不需要对master_sem进行加锁，因为sc和voe在此期间都不会被删除。
+- 通过data.config_index获取对应的sc（从master获取）。
+- 通过data.voe_index获取对应的voe（从sc获取）。
+- 将voe的data字段复制回用户空间，如果失败返回-EFAULT。
+- 返回0表示成功。
+*/
 static ATTRIBUTES int ec_ioctl_voe_data(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主站。*/
+    void *arg,              /**< ioctl()参数。*/
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。*/
 )
 {
     ec_ioctl_voe_t data;
@@ -5328,8 +6580,7 @@ static ATTRIBUTES int ec_ioctl_voe_data(
     if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
         return -EFAULT;
 
-    /* no locking of master_sem needed, because neither sc nor voe will not be
-     * deleted in the meantime. */
+    /* 不需要对master_sem进行加锁，因为sc和voe在此期间都不会被删除。 */
 
     if (!(sc = ec_master_get_config(master, data.config_index)))
     {
@@ -5350,13 +6601,33 @@ static ATTRIBUTES int ec_ioctl_voe_data(
 
 /*****************************************************************************/
 
-/** Read a file from a slave via FoE.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 通过FoE从从站读取文件。
+@param master：EtherCAT主站。
+@param arg：ioctl()参数。
+@return：成功返回零，否则返回负错误代码。
+@details：
+- 从用户空间复制请求数据到内核空间，如果失败返回-EFAULT。
+- 初始化一个ec_foe_request_t结构体。
+- 分配请求的buffer，如果失败则清除请求并返回错误。
+- 调用ec_foe_request_file()设置请求的文件名和密码。
+- 调用ec_foe_request_read()执行FoE读操作。
+- 锁定master_sem。
+- 通过slave_position查找对应的从站，如果不存在则解锁并返回错误。
+- 将请求添加到从站的foe_requests链表中。
+- 解锁master_sem。
+- 等待请求在FSM中处理。
+- 如果被中断则清除请求并返回错误。
+- 等待请求在主站FSM中完成处理。
+- 将请求结果和错误码复制回用户空间，如果失败返回错误。
+- 如果请求状态不是成功，则设置data_size为0并返回-EIO错误。
+- 如果请求状态是成功，则检查data_size是否超过buffer大小，如果超过则返回-EOVERFLOW错误。
+- 将数据大小复制回io.buffer，如果失败返回-EFAULT错误。
+- 返回0表示成功。
+*/
 static ATTRIBUTES int ec_ioctl_slave_foe_read(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< ioctl() argument. */
+    ec_master_t *master, /**< EtherCAT主站。*/
+    void *arg            /**< ioctl()参数。*/
 )
 {
     ec_ioctl_slave_foe_t io;
@@ -5459,13 +6730,33 @@ static ATTRIBUTES int ec_ioctl_slave_foe_read(
 
 /*****************************************************************************/
 
-/** Write a file to a slave via FoE
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/** 
+@brief 通过FoE向从站写入文件。
+@param master：EtherCAT主站。
+@param arg：ioctl()参数。
+@return：成功返回零，否则返回负错误代码。
+@details：
+- 从用户空间复制请求数据到内核空间，如果失败返回-EFAULT。
+- 初始化一个ec_foe_request_t结构体。
+- 分配请求的buffer，如果失败则清除请求并返回错误。
+- 从用户空间复制数据到请求的buffer，如果失败则清除请求并返回错误。
+- 调用ec_foe_request_file()设置请求的文件名和密码。
+- 调用ec_foe_request_write()执行FoE写操作。
+- 锁定master_sem。
+- 通过slave_position查找对应的从站，如果不存在则解锁并返回错误。
+- 将请求添加到从站的foe_requests链表中。
+- 解锁master_sem。
+- 等待请求在FSM中处理。
+- 如果被中断则清除请求并返回错误。
+- 等待请求在主站FSM中完成处理。
+- 将请求结果和错误码复制回用户空间，如果失败返回错误。
+- 如果请求状态不是成功，则返回-EIO错误。
+- 如果请求状态是成功，则将数据大小复制回io.data_size，如果失败返回-EFAULT错误。
+- 返回0表示成功。
+*/
 static ATTRIBUTES int ec_ioctl_slave_foe_write(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< ioctl() argument. */
+    ec_master_t *master, /**< EtherCAT主站。*/
+    void *arg            /**< ioctl()参数。*/
 )
 {
     ec_ioctl_slave_foe_t io;
@@ -5506,28 +6797,28 @@ static ATTRIBUTES int ec_ioctl_slave_foe_write(
     if (!(slave = ec_master_find_slave(master, 0, io.slave_position)))
     {
         ec_lock_up(&master->master_sem);
-        EC_MASTER_ERR(master, "Slave %u does not exist!\n",
+        EC_MASTER_ERR(master, "从站 %u 不存在！\n",
                       io.slave_position);
         ec_foe_request_clear(&request);
         return -EINVAL;
     }
 
-    EC_SLAVE_DBG(slave, 1, "Scheduling FoE write request.\n");
+    EC_SLAVE_DBG(slave, 1, "调度FoE写请求。\n");
 
-    // schedule FoE write request.
+    // 调度FoE写请求。
     list_add_tail(&request.list, &slave->foe_requests);
 
     ec_lock_up(&master->master_sem);
 
-    // wait for processing through FSM
+    // 等待在FSM中处理
     if (wait_event_interruptible(master->request_queue,
                                  request.state != EC_INT_REQUEST_QUEUED))
     {
-        // interrupted by signal
+        // 信号中断
         ec_lock_down(&master->master_sem);
         if (request.state == EC_INT_REQUEST_QUEUED)
         {
-            // abort request
+            // 中止请求
             list_del(&request.list);
             ec_lock_up(&master->master_sem);
             ec_foe_request_clear(&request);
@@ -5536,7 +6827,7 @@ static ATTRIBUTES int ec_ioctl_slave_foe_write(
         ec_lock_up(&master->master_sem);
     }
 
-    // wait until master FSM has finished processing
+    // 等待主站FSM处理完成
     wait_event(master->request_queue, request.state != EC_INT_REQUEST_BUSY);
 
     io.result = request.result;
@@ -5555,13 +6846,24 @@ static ATTRIBUTES int ec_ioctl_slave_foe_write(
 
 /*****************************************************************************/
 
-/** Read an SoE IDN.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 读取SoE IDN。
+@param master：EtherCAT主站。
+@param arg：ioctl()参数。
+@return：成功返回零，否则返回负错误代码。
+@details：
+- 从用户空间复制请求数据到内核空间，如果失败返回-EFAULT。
+- 分配数据的缓冲区，如果失败返回-ENOMEM。
+- 调用ecrt_master_read_idn()执行SoE读操作。
+- 如果失败则释放缓冲区并返回错误。
+- 将数据复制回用户空间，如果失败则释放缓冲区并返回错误。
+- 释放缓冲区。
+- 将更新后的数据复制回io结构体，如果失败返回错误。
+- 返回0表示成功。
+*/
 static ATTRIBUTES int ec_ioctl_slave_soe_read(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< ioctl() argument. */
+    ec_master_t *master, /**< EtherCAT主站。*/
+    void *arg            /**< ioctl()参数。*/
 )
 {
     ec_ioctl_slave_soe_read_t ioctl;
@@ -5576,7 +6878,7 @@ static ATTRIBUTES int ec_ioctl_slave_soe_read(
     data = kmalloc(ioctl.mem_size, GFP_KERNEL);
     if (!data)
     {
-        EC_MASTER_ERR(master, "Failed to allocate %zu bytes of IDN data.\n",
+        EC_MASTER_ERR(master, "无法分配%zu字节的IDN数据缓冲区。\n",
                       ioctl.mem_size);
         return -ENOMEM;
     }
@@ -5603,19 +6905,29 @@ static ATTRIBUTES int ec_ioctl_slave_soe_read(
         retval = -EFAULT;
     }
 
-    EC_MASTER_DBG(master, 1, "Finished SoE read request.\n");
+    EC_MASTER_DBG(master, 1, "完成SoE读请求。\n");
     return retval;
 }
 
 /*****************************************************************************/
 
-/** Write an IDN to a slave via SoE.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 向从站通过SoE写入IDN。
+@param master：EtherCAT主站。
+@param arg：ioctl()参数。
+@return：成功返回零，否则返回负错误代码。
+@details：
+- 从用户空间复制请求数据到内核空间，如果失败返回-EFAULT。
+- 分配数据的缓冲区，如果失败返回-ENOMEM。
+- 从用户空间复制数据到缓冲区，如果失败则释放缓冲区并返回错误。
+- 调用ecrt_master_write_idn()执行SoE写操作。
+- 释放缓冲区。
+- 将更新后的数据复制回io结构体，如果失败返回错误。
+- 返回0表示成功。
+*/
 static ATTRIBUTES int ec_ioctl_slave_soe_write(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< ioctl() argument. */
+    ec_master_t *master, /**< EtherCAT主站。*/
+    void *arg            /**< ioctl()参数。*/
 )
 {
     ec_ioctl_slave_soe_write_t ioctl;
@@ -5630,7 +6942,7 @@ static ATTRIBUTES int ec_ioctl_slave_soe_write(
     data = kmalloc(ioctl.data_size, GFP_KERNEL);
     if (!data)
     {
-        EC_MASTER_ERR(master, "Failed to allocate %zu bytes of IDN data.\n",
+        EC_MASTER_ERR(master, "无法分配%zu字节的IDN数据缓冲区。\n",
                       ioctl.data_size);
         return -ENOMEM;
     }
@@ -5654,18 +6966,24 @@ static ATTRIBUTES int ec_ioctl_slave_soe_write(
         retval = -EFAULT;
     }
 
-    EC_MASTER_DBG(master, 1, "Finished SoE write request.\n");
+    EC_MASTER_DBG(master, 1, "完成SoE写请求。\n");
     return retval;
 }
 
 /*****************************************************************************/
-/** Upload Dictionary.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/**
+@brief 上传字典。
+@param master：EtherCAT主站。
+@param arg：ioctl()参数。
+@return：成功返回零，否则返回负错误代码。
+@details：
+- 从用户空间复制请求数据到内核空间，如果失败返回-EFAULT。
+- 调用ec_master_dict_upload()执行字典上传操作。
+- 返回结果。
+*/
 static ATTRIBUTES int ec_ioctl_slave_dict_upload(
-    ec_master_t *master, /**< EtherCAT master. */
-    void *arg            /**< ioctl() argument. */
+    ec_master_t *master, /**< EtherCAT主站。*/
+    void *arg            /**< ioctl()参数。*/
 )
 {
     ec_ioctl_slave_dict_upload_t data;
@@ -5685,14 +7003,21 @@ static ATTRIBUTES int ec_ioctl_slave_dict_upload(
 
 #ifdef EC_EOE
 
-/** add an EOE interface
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/** 
+@brief 添加一个EOE接口。
+@param master：EtherCAT主站。
+@param arg：ioctl()参数。
+@param ctx：文件句柄的私有数据结构。
+@return：成功返回零，否则返回负错误代码。
+@details：
+- 从用户空间复制请求数据到内核空间，如果失败返回-EFAULT。
+- 调用ecrt_master_eoe_addif()执行添加EOE接口操作。
+- 返回结果。
+*/
 static ATTRIBUTES int ec_ioctl_eoe_addif(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主站。*/
+    void *arg,              /**< ioctl()参数。*/
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。*/
 )
 {
     int ret;
@@ -5710,14 +7035,21 @@ static ATTRIBUTES int ec_ioctl_eoe_addif(
 
 /*****************************************************************************/
 
-/** delete an EOE interface
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/** 
+@brief 删除一个EOE接口。
+@param master：EtherCAT主站。
+@param arg：ioctl()参数。
+@param ctx：文件句柄的私有数据结构。
+@return：成功返回零，否则返回负错误代码。
+@details：
+- 从用户空间复制请求数据到内核空间，如果失败返回-EFAULT。
+- 调用ecrt_master_eoe_delif()执行删除EOE接口操作。
+- 返回结果。
+*/
 static ATTRIBUTES int ec_ioctl_eoe_delif(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主站。*/
+    void *arg,              /**< ioctl()参数。*/
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。*/
 )
 {
     int ret;
@@ -5737,14 +7069,27 @@ static ATTRIBUTES int ec_ioctl_eoe_delif(
 
 /*****************************************************************************/
 
-/** Process an EtherCAT Mailbox Gateway message.
- *
- * \return Zero on success, otherwise a negative error code.
- */
+/** 
+@brief 处理EtherCAT邮箱网关消息。
+@param master：EtherCAT主站。
+@param arg：ioctl()参数。
+@param ctx：文件句柄的私有数据结构。
+@return：成功返回零，否则返回负错误代码。
+@details：
+- 从用户空间复制请求数据到内核空间，如果失败返回-EFAULT。
+- 确保传入的数据大小至少为邮箱头的大小。
+- 确保传入的数据大小不超过最大缓冲区大小。
+- 分配缓冲区，如果失败返回-ENOMEM。
+- 从用户空间复制数据到缓冲区，如果失败则释放缓冲区并返回错误。
+- 发送邮箱数据包。
+- 释放缓冲区。
+- 将更新后的数据复制回用户空间，如果失败则释放缓冲区并返回错误。
+- 返回0表示成功。
+*/
 static ATTRIBUTES int ec_ioctl_mbox_gateway(
-    ec_master_t *master,    /**< EtherCAT master. */
-    void *arg,              /**< ioctl() argument. */
-    ec_ioctl_context_t *ctx /**< Private data structure of file handle. */
+    ec_master_t *master,    /**< EtherCAT主站。*/
+    void *arg,              /**< ioctl()参数。*/
+    ec_ioctl_context_t *ctx /**< 文件句柄的私有数据结构。*/
 )
 {
     ec_ioctl_mbox_gateway_t ioctl;
@@ -5756,13 +7101,13 @@ static ATTRIBUTES int ec_ioctl_mbox_gateway(
         return -EFAULT;
     }
 
-    // ensure the incoming data will be at least the size of the mailbox header
+    // 确保传入的数据大小至少为邮箱头的大小
     if (ioctl.data_size < EC_MBOX_HEADER_SIZE)
     {
         return -EFAULT;
     }
 
-    // ensure the incoming data fits into the max buffer size
+    // 确保传入的数据大小不超过最大缓冲区大小
     if (ioctl.data_size > ioctl.buff_size)
     {
         return -EFAULT;
@@ -5771,8 +7116,7 @@ static ATTRIBUTES int ec_ioctl_mbox_gateway(
     data = kmalloc(ioctl.buff_size, GFP_KERNEL);
     if (!data)
     {
-        EC_MASTER_ERR(master, "Failed to allocate %zu bytes of"
-                              " mailbox gateway data.\n",
+        EC_MASTER_ERR(master, "无法分配%zu字节的邮箱网关数据缓冲区。\n",
                       ioctl.buff_size);
         return -ENOMEM;
     }
@@ -5782,7 +7126,7 @@ static ATTRIBUTES int ec_ioctl_mbox_gateway(
         return -EFAULT;
     }
 
-    // send the mailbox packet
+    // 发送邮箱数据包
     retval = ec_master_mbox_gateway(master, data,
                                     &ioctl.data_size, ioctl.buff_size);
     if (retval)
@@ -5804,24 +7148,34 @@ static ATTRIBUTES int ec_ioctl_mbox_gateway(
         retval = -EFAULT;
     }
 
-    EC_MASTER_DBG(master, 1, "Finished Mailbox Gateway request.\n");
+    EC_MASTER_DBG(master, 1, "完成邮箱网关请求。\n");
     return retval;
 }
 
 /*****************************************************************************/
 
-/** ioctl() function to use.
- */
+/** 
+@brief 使用的ioctl()函数。
+*/
 #ifdef EC_IOCTL_RTDM
 #define EC_IOCTL ec_ioctl_rtdm
 #else
 #define EC_IOCTL ec_ioctl
 #endif
 
-/** Called when an ioctl() command is issued.
- *
- * \return ioctl() return code.
- */
+/**
+@brief 处理ioctl()命令时调用的函数。
+@param master：EtherCAT主站。
+@param ctx：设备上下文。
+@param cmd：ioctl()命令标识符。
+@param arg：ioctl()参数。
+@return：ioctl()返回代码。
+@details：
+
+根据命令标识符调用相应的处理函数。
+
+返回处理函数的返回代码。
+*/
 long EC_IOCTL(
     ec_master_t *master,     /**< EtherCAT master. */
     ec_ioctl_context_t *ctx, /**< Device context. */

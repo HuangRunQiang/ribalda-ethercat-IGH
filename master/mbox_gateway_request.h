@@ -29,7 +29,7 @@
 
 /**
    \file
-   EtherCAT Mailbox Gateway request structure.
+   EtherCAT邮箱网关请求结构体。
 */
 
 /*****************************************************************************/
@@ -43,23 +43,20 @@
 
 /*****************************************************************************/
 
-/** EtherCAT Mailbox Gateway request.
+/** EtherCAT邮箱网关请求。
  */
 typedef struct
 {
-    struct list_head list;             /**< List item. */
-    uint8_t *data;                     /**< Pointer to MBox request data. */
-    size_t mem_size;                   /**< Size of MBox request data memory. */
-    size_t data_size;                  /**< Size of MBox request data. */
-    uint32_t response_timeout;         /**< Maximum time in ms, the transfer is
-                                         retried, if the slave does not respond. */
-    ec_internal_request_state_t state; /**< Request state. */
-    unsigned long jiffies_sent;        /**< Jiffies, when the upload/download
-                                            request was sent. */
-    uint16_t error_code;               /**< MBox Gateway error code. */
-    uint8_t mbox_type;                 /**< Cached MBox type */
+    struct list_head list;             /**< 链表项。 */
+    uint8_t *data;                     /**< 指向MBox请求数据的指针。 */
+    size_t mem_size;                   /**< MBox请求数据内存的大小。 */
+    size_t data_size;                  /**< MBox请求数据的大小。 */
+    uint32_t response_timeout;         /**< 如果从站不响应，传输重试的最大时间（以毫秒为单位）。 */
+    ec_internal_request_state_t state; /**< 请求状态。 */
+    unsigned long jiffies_sent;        /**< 发送上传/下载请求的时刻。 */
+    uint16_t error_code;               /**< MBox网关错误代码。 */
+    uint8_t mbox_type;                 /**< 缓存的MBox类型。 */
 } ec_mbg_request_t;
-
 /*****************************************************************************/
 
 void ec_mbg_request_init(ec_mbg_request_t *);

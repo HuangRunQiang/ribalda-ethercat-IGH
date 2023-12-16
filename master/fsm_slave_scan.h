@@ -29,7 +29,7 @@
 
 /**
    \file
-   EtherCAT slave scanning state machine.
+   EtherCAT从站扫描状态机。
 */
 
 /*****************************************************************************/
@@ -50,23 +50,22 @@
 /** \see ec_fsm_slave_scan */
 typedef struct ec_fsm_slave_scan ec_fsm_slave_scan_t;
 
-/** Finite state machine for scanning an EtherCAT slave.
+/** 用于扫描EtherCAT从站的有限状态机。
  */
 struct ec_fsm_slave_scan
 {
-    ec_slave_t *slave;                       /**< Slave the FSM runs on. */
-    ec_datagram_t *datagram;                 /**< Datagram used in the state machine. */
-    ec_fsm_slave_config_t *fsm_slave_config; /**< Slave configuration state
-                                               machine to use. */
-    ec_fsm_pdo_t *fsm_pdo;                   /**< PDO configuration state machine to use. */
-    unsigned int retries;                    /**< Retries on datagram timeout. */
-    unsigned int scan_retries;               /**< Retries on scan read error. */
-    unsigned long scan_jiffies_start;        /**< scan retry start timestamp. */
+    ec_slave_t *slave;                       /**< 运行FSM的从站。 */
+    ec_datagram_t *datagram;                 /**< 在状态机中使用的数据报。 */
+    ec_fsm_slave_config_t *fsm_slave_config; /**< 使用的从站配置状态机。 */
+    ec_fsm_pdo_t *fsm_pdo;                   /**< 使用的PDO配置状态机。 */
+    unsigned int retries;                    /**< 数据报超时的重试次数。 */
+    unsigned int scan_retries;               /**< 扫描读取错误的重试次数。 */
+    unsigned long scan_jiffies_start;        /**< 扫描重试的起始时间戳。 */
 
-    void (*state)(ec_fsm_slave_scan_t *, ec_datagram_t *); /**< State function. */
-    uint16_t sii_offset;                                   /**< SII offset in words. */
+    void (*state)(ec_fsm_slave_scan_t *, ec_datagram_t *); /**< 状态函数。 */
+    uint16_t sii_offset;                                   /**< SII偏移量（以字为单位）。 */
 
-    ec_fsm_sii_t fsm_sii; /**< SII state machine. */
+    ec_fsm_sii_t fsm_sii; /**< SII状态机。 */
 
 #ifdef EC_SII_OVERRIDE
     const struct firmware *sii_firmware;

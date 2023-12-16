@@ -47,18 +47,55 @@
 
 /*****************************************************************************/
 
-/** Slave configuration constructor.
- *
- * See ecrt_master_slave_config() for the usage of the \a alias and \a
- * position parameters.
+/**
+ * @brief 从配置中获取地址的从站对象。
+ * @param sc 从站配置的指针。
+ * @return 返回从站对象的指针。
+ *         如果未找到匹配的从站对象，则返回 NULL。
+ */
+ec_slave_t *ec_master_find_slave(
+    ec_master_t *master, /**< EtherCAT 主站。 */
+    uint16_t alias,      /**< 从站别名。 */
+    uint16_t position    /**< 从站位置。 */
+)
+{
+    ec_slave_t *slave;
+
+    list_for_each_entry(slave, &master->slaves, list)
+    {
+        if (slave->alias == alias && slave->ring_position == position)
+            return slave;
+    }
+
+    return NULL;
+}
+
+/*****************************************************************************/
+
+/**
+ * @brief 从站配置构造函数。
+ * @param sc 从站配置的指针。
+ * @param master EtherCAT 主站。
+ * @param alias 从站别名。
+ * @param position 从站位置。
+ * @param vendor_id 期望的厂商 ID。
+ * @param product_code 期望的产品码。
+ * @details
+ * - 初始化从站配置对象的成员变量。
+ * - 设置从站配置的主站、别名、位置、厂商 ID 和产品码。
+ * - 设置看门狗分频器为默认值。
+ * - 设置允许重叠 PDO 为默认值。
+ * - 设置看门狗间隔为默认值。
+ * - 初始化从站配置的 SDO 配置链表、SDO 请求链表、FoE 请求链表、寄存器请求链表、VoE 处理器链表和 SoE 配置链表。
+ * - 初始化紧急消息环。
  */
 void ec_slave_config_init(
-    ec_slave_config_t *sc, /**< Slave configuration. */
-    ec_master_t *master,   /**< EtherCAT master. */
-    uint16_t alias,        /**< Slave alias. */
-    uint16_t position,     /**< Slave position. */
-    uint32_t vendor_id,    /**< Expected vendor ID. */
-    uint32_t product_code  /**< Expected product code. */
+    ec_slave_config_t *sc, /**< 从站配置。 */
+    ec_master_t *master,   /**< EtherCAT 主站。 */
+    uint16_t alias,        /**< 从站别名。 */
+    uint16_t position,     /**< 从站位置。 */
+    uint32_t vendor_id,    /**< 期望的厂商 ID。 */
+    uint32_t product_code  /**< 期望的产品码。 */
 )
 {
     unsigned int i;
@@ -69,9 +106,9 @@ void ec_slave_config_init(
     sc->position = position;
     sc->vendor_id = vendor_id;
     sc->product_code = product_code;
-    sc->watchdog_divider = 0;       // use default
-    sc->allow_overlapping_pdos = 0; // default not allowed
-    sc->watchdog_intervals = 0;     // use default
+    sc->watchdog_divider = 0;       // 使用默认值
+    sc->allow_overlapping_pdos = 0; // 默认不允许
+    sc->watchdog_intervals = 0;     // 使用默认值
 
     sc->slave = NULL;
 
@@ -97,12 +134,23 @@ void ec_slave_config_init(
 
 /*****************************************************************************/
 
-/** Slave configuration destructor.
- *
- * Clears and frees a slave configuration object.
+/**
+ * @brief 从站配置析构函数。
+ * @param sc 从站配置的指针。
+ * @details
+ * - 清除并释放从站配置对象。
+ * - 断开从站配置与从站的关联。
+ * - 释放所有同步管理器的内存。
+ * - 释放所有 SDO 配置的内存。
+ * - 释放所有 SDO 请求的内存。
+ * - 释放所有 FoE 请求的内存。
+ * - 释放所有寄存器请求的内存。
+ * - 释放所有 VoE 处理器的内存。
+ * - 释放所有 SoE 配置的内存。
+ * - 清除紧急消息环。
  */
 void ec_slave_config_clear(
-    ec_slave_config_t *sc /**< Slave configuration. */
+    ec_slave_config_t *sc /**< 从站配置。 */
 )
 {
     unsigned int i;
@@ -114,11 +162,11 @@ void ec_slave_config_clear(
 
     ec_slave_config_detach(sc);
 
-    // Free sync managers
+    // 释放所有同步管理器
     for (i = 0; i < EC_MAX_SYNC_MANAGERS; i++)
         ec_sync_config_clear(&sc->sync_configs[i]);
 
-    // free all SDO configurations
+    // 释放所有 SDO 配置
     list_for_each_entry_safe(req, next_req, &sc->sdo_configs, list)
     {
         list_del(&req->list);
@@ -126,7 +174,7 @@ void ec_slave_config_clear(
         kfree(req);
     }
 
-    // free all SDO requests
+    // 释放所有 SDO 请求
     list_for_each_entry_safe(req, next_req, &sc->sdo_requests, list)
     {
         list_del(&req->list);
@@ -134,7 +182,7 @@ void ec_slave_config_clear(
         kfree(req);
     }
 
-    // free all FoE requests
+    // 释放所有 FoE 请求
     list_for_each_entry_safe(foe, next_foe, &sc->foe_requests, list)
     {
         list_del(&foe->list);
@@ -142,7 +190,7 @@ void ec_slave_config_clear(
         kfree(foe);
     }
 
-    // free all register requests
+    // 释放所有寄存器请求
     list_for_each_entry_safe(reg, next_reg, &sc->reg_requests, list)
     {
         list_del(&reg->list);
@@ -150,7 +198,7 @@ void ec_slave_config_clear(
         kfree(reg);
     }
 
-    // free all VoE handlers
+    // 释放所有 VoE 处理器
     list_for_each_entry_safe(voe, next_voe, &sc->voe_handlers, list)
     {
         list_del(&voe->list);
@@ -158,7 +206,7 @@ void ec_slave_config_clear(
         kfree(voe);
     }
 
-    // free all SoE configurations
+    // 释放所有 SoE 配置
     list_for_each_entry_safe(soe, next_soe, &sc->soe_configs, list)
     {
         list_del(&soe->list);
@@ -171,29 +219,30 @@ void ec_slave_config_clear(
 
 /*****************************************************************************/
 
-/** Prepares an FMMU configuration.
- *
- * Configuration data for the FMMU is saved in the slave config structure and
- * is written to the slave during the configuration. The FMMU configuration
- * is done in a way, that the complete data range of the corresponding sync
- * manager is covered. Seperate FMMUs are configured for each domain. If the
- * FMMU configuration is already prepared, the function does nothing and
- * returns with success.
- *
- * \retval >=0 Success, logical offset byte address.
- * \retval  <0 Error code.
+/**
+ * @brief 准备 FMMU 配置。
+ * @param sc 从站配置的指针。
+ * @param domain 域。
+ * @param sync_index 同步管理器索引。
+ * @param dir PDO 方向。
+ * @return 成功时返回逻辑偏移字节地址，失败时返回错误码。
+ * @details
+ * - 将 FMMU 配置数据保存在从站配置结构中，并在配置期间写入从站。
+ * - FMMU 配置以覆盖相应同步管理器的完整数据范围的方式进行。
+ * - 为每个域配置单独的 FMMU。
+ * - 如果 FMMU 配置已准备好，则函数不执行任何操作并返回成功。
  */
 int ec_slave_config_prepare_fmmu(
-    ec_slave_config_t *sc, /**< Slave configuration. */
-    ec_domain_t *domain,   /**< Domain. */
-    uint8_t sync_index,    /**< Sync manager index. */
-    ec_direction_t dir     /**< PDO direction. */
+    ec_slave_config_t *sc, /**< 从站配置。 */
+    ec_domain_t *domain,   /**< 域。 */
+    uint8_t sync_index,    /**< 同步管理器索引。 */
+    ec_direction_t dir     /**< PDO 方向。 */
 )
 {
     unsigned int i;
     ec_fmmu_config_t *fmmu;
 
-    // FMMU configuration already prepared?
+    // FMMU 配置已准备好？
     for (i = 0; i < sc->used_fmmus; i++)
     {
         fmmu = &sc->fmmu_configs[i];
@@ -203,7 +252,7 @@ int ec_slave_config_prepare_fmmu(
 
     if (sc->used_fmmus == EC_MAX_FMMUS)
     {
-        EC_CONFIG_ERR(sc, "FMMU limit reached!\n");
+        EC_CONFIG_ERR(sc, "FMMU 数量已达到上限！\n");
         return -EOVERFLOW;
     }
 
@@ -249,38 +298,39 @@ int ec_slave_config_prepare_fmmu(
 
 /*****************************************************************************/
 
-/** Attaches the configuration to the addressed slave object.
- *
- * \retval  0 Success.
- * \retval <0 Error code.
+/**
+ * @brief 将配置附加到从站对象。
+ * @param sc 从站配置的指针。
+ * @return 成功时返回 0。
+ *         失败时返回错误码。
  */
 int ec_slave_config_attach(
-    ec_slave_config_t *sc /**< Slave configuration. */
+    ec_slave_config_t *sc /**< 从站配置。 */
 )
 {
     ec_slave_t *slave;
 
     if (sc->slave)
-        return 0; // already attached
+        return 0; // 已经附加
 
     if (!(slave = ec_master_find_slave(
               sc->master, sc->alias, sc->position)))
     {
-        EC_CONFIG_DBG(sc, 1, "Failed to find slave for configuration.\n");
+        EC_CONFIG_DBG(sc, 1, "未找到配置的从站。\n");
         return -ENOENT;
     }
 
     if (slave->config)
     {
-        EC_CONFIG_DBG(sc, 1, "Failed to attach configuration. Slave %s-%u"
-                             " already has a configuration!\n",
+        EC_CONFIG_DBG(sc, 1, "无法附加配置。从站 %s-%u"
+                             " 已经有一个配置！\n",
                       ec_device_names[slave->device_index != 0], slave->ring_position);
         return -EEXIST;
     }
 
     if (!slave->sii_image)
     {
-        EC_CONFIG_DBG(sc, 1, "Slave cannot access its SII data!\n");
+        EC_CONFIG_DBG(sc, 1, "从站无法访问其 SII 数据！\n");
         return -EAGAIN;
     }
 
@@ -290,8 +340,8 @@ int ec_slave_config_attach(
 #endif
         slave->sii_image->sii.vendor_id != sc->vendor_id)
     {
-        EC_CONFIG_DBG(sc, 1, "Slave %s-%u has no matching vendor ID (0x%08X)"
-                             " for configuration (0x%08X).\n",
+        EC_CONFIG_DBG(sc, 1, "从站 %s-%u 的厂商 ID (0x%08X)"
+                             " 与配置的厂商 ID (0x%08X) 不匹配。\n",
                       ec_device_names[slave->device_index != 0], slave->ring_position,
                       slave->sii_image->sii.vendor_id, sc->vendor_id);
         return -EINVAL;
@@ -303,28 +353,30 @@ int ec_slave_config_attach(
 #endif
         slave->sii_image->sii.product_code != sc->product_code)
     {
-        EC_CONFIG_DBG(sc, 1, "Slave %s-%u has no matching product code (0x%08X)"
-                             " for configuration (0x%08X).\n",
+        EC_CONFIG_DBG(sc, 1, "从站 %s-%u 的产品码 (0x%08X)"
+                             " 与配置的产品码 (0x%08X) 不匹配。\n",
                       ec_device_names[slave->device_index != 0], slave->ring_position,
                       slave->sii_image->sii.product_code, sc->product_code);
         return -EINVAL;
     }
 
-    // attach slave
+    // 附加从站
     slave->config = sc;
     sc->slave = slave;
 
-    EC_CONFIG_DBG(sc, 1, "Attached slave %s-%u.\n",
+    EC_CONFIG_DBG(sc, 1, "附加从站 %s-%u。\n",
                   ec_device_names[slave->device_index != 0], slave->ring_position);
     return 0;
 }
 
 /*****************************************************************************/
 
-/** Detaches the configuration from a slave object.
+/**
+ * @brief 从站配置解除关联。
+ * @param sc 从站配置的指针。
  */
 void ec_slave_config_detach(
-    ec_slave_config_t *sc /**< Slave configuration. */
+    ec_slave_config_t *sc /**< 从站配置。 */
 )
 {
     if (sc->slave)
@@ -333,14 +385,13 @@ void ec_slave_config_detach(
 
         sc->slave->config = NULL;
 
-        // invalidate processing register request
+        // 使正在处理的寄存器请求无效
         list_for_each_entry(reg, &sc->reg_requests, list)
         {
             if (sc->slave->fsm.reg_request == reg)
             {
                 sc->slave->fsm.reg_request = NULL;
-                EC_SLAVE_WARN(sc->slave, "Aborting register request,"
-                                         " slave is detaching.\n");
+                EC_SLAVE_WARN(sc->slave, "中止寄存器请求，从站正在解除关联。\n");
                 reg->state = EC_INT_REQUEST_FAILURE;
                 wake_up_all(&sc->slave->master->request_queue);
                 break;
@@ -353,7 +404,13 @@ void ec_slave_config_detach(
 
 /*****************************************************************************/
 
-/** Loads the default PDO assignment from the slave object.
+/**
+ * @brief 加载从对象的默认PDO分配。
+ * @param sc 从对象的配置。
+ * @return 无。
+ * @details 
+ * - 遍历从对象的同步管理器。
+ * - 获取同步管理器的方向和PDO列表。
  */
 void ec_slave_config_load_default_sync_config(ec_slave_config_t *sc)
 {
@@ -372,7 +429,7 @@ void ec_slave_config_load_default_sync_config(ec_slave_config_t *sc)
             sync_config->dir = ec_sync_default_direction(sync);
             if (sync_config->dir == EC_DIR_INVALID)
                 EC_SLAVE_WARN(sc->slave,
-                              "SM%u has an invalid direction field!\n", sync_index);
+                              "SM%u的方向字段无效！\n", sync_index);
             ec_pdo_list_copy(&sync_config->pdos, &sync->pdos);
         }
     }
@@ -380,7 +437,17 @@ void ec_slave_config_load_default_sync_config(ec_slave_config_t *sc)
 
 /*****************************************************************************/
 
-/** Loads the default mapping for a PDO from the slave object.
+/**
+ * @brief 加载从对象的默认PDO映射。
+ * @param sc 从对象的配置。
+ * @param pdo PDO对象。
+ * @return 无。
+ * @details 
+ * - 遍历从对象的SII数据中的同步管理器。
+ * - 在同步管理器中查找与给定PDO对象相匹配的PDO。
+ * - 如果找到匹配的PDO：
+ *   - 如果PDO有名称，则使用该名称。
+ *   - 复制默认PDO的映射到给定的PDO对象。
  */
 void ec_slave_config_load_default_mapping(
     const ec_slave_config_t *sc,
@@ -393,16 +460,16 @@ void ec_slave_config_load_default_mapping(
     if (!sc->slave)
         return;
 
-    EC_CONFIG_DBG(sc, 1, "Loading default mapping for PDO 0x%04X.\n",
+    EC_CONFIG_DBG(sc, 1, "加载PDO 0x%04X的默认映射。\n",
                   pdo->index);
 
     if (!sc->slave->sii_image)
     {
-        EC_CONFIG_DBG(sc, 1, "Slave cannot access its SII data!\n");
+        EC_CONFIG_DBG(sc, 1, "从对象无法访问其SII数据！\n");
         return;
     }
 
-    // find PDO in any sync manager (it could be reassigned later)
+    // 在任何同步管理器中查找PDO（稍后可能会重新分配）
     for (i = 0; i < sc->slave->sii_image->sii.sync_count; i++)
     {
         sync = &sc->slave->sii_image->sii.syncs[i];
@@ -414,14 +481,14 @@ void ec_slave_config_load_default_mapping(
 
             if (default_pdo->name)
             {
-                EC_CONFIG_DBG(sc, 1, "Found PDO name \"%s\".\n",
+                EC_CONFIG_DBG(sc, 1, "找到PDO名称为“%s”。\n",
                               default_pdo->name);
 
-                // take PDO name from assigned one
+                // 使用已分配的PDO名称
                 ec_pdo_set_name(pdo, default_pdo->name);
             }
 
-            // copy entries (= default PDO mapping)
+            // 复制条目（即默认PDO映射）
             if (ec_pdo_copy_entries(pdo, default_pdo))
                 return;
 
@@ -430,7 +497,7 @@ void ec_slave_config_load_default_mapping(
                 const ec_pdo_entry_t *entry;
                 list_for_each_entry(entry, &pdo->entries, list)
                 {
-                    EC_CONFIG_DBG(sc, 1, "Entry 0x%04X:%02X.\n",
+                    EC_CONFIG_DBG(sc, 1, "条目0x%04X:%02X。\n",
                                   entry->index, entry->subindex);
                 }
             }
@@ -439,17 +506,18 @@ void ec_slave_config_load_default_mapping(
         }
     }
 
-    EC_CONFIG_DBG(sc, 1, "No default mapping found.\n");
+    EC_CONFIG_DBG(sc, 1, "未找到默认映射。\n");
 }
 
 /*****************************************************************************/
 
-/** Get the number of SDO configurations.
- *
- * \return Number of SDO configurations.
+/**
+ * @brief 获取SDO配置的数量。
+ * @param sc 从对象的配置。
+ * @return SDO配置的数量。
  */
 unsigned int ec_slave_config_sdo_count(
-    const ec_slave_config_t *sc /**< Slave configuration. */
+    const ec_slave_config_t *sc /**< 从对象的配置。 */
 )
 {
     const ec_sdo_request_t *req;
@@ -465,15 +533,15 @@ unsigned int ec_slave_config_sdo_count(
 
 /*****************************************************************************/
 
-/** Finds an SDO configuration via its position in the list.
- *
- * Const version.
- *
- * \return Search result, or NULL.
+/**
+ * @brief 通过在列表中的位置查找SDO配置。
+ * @param sc 从对象的配置。
+ * @param pos 列表中的位置。
+ * @return 搜索结果，或者NULL。
  */
 const ec_sdo_request_t *ec_slave_config_get_sdo_by_pos_const(
-    const ec_slave_config_t *sc, /**< Slave configuration. */
-    unsigned int pos             /**< Position in the list. */
+    const ec_slave_config_t *sc, /**< 从对象的配置。 */
+    unsigned int pos             /**< 列表中的位置。 */
 )
 {
     const ec_sdo_request_t *req;
@@ -490,12 +558,13 @@ const ec_sdo_request_t *ec_slave_config_get_sdo_by_pos_const(
 
 /*****************************************************************************/
 
-/** Get the number of IDN configurations.
- *
- * \return Number of SDO configurations.
+/**
+ * @brief 获取IDN配置的数量。
+ * @param sc 从对象的配置。
+ * @return IDN配置的数量。
  */
 unsigned int ec_slave_config_idn_count(
-    const ec_slave_config_t *sc /**< Slave configuration. */
+    const ec_slave_config_t *sc /**< 从对象的配置。 */
 )
 {
     const ec_soe_request_t *req;
@@ -511,15 +580,15 @@ unsigned int ec_slave_config_idn_count(
 
 /*****************************************************************************/
 
-/** Finds an IDN configuration via its position in the list.
- *
- * Const version.
- *
- * \return Search result, or NULL.
+/**
+ * @brief 通过在列表中的位置查找IDN配置。
+ * @param sc 从对象的配置。
+ * @param pos 列表中的位置。
+ * @return 搜索结果，或者NULL。
  */
 const ec_soe_request_t *ec_slave_config_get_idn_by_pos_const(
-    const ec_slave_config_t *sc, /**< Slave configuration. */
-    unsigned int pos             /**< Position in the list. */
+    const ec_slave_config_t *sc, /**< 从对象的配置。 */
+    unsigned int pos             /**< 列表中的位置。 */
 )
 {
     const ec_soe_request_t *req;
@@ -536,13 +605,15 @@ const ec_soe_request_t *ec_slave_config_get_idn_by_pos_const(
 
 /*****************************************************************************/
 
-/** Finds a CoE handler via its position in the list.
- *
- * \return Search result, or NULL.
+/**
+ * @brief 通过在列表中的位置查找CoE处理程序。
+ * @param sc 从对象的配置。
+ * @param pos 列表中的位置。
+ * @return 搜索结果，或者NULL。
  */
 ec_sdo_request_t *ec_slave_config_find_sdo_request(
-    ec_slave_config_t *sc, /**< Slave configuration. */
-    unsigned int pos       /**< Position in the list. */
+    ec_slave_config_t *sc, /**< 从对象的配置。 */
+    unsigned int pos       /**< 列表中的位置。 */
 )
 {
     ec_sdo_request_t *req;
@@ -559,13 +630,15 @@ ec_sdo_request_t *ec_slave_config_find_sdo_request(
 
 /*****************************************************************************/
 
-/** Finds an FoE handler via its position in the list.
- *
- * \return Search result, or NULL.
+/**
+ * @brief 通过在列表中的位置查找FoE处理程序。
+ * @param sc 从对象的配置。
+ * @param pos 列表中的位置。
+ * @return 搜索结果，或者NULL。
  */
 ec_foe_request_t *ec_slave_config_find_foe_request(
-    ec_slave_config_t *sc, /**< Slave configuration. */
-    unsigned int pos       /**< Position in the list. */
+    ec_slave_config_t *sc, /**< 从对象的配置。 */
+    unsigned int pos       /**< 列表中的位置。 */
 )
 {
     ec_foe_request_t *req;
@@ -582,13 +655,15 @@ ec_foe_request_t *ec_slave_config_find_foe_request(
 
 /*****************************************************************************/
 
-/** Finds a register handler via its position in the list.
- *
- * \return Search result, or NULL.
+/**
+ * @brief 通过在列表中的位置查找寄存器处理程序。
+ * @param sc 从对象的配置。
+ * @param pos 列表中的位置。
+ * @return 搜索结果，或者NULL。
  */
 ec_reg_request_t *ec_slave_config_find_reg_request(
-    ec_slave_config_t *sc, /**< Slave configuration. */
-    unsigned int pos       /**< Position in the list. */
+    ec_slave_config_t *sc, /**< 从对象的配置。 */
+    unsigned int pos       /**< 列表中的位置。 */
 )
 {
     ec_reg_request_t *reg;
@@ -605,13 +680,15 @@ ec_reg_request_t *ec_slave_config_find_reg_request(
 
 /*****************************************************************************/
 
-/** Finds a VoE handler via its position in the list.
- *
- * \return Search result, or NULL.
+/**
+ * @brief 通过在列表中的位置查找VoE处理程序。
+ * @param sc 从对象的配置。
+ * @param pos 列表中的位置。
+ * @return 搜索结果，或者NULL。
  */
 ec_voe_handler_t *ec_slave_config_find_voe_handler(
-    ec_slave_config_t *sc, /**< Slave configuration. */
-    unsigned int pos       /**< Position in the list. */
+    ec_slave_config_t *sc, /**< 从对象的配置。 */
+    unsigned int pos       /**< 列表中的位置。 */
 )
 {
     ec_voe_handler_t *voe;
@@ -628,10 +705,20 @@ ec_voe_handler_t *ec_slave_config_find_voe_handler(
 
 /*****************************************************************************/
 
-/** Expires any requests that have been started on a detached slave.
+/**
+ * @brief 在已分离的从对象上过期任何已启动的请求。
+ * @param sc 从对象的配置。
+ * @return 无。
+ * @details 
+ * - 遍历从对象的SDO请求列表。
+ * - 对于已排队或忙碌的SDO请求，将其状态设置为失败。
+ * - 遍历从对象的FoE请求列表。
+ * - 对于已排队或忙碌的FoE请求，将其状态设置为失败。
+ * - 遍历从对象的寄存器请求列表。
+ * - 对于已排队或忙碌的寄存器请求，将其状态设置为失败。
  */
 void ec_slave_config_expire_disconnected_requests(
-    ec_slave_config_t *sc /**< Slave configuration. */
+    ec_slave_config_t *sc /**< 从对象的配置。 */
 )
 {
     ec_sdo_request_t *sdo_req;
@@ -648,7 +735,7 @@ void ec_slave_config_expire_disconnected_requests(
         if (sdo_req->state == EC_INT_REQUEST_QUEUED ||
             sdo_req->state == EC_INT_REQUEST_BUSY)
         {
-            EC_CONFIG_DBG(sc, 1, "Aborting SDO request; no slave attached.\n");
+            EC_CONFIG_DBG(sc, 1, "中止SDO请求；没有连接的从对象。\n");
             sdo_req->state = EC_INT_REQUEST_FAILURE;
         }
     }
@@ -658,7 +745,7 @@ void ec_slave_config_expire_disconnected_requests(
         if (foe_req->state == EC_INT_REQUEST_QUEUED ||
             foe_req->state == EC_INT_REQUEST_BUSY)
         {
-            EC_CONFIG_DBG(sc, 1, "Aborting FoE request; no slave attached.\n");
+            EC_CONFIG_DBG(sc, 1, "中止FoE请求；没有连接的从对象。\n");
             foe_req->state = EC_INT_REQUEST_FAILURE;
         }
     }
@@ -668,7 +755,7 @@ void ec_slave_config_expire_disconnected_requests(
         if (reg_req->state == EC_INT_REQUEST_QUEUED ||
             reg_req->state == EC_INT_REQUEST_BUSY)
         {
-            EC_CONFIG_DBG(sc, 1, "Aborting register request; no slave attached.\n");
+            EC_CONFIG_DBG(sc, 1, "中止寄存器请求；没有连接的从对象。\n");
             reg_req->state = EC_INT_REQUEST_FAILURE;
         }
     }
@@ -678,6 +765,18 @@ void ec_slave_config_expire_disconnected_requests(
  *  Application interface
  *****************************************************************************/
 
+/**
+ * @brief 配置从对象的同步管理器。
+ * @param sc 从对象的配置。
+ * @param sync_index 同步管理器的索引。
+ * @param dir 方向。
+ * @param watchdog_mode 看门狗模式。
+ * @return 成功返回0，否则返回错误代码。
+ * @details 
+ * - 检查同步管理器索引是否有效。
+ * - 检查方向是否有效。
+ * - 配置同步管理器的方向和看门狗模式。
+ */
 int ecrt_slave_config_sync_manager(ec_slave_config_t *sc, uint8_t sync_index,
                                    ec_direction_t dir, ec_watchdog_mode_t watchdog_mode)
 {
@@ -689,13 +788,13 @@ int ecrt_slave_config_sync_manager(ec_slave_config_t *sc, uint8_t sync_index,
 
     if (sync_index >= EC_MAX_SYNC_MANAGERS)
     {
-        EC_CONFIG_ERR(sc, "Invalid sync manager index %u!\n", sync_index);
+        EC_CONFIG_ERR(sc, "无效的同步管理器索引 %u！\n", sync_index);
         return -ENOENT;
     }
 
     if (dir != EC_DIR_OUTPUT && dir != EC_DIR_INPUT)
     {
-        EC_CONFIG_ERR(sc, "Invalid direction %u!\n", (unsigned int)dir);
+        EC_CONFIG_ERR(sc, "无效的方向 %u！\n", (unsigned int)dir);
         return -EINVAL;
     }
 
@@ -707,6 +806,15 @@ int ecrt_slave_config_sync_manager(ec_slave_config_t *sc, uint8_t sync_index,
 
 /*****************************************************************************/
 
+/**
+ * @brief 配置从对象的看门狗。
+ * @param sc 从对象的配置。
+ * @param divider 分频器。
+ * @param intervals 间隔。
+ * @return 无。
+ * @details 
+ * - 配置从对象的看门狗分频器和间隔。
+ */
 void ecrt_slave_config_watchdog(ec_slave_config_t *sc,
                                 uint16_t divider, uint16_t intervals)
 {
@@ -719,6 +827,14 @@ void ecrt_slave_config_watchdog(ec_slave_config_t *sc,
 
 /*****************************************************************************/
 
+/**
+ * @brief 配置从对象的重叠PDO。
+ * @param sc 从对象的配置。
+ * @param allow_overlapping_pdos 允许重叠的PDO。
+ * @return 无。
+ * @details 
+ * - 配置从对象是否允许重叠的PDO。
+ */
 void ecrt_slave_config_overlapping_pdos(ec_slave_config_t *sc,
                                         uint8_t allow_overlapping_pdos)
 {
@@ -730,6 +846,20 @@ void ecrt_slave_config_overlapping_pdos(ec_slave_config_t *sc,
 
 /*****************************************************************************/
 
+/**
+ * @brief 添加从对象的PDO分配。
+ * @param sc 从对象的配置。
+ * @param sync_index 同步管理器的索引。
+ * @param pdo_index PDO的索引。
+ * @return 成功返回0，否则返回错误代码。
+ * @details 
+ * - 检查同步管理器索引是否有效。
+ * - 锁定主站信号量。
+ * - 添加PDO到同步管理器的PDO列表。
+ * - 设置PDO的同步管理器索引。
+ * - 加载默认的PDO映射。
+ * - 解锁主站信号量。
+ */
 int ecrt_slave_config_pdo_assign_add(ec_slave_config_t *sc,
                                      uint8_t sync_index, uint16_t pdo_index)
 {
@@ -741,7 +871,7 @@ int ecrt_slave_config_pdo_assign_add(ec_slave_config_t *sc,
 
     if (sync_index >= EC_MAX_SYNC_MANAGERS)
     {
-        EC_CONFIG_ERR(sc, "Invalid sync manager index %u!\n", sync_index);
+        EC_CONFIG_ERR(sc, "无效的同步管理器索引 %u！\n", sync_index);
         return -EINVAL;
     }
 
@@ -763,6 +893,17 @@ int ecrt_slave_config_pdo_assign_add(ec_slave_config_t *sc,
 
 /*****************************************************************************/
 
+/**
+ * @brief 清除从对象的PDO分配。
+ * @param sc 从对象的配置。
+ * @param sync_index 同步管理器的索引。
+ * @return 无。
+ * @details 
+ * - 检查同步管理器索引是否有效。
+ * - 锁定主站信号量。
+ * - 清除同步管理器的PDO列表。
+ * - 解锁主站信号量。
+ */
 void ecrt_slave_config_pdo_assign_clear(ec_slave_config_t *sc,
                                         uint8_t sync_index)
 {
@@ -771,7 +912,7 @@ void ecrt_slave_config_pdo_assign_clear(ec_slave_config_t *sc,
 
     if (sync_index >= EC_MAX_SYNC_MANAGERS)
     {
-        EC_CONFIG_ERR(sc, "Invalid sync manager index %u!\n", sync_index);
+        EC_CONFIG_ERR(sc, "无效的同步管理器索引 %u！\n", sync_index);
         return;
     }
 
@@ -782,6 +923,20 @@ void ecrt_slave_config_pdo_assign_clear(ec_slave_config_t *sc,
 
 /*****************************************************************************/
 
+/**
+ * @brief 添加从对象的PDO映射。
+ * @param sc 从对象的配置。
+ * @param pdo_index PDO的索引。
+ * @param entry_index 条目的索引。
+ * @param entry_subindex 条目的子索引。
+ * @param entry_bit_length 条目的位长度。
+ * @return 成功返回0，否则返回错误代码。
+ * @details 
+ * - 查找与给定PDO索引相匹配的PDO。
+ * - 锁定主站信号量。
+ * - 添加条目到PDO的条目列表。
+ * - 解锁主站信号量。
+ */
 int ecrt_slave_config_pdo_mapping_add(ec_slave_config_t *sc,
                                       uint16_t pdo_index, uint16_t entry_index, uint8_t entry_subindex,
                                       uint8_t entry_bit_length)
@@ -813,7 +968,7 @@ int ecrt_slave_config_pdo_mapping_add(ec_slave_config_t *sc,
     }
     else
     {
-        EC_CONFIG_ERR(sc, "PDO 0x%04X is not assigned.\n", pdo_index);
+        EC_CONFIG_ERR(sc, "PDO 0x%04X未分配。\n", pdo_index);
         retval = -ENOENT;
     }
 
@@ -822,6 +977,17 @@ int ecrt_slave_config_pdo_mapping_add(ec_slave_config_t *sc,
 
 /*****************************************************************************/
 
+/**
+ * @brief 清除从对象的PDO映射。
+ * @param sc 从对象的配置。
+ * @param pdo_index PDO的索引。
+ * @return 无。
+ * @details 
+ * - 查找与给定PDO索引相匹配的PDO。
+ * - 锁定主站信号量。
+ * - 清除PDO的条目列表。
+ * - 解锁主站信号量。
+ */
 void ecrt_slave_config_pdo_mapping_clear(ec_slave_config_t *sc,
                                          uint16_t pdo_index)
 {
@@ -844,12 +1010,31 @@ void ecrt_slave_config_pdo_mapping_clear(ec_slave_config_t *sc,
     }
     else
     {
-        EC_CONFIG_WARN(sc, "PDO 0x%04X is not assigned.\n", pdo_index);
+        EC_CONFIG_WARN(sc, "PDO 0x%04X未分配。\n", pdo_index);
     }
 }
 
 /*****************************************************************************/
 
+/**
+ * @brief 配置从对象的PDO。
+ * @param sc 从对象的配置。
+ * @param n_syncs 同步管理器的数量。
+ * @param syncs 同步管理器的信息。
+ * @return 成功返回0，否则返回错误代码。
+ * @details 
+ * - 遍历同步管理器信息：
+ *   - 检查同步管理器索引是否有效。
+ *   - 配置同步管理器。
+ *   - 清除同步管理器的PDO分配。
+ *   - 如果有PDO信息：
+ *     - 遍历PDO信息：
+ *       - 添加PDO到同步管理器的PDO列表。
+ *       - 如果有条目信息：
+ *         - 清除PDO的条目列表。
+ *         - 遍历条目信息：
+ *           - 添加条目到PDO的条目列表。
+ */
 int ecrt_slave_config_pdos(ec_slave_config_t *sc,
                            unsigned int n_syncs, const ec_sync_info_t syncs[])
 {
@@ -874,7 +1059,7 @@ int ecrt_slave_config_pdos(ec_slave_config_t *sc,
 
         if (sync_info->index >= EC_MAX_SYNC_MANAGERS)
         {
-            EC_CONFIG_ERR(sc, "Invalid sync manager index %u!\n",
+            EC_CONFIG_ERR(sc, "无效的同步管理器索引 %u！\n",
                           sync_info->index);
             return -ENOENT;
         }
@@ -923,6 +1108,22 @@ int ecrt_slave_config_pdos(ec_slave_config_t *sc,
 
 /*****************************************************************************/
 
+/**
+ * @brief 配置从对象的寄存器PDO条目。
+ * @param sc 从对象的配置。
+ * @param index 寄存器的索引。
+ * @param subindex 寄存器的子索引。
+ * @param domain 领域。
+ * @param bit_position 位位置。
+ * @return 成功返回寄存器的偏移量，否则返回错误代码。
+ * @details 
+ * - 遍历同步管理器的PDO：
+ *   - 遍历PDO的条目：
+ *     - 如果条目的索引和子索引匹配：
+ *       - 计算位偏移量。
+ *       - 如果有位位置指针，则设置位位置。
+ *       - 准备FMMU并返回同步偏移量和位偏移量。
+ */
 int ecrt_slave_config_reg_pdo_entry(
     ec_slave_config_t *sc,
     uint16_t index,
@@ -963,8 +1164,7 @@ int ecrt_slave_config_reg_pdo_entry(
                     }
                     else if (bit_pos)
                     {
-                        EC_CONFIG_ERR(sc, "PDO entry 0x%04X:%02X does"
-                                          " not byte-align.\n",
+                        EC_CONFIG_ERR(sc, "PDO条目0x%04X:%02X不字节对齐。\n",
                                       index, subindex);
                         return -EFAULT;
                     }
@@ -980,13 +1180,30 @@ int ecrt_slave_config_reg_pdo_entry(
         }
     }
 
-    EC_CONFIG_ERR(sc, "PDO entry 0x%04X:%02X is not mapped.\n",
+    EC_CONFIG_ERR(sc, "PDO条目0x%04X:%02X未映射。\n",
                   index, subindex);
     return -ENOENT;
 }
 
 /*****************************************************************************/
 
+/**
+ * @brief 配置从对象的寄存器PDO条目位置。
+ * @param sc 从对象的配置。
+ * @param sync_index 同步管理器的索引。
+ * @param pdo_pos PDO的位置。
+ * @param entry_pos 条目的位置。
+ * @param domain 领域。
+ * @param bit_position 位位置。
+ * @return 成功返回寄存器的偏移量，否则返回错误代码。
+ * @details 
+ * - 检查同步管理器索引是否有效。
+ * - 遍历同步管理器的PDO和条目：
+ *   - 如果位置不匹配，计算位偏移量。
+ *   - 如果位置匹配，计算位偏移量和同步偏移量。
+ *   - 如果有位位置指针，则设置位位置。
+ *   - 准备FMMU并返回同步偏移量和位偏移量。
+ */
 int ecrt_slave_config_reg_pdo_entry_pos(
     ec_slave_config_t *sc,
     uint8_t sync_index,
@@ -1007,7 +1224,7 @@ int ecrt_slave_config_reg_pdo_entry_pos(
 
     if (sync_index >= EC_MAX_SYNC_MANAGERS)
     {
-        EC_CONFIG_ERR(sc, "Invalid syncmanager position %u.\n", sync_index);
+        EC_CONFIG_ERR(sc, "无效的同步管理器位置 %u！\n", sync_index);
         return -EINVAL;
     }
 
@@ -1035,9 +1252,8 @@ int ecrt_slave_config_reg_pdo_entry_pos(
                 }
                 else if (bit_pos)
                 {
-                    EC_CONFIG_ERR(sc, "PDO entry 0x%04X:%02X does"
-                                      " not byte-align.\n",
-                                  pdo->index, entry->subindex);
+                    EC_CONFIG_ERR(sc, "PDO条目0x%04X:%02X不字节对齐。\n",
+                                      pdo->index, entry->subindex);
                     return -EFAULT;
                 }
 
@@ -1053,13 +1269,25 @@ int ecrt_slave_config_reg_pdo_entry_pos(
         pp++;
     }
 
-    EC_CONFIG_ERR(sc, "PDO entry specification %u/%u/%u out of range.\n",
+    EC_CONFIG_ERR(sc, "PDO条目规范 %u/%u/%u 超出范围。\n",
                   sync_index, pdo_pos, entry_pos);
     return -ENOENT;
 }
 
 /*****************************************************************************/
 
+/**
+ * @brief 配置从对象的DC。
+ * @param sc 从对象的配置。
+ * @param assign_activate 分配激活。
+ * @param sync0_cycle_time 同步0的周期时间。
+ * @param sync0_shift_time 同步0的偏移时间。
+ * @param sync1_cycle_time 同步1的周期时间。
+ * @param sync1_shift_time 同步1的偏移时间。
+ * @return 无。
+ * @details 
+ * - 配置从对象的DC分配激活、同步0的周期时间和偏移时间、同步1的周期时间和偏移时间。
+ */
 void ecrt_slave_config_dc(ec_slave_config_t *sc, uint16_t assign_activate,
                           uint32_t sync0_cycle_time, int32_t sync0_shift_time,
                           uint32_t sync1_cycle_time, int32_t sync1_shift_time)
@@ -1080,8 +1308,7 @@ void ecrt_slave_config_dc(ec_slave_config_t *sc, uint16_t assign_activate,
 
         if ((sync1_cycle_time + sync1_shift_time) < sc->dc_sync[1].shift_time)
         {
-            EC_CONFIG_ERR(sc, "Slave Config DC results in a negative "
-                              "sync1 cycle.  Resetting to zero cycle and shift time\n");
+            EC_CONFIG_ERR(sc, "从配置DC结果为负的同步1周期。重置为零周期和偏移时间\n");
 
             sc->dc_sync[1].cycle_time = 0;
             sc->dc_sync[1].shift_time = 0;
@@ -1101,6 +1328,23 @@ void ecrt_slave_config_dc(ec_slave_config_t *sc, uint16_t assign_activate,
 
 /*****************************************************************************/
 
+/**
+ * @brief 配置从对象的SDO。
+ * @param sc 从对象的配置。
+ * @param index SDO的索引。
+ * @param subindex SDO的子索引。
+ * @param data 数据。
+ * @param size 大小。
+ * @return 成功返回0，否则返回错误代码。
+ * @details 
+ * - 检查从对象是否支持CoE。
+ * - 分配SDO请求内存。
+ * - 初始化SDO请求。
+ * - 设置SDO请求的索引和数据。
+ * - 锁定主站信号量。
+ * - 添加SDO请求到从对象的SDO配置列表。
+ * - 解锁主站信号量。
+ */
 int ecrt_slave_config_sdo(ec_slave_config_t *sc, uint16_t index,
                           uint8_t subindex, const uint8_t *data, size_t size)
 {
@@ -1114,14 +1358,13 @@ int ecrt_slave_config_sdo(ec_slave_config_t *sc, uint16_t index,
 
     if (slave && slave->sii_image && !(slave->sii_image->sii.mailbox_protocols & EC_MBOX_COE))
     {
-        EC_CONFIG_WARN(sc, "Attached slave does not support CoE!\n");
+        EC_CONFIG_WARN(sc, "连接的从设备不支持CoE！\n");
     }
 
     if (!(req = (ec_sdo_request_t *)
               kmalloc(sizeof(ec_sdo_request_t), GFP_KERNEL)))
     {
-        EC_CONFIG_ERR(sc, "Failed to allocate memory for"
-                          " SDO configuration!\n");
+        EC_CONFIG_ERR(sc, "分配SDO配置的内存失败！\n");
         return -ENOMEM;
     }
 
@@ -1144,6 +1387,16 @@ int ecrt_slave_config_sdo(ec_slave_config_t *sc, uint16_t index,
 
 /*****************************************************************************/
 
+/**
+ * @brief 配置从对象的SDO8。
+ * @param sc 从对象的配置。
+ * @param index SDO的索引。
+ * @param subindex SDO的子索引。
+ * @param value 值。
+ * @return 成功返回0，否则返回错误代码。
+ * @details 
+ * - 调用ecrt_slave_config_sdo()，传递一个字节的数据。
+ */
 int ecrt_slave_config_sdo8(ec_slave_config_t *sc, uint16_t index,
                            uint8_t subindex, uint8_t value)
 {
@@ -1159,6 +1412,16 @@ int ecrt_slave_config_sdo8(ec_slave_config_t *sc, uint16_t index,
 
 /*****************************************************************************/
 
+/**
+ * @brief 配置从对象的SDO16。
+ * @param sc 从对象的配置。
+ * @param index SDO的索引。
+ * @param subindex SDO的子索引。
+ * @param value 值。
+ * @return 成功返回0，否则返回错误代码。
+ * @details 
+ * - 调用ecrt_slave_config_sdo()，传递两个字节的数据。
+ */
 int ecrt_slave_config_sdo16(ec_slave_config_t *sc, uint16_t index,
                             uint8_t subindex, uint16_t value)
 {
@@ -1174,6 +1437,16 @@ int ecrt_slave_config_sdo16(ec_slave_config_t *sc, uint16_t index,
 
 /*****************************************************************************/
 
+/**
+ * @brief 配置从对象的SDO32。
+ * @param sc 从对象的配置。
+ * @param index SDO的索引。
+ * @param subindex SDO的子索引。
+ * @param value 值。
+ * @return 成功返回0，否则返回错误代码。
+ * @details 
+ * - 调用ecrt_slave_config_sdo()，传递四个字节的数据。
+ */
 int ecrt_slave_config_sdo32(ec_slave_config_t *sc, uint16_t index,
                             uint8_t subindex, uint32_t value)
 {
@@ -1189,6 +1462,22 @@ int ecrt_slave_config_sdo32(ec_slave_config_t *sc, uint16_t index,
 
 /*****************************************************************************/
 
+/**
+ * @brief 配置从对象的完整SDO。
+ * @param sc 从对象的配置。
+ * @param index SDO的索引。
+ * @param data 数据。
+ * @param size 大小。
+ * @return 成功返回0，否则返回错误代码。
+ * @details 
+ * - 检查从对象是否支持CoE。
+ * - 分配SDO请求内存。
+ * - 初始化SDO请求。
+ * - 设置SDO请求的索引和数据。
+ * - 锁定主站信号量。
+ * - 添加SDO请求到从对象的SDO配置列表。
+ * - 解锁主站信号量。
+ */
 int ecrt_slave_config_complete_sdo(ec_slave_config_t *sc, uint16_t index,
                                    const uint8_t *data, size_t size)
 {
@@ -1202,14 +1491,13 @@ int ecrt_slave_config_complete_sdo(ec_slave_config_t *sc, uint16_t index,
 
     if (slave && !(slave->sii_image->sii.mailbox_protocols & EC_MBOX_COE))
     {
-        EC_CONFIG_WARN(sc, "Attached slave does not support CoE!\n");
+        EC_CONFIG_WARN(sc, "连接的从设备不支持CoE！\n");
     }
 
     if (!(req = (ec_sdo_request_t *)
               kmalloc(sizeof(ec_sdo_request_t), GFP_KERNEL)))
     {
-        EC_CONFIG_ERR(sc, "Failed to allocate memory for"
-                          " SDO configuration!\n");
+        EC_CONFIG_ERR(sc, "分配SDO配置的内存失败！\n");
         return -ENOMEM;
     }
 
@@ -1232,6 +1520,14 @@ int ecrt_slave_config_complete_sdo(ec_slave_config_t *sc, uint16_t index,
 
 /*****************************************************************************/
 
+/**
+ * @brief 配置从对象的紧急大小。
+ * @param sc 从对象的配置。
+ * @param elements 元素数量。
+ * @return 成功返回0，否则返回错误代码。
+ * @details 
+ * - 调用ec_coe_emerg_ring_size()，设置紧急环的大小。
+ */
 int ecrt_slave_config_emerg_size(ec_slave_config_t *sc, size_t elements)
 {
     return ec_coe_emerg_ring_size(&sc->emerg_ring, elements);
@@ -1239,6 +1535,14 @@ int ecrt_slave_config_emerg_size(ec_slave_config_t *sc, size_t elements)
 
 /*****************************************************************************/
 
+/**
+ * @brief 弹出从对象的紧急数据。
+ * @param sc 从对象的配置。
+ * @param target 目标指针。
+ * @return 成功返回0，否则返回错误代码。
+ * @details 
+ * - 调用ec_coe_emerg_ring_pop()，弹出紧急环的数据。
+ */
 int ecrt_slave_config_emerg_pop(ec_slave_config_t *sc, uint8_t *target)
 {
     return ec_coe_emerg_ring_pop(&sc->emerg_ring, target);
@@ -1246,6 +1550,13 @@ int ecrt_slave_config_emerg_pop(ec_slave_config_t *sc, uint8_t *target)
 
 /*****************************************************************************/
 
+/**
+ * @brief 清除从对象的紧急环。
+ * @param sc 从对象的配置。
+ * @return 成功返回0，否则返回错误代码。
+ * @details 
+ * - 调用ec_coe_emerg_ring_clear_ring()，清除紧急环。
+ */
 int ecrt_slave_config_emerg_clear(ec_slave_config_t *sc)
 {
     return ec_coe_emerg_ring_clear_ring(&sc->emerg_ring);
@@ -1253,6 +1564,13 @@ int ecrt_slave_config_emerg_clear(ec_slave_config_t *sc)
 
 /*****************************************************************************/
 
+/**
+ * @brief 获取从对象的紧急环溢出次数。
+ * @param sc 从对象的配置。
+ * @return 紧急环溢出次数。
+ * @details 
+ * - 调用ec_coe_emerg_ring_overruns()，获取紧急环溢出次数。
+ */
 int ecrt_slave_config_emerg_overruns(ec_slave_config_t *sc)
 {
     return ec_coe_emerg_ring_overruns(&sc->emerg_ring);
@@ -1260,8 +1578,21 @@ int ecrt_slave_config_emerg_overruns(ec_slave_config_t *sc)
 
 /*****************************************************************************/
 
-/** Same as ecrt_slave_config_create_sdo_request(), but with ERR_PTR() return
- * value.
+/**
+ * @brief 创建从对象的SDO请求（带错误指针返回值）。
+ * @param sc 从对象的配置。
+ * @param index SDO的索引。
+ * @param subindex SDO的子索引。
+ * @param complete 是否为完整SDO。
+ * @param size 数据大小。
+ * @return SDO请求指针。
+ * @details 
+ * - 分配SDO请求内存。
+ * - 初始化SDO请求。
+ * - 设置SDO请求的索引。
+ * - 锁定主站信号量。
+ * - 添加SDO请求到从对象的SDO请求列表。
+ * - 解锁主站信号量。
  */
 ec_sdo_request_t *ecrt_slave_config_create_sdo_request_err(
     ec_slave_config_t *sc, uint16_t index, uint8_t subindex, uint8_t complete, size_t size)
@@ -1276,7 +1607,7 @@ ec_sdo_request_t *ecrt_slave_config_create_sdo_request_err(
     if (!(req = (ec_sdo_request_t *)
               kmalloc(sizeof(ec_sdo_request_t), GFP_KERNEL)))
     {
-        EC_CONFIG_ERR(sc, "Failed to allocate SDO request memory!\n");
+        EC_CONFIG_ERR(sc, "分配SDO请求的内存失败！\n");
         return ERR_PTR(-ENOMEM);
     }
 
@@ -1297,7 +1628,7 @@ ec_sdo_request_t *ecrt_slave_config_create_sdo_request_err(
         return ERR_PTR(ret);
     }
 
-    // prepare data for optional writing
+    // 准备可选写入的数据
     memset(req->data, 0x00, size);
     req->data_size = size;
 
@@ -1310,6 +1641,16 @@ ec_sdo_request_t *ecrt_slave_config_create_sdo_request_err(
 
 /*****************************************************************************/
 
+/**
+ * @brief 创建从对象的SDO请求。
+ * @param sc 从对象的配置。
+ * @param index SDO的索引。
+ * @param subindex SDO的子索引。
+ * @param size 数据大小。
+ * @return SDO请求指针。
+ * @details 
+ * - 调用ecrt_slave_config_create_sdo_request_err()，传递complete为0。
+ */
 ec_sdo_request_t *ecrt_slave_config_create_sdo_request(
     ec_slave_config_t *sc, uint16_t index, uint8_t subindex, size_t size)
 {
@@ -1320,6 +1661,15 @@ ec_sdo_request_t *ecrt_slave_config_create_sdo_request(
 
 /*****************************************************************************/
 
+/**
+ * @brief 创建从对象的完整SDO请求。
+ * @param sc 从对象的配置。
+ * @param index SDO的索引。
+ * @param size 数据大小。
+ * @return SDO请求指针。
+ * @details 
+ * - 调用ecrt_slave_config_create_sdo_request_err()，传递complete为1。
+ */
 ec_sdo_request_t *ecrt_slave_config_create_sdo_request_complete(
     ec_slave_config_t *sc, uint16_t index, size_t size)
 {
@@ -1330,8 +1680,18 @@ ec_sdo_request_t *ecrt_slave_config_create_sdo_request_complete(
 
 /*****************************************************************************/
 
-/** Same as ecrt_slave_config_create_foe_request(), but with ERR_PTR() return
- * value.
+/**
+ * @brief 创建从对象的FoE请求（带错误指针返回值）。
+ * @param sc 从对象的配置。
+ * @param size 数据大小。
+ * @return FoE请求指针。
+ * @details 
+ * - 分配FoE请求内存。
+ * - 初始化FoE请求。
+ * - 分配FoE请求的数据内存。
+ * - 锁定主站信号量。
+ * - 添加FoE请求到从对象的FoE请求列表。
+ * - 解锁主站信号量。
  */
 ec_foe_request_t *ecrt_slave_config_create_foe_request_err(
     ec_slave_config_t *sc, size_t size)
@@ -1345,7 +1705,7 @@ ec_foe_request_t *ecrt_slave_config_create_foe_request_err(
     if (!(req = (ec_foe_request_t *)
               kmalloc(sizeof(ec_foe_request_t), GFP_KERNEL)))
     {
-        EC_CONFIG_ERR(sc, "Failed to allocate FoE request memory!\n");
+        EC_CONFIG_ERR(sc, "分配FoE请求的内存失败！\n");
         return ERR_PTR(-ENOMEM);
     }
 
@@ -1356,13 +1716,12 @@ ec_foe_request_t *ecrt_slave_config_create_foe_request_err(
     {
         ec_foe_request_clear(req);
         kfree(req);
-        EC_CONFIG_ERR(sc, "Failed to allocate FoE request data "
-                          "memory (size=%zu)!\n",
+        EC_CONFIG_ERR(sc, "分配FoE请求数据的内存失败（大小=%zu）！\n",
                       size);
         return ERR_PTR(ret);
     }
 
-    // prepare data for optional writing
+    // 准备可选写入的数据
     memset(req->buffer, 0x00, size);
     req->data_size = size;
 
@@ -1375,6 +1734,14 @@ ec_foe_request_t *ecrt_slave_config_create_foe_request_err(
 
 /*****************************************************************************/
 
+/**
+ * @brief 创建从对象的FoE请求。
+ * @param sc 从对象的配置。
+ * @param size 数据大小。
+ * @return FoE请求指针。
+ * @details 
+ * - 调用ecrt_slave_config_create_foe_request_err()，返回NULL或指针。
+ */
 ec_foe_request_t *ecrt_slave_config_create_foe_request(
     ec_slave_config_t *sc, size_t size)
 {
@@ -1384,8 +1751,17 @@ ec_foe_request_t *ecrt_slave_config_create_foe_request(
 
 /*****************************************************************************/
 
-/** Same as ecrt_slave_config_create_reg_request(), but with ERR_PTR() return
- * value.
+/**
+ * @brief 创建从对象的寄存器请求（带错误指针返回值）。
+ * @param sc 从对象的配置。
+ * @param size 数据大小。
+ * @return 寄存器请求指针。
+ * @details 
+ * - 分配寄存器请求内存。
+ * - 初始化寄存器请求。
+ * - 锁定主站信号量。
+ * - 添加寄存器请求到从对象的寄存器请求列表。
+ * - 解锁主站信号量。
  */
 ec_reg_request_t *ecrt_slave_config_create_reg_request_err(
     ec_slave_config_t *sc, size_t size)
@@ -1399,7 +1775,7 @@ ec_reg_request_t *ecrt_slave_config_create_reg_request_err(
     if (!(reg = (ec_reg_request_t *)
               kmalloc(sizeof(ec_reg_request_t), GFP_KERNEL)))
     {
-        EC_CONFIG_ERR(sc, "Failed to allocate register request memory!\n");
+        EC_CONFIG_ERR(sc, "分配寄存器请求的内存失败！\n");
         return ERR_PTR(-ENOMEM);
     }
 
@@ -1419,6 +1795,14 @@ ec_reg_request_t *ecrt_slave_config_create_reg_request_err(
 
 /*****************************************************************************/
 
+/**
+ * @brief 创建从对象的寄存器请求。
+ * @param sc 从对象的配置。
+ * @param size 数据大小。
+ * @return 寄存器请求指针。
+ * @details 
+ * - 调用ecrt_slave_config_create_reg_request_err()，返回NULL或指针。
+ */
 ec_reg_request_t *ecrt_slave_config_create_reg_request(
     ec_slave_config_t *sc, size_t size)
 {
@@ -1429,8 +1813,17 @@ ec_reg_request_t *ecrt_slave_config_create_reg_request(
 
 /*****************************************************************************/
 
-/** Same as ecrt_slave_config_create_voe_handler(), but with ERR_PTR() return
- * value.
+/**
+ * @brief 创建从对象的VoE处理程序（带错误指针返回值）。
+ * @param sc 从对象的配置。
+ * @param size 数据大小。
+ * @return VoE处理程序指针。
+ * @details 
+ * - 分配VoE处理程序内存。
+ * - 初始化VoE处理程序。
+ * - 锁定主站信号量。
+ * - 添加VoE处理程序到从对象的VoE处理程序列表。
+ * - 解锁主站信号量。
  */
 ec_voe_handler_t *ecrt_slave_config_create_voe_handler_err(
     ec_slave_config_t *sc, size_t size)
@@ -1443,7 +1836,7 @@ ec_voe_handler_t *ecrt_slave_config_create_voe_handler_err(
     if (!(voe = (ec_voe_handler_t *)
               kmalloc(sizeof(ec_voe_handler_t), GFP_KERNEL)))
     {
-        EC_CONFIG_ERR(sc, "Failed to allocate VoE request memory!\n");
+        EC_CONFIG_ERR(sc, "分配VoE处理程序的内存失败！\n");
         return ERR_PTR(-ENOMEM);
     }
 
@@ -1463,6 +1856,14 @@ ec_voe_handler_t *ecrt_slave_config_create_voe_handler_err(
 
 /*****************************************************************************/
 
+/**
+ * @brief 创建从对象的VoE处理程序。
+ * @param sc 从对象的配置。
+ * @param size 数据大小。
+ * @return VoE处理程序指针。
+ * @details 
+ * - 调用ecrt_slave_config_create_voe_handler_err()，返回NULL或指针。
+ */
 ec_voe_handler_t *ecrt_slave_config_create_voe_handler(
     ec_slave_config_t *sc, size_t size)
 {
@@ -1473,6 +1874,16 @@ ec_voe_handler_t *ecrt_slave_config_create_voe_handler(
 
 /*****************************************************************************/
 
+/**
+ * @brief 获取从对象的状态。
+ * @param sc 从对象的配置。
+ * @param state 状态结构体。
+ * @return 无。
+ * @details 
+ * - 设置状态结构体的在线状态。
+ * - 如果在线，设置状态结构体的操作状态、AL状态、错误标志、准备状态和位置。
+ * - 如果不在线，设置状态结构体的操作状态、AL状态、错误标志、准备状态和位置（-1）。
+ */
 void ecrt_slave_config_state(const ec_slave_config_t *sc,
                              ec_slave_config_state_t *state)
 {
@@ -1498,6 +1909,27 @@ void ecrt_slave_config_state(const ec_slave_config_t *sc,
 
 /*****************************************************************************/
 
+/**
+ * @brief 为从对象配置IDN。
+ * @param sc 从对象的配置。
+ * @param drive_no 驱动号。
+ * @param idn IDN。
+ * @param state AL状态。
+ * @param data 数据。
+ * @param size 数据大小。
+ * @return 成功返回0，否则返回错误代码。
+ * @details 
+ * - 检查驱动号是否有效。
+ * - 检查AL状态是否为PREOP或SAFEOP。
+ * - 检查从对象是否支持SoE。
+ * - 分配SoE请求内存。
+ * - 初始化SoE请求。
+ * - 设置SoE请求的驱动号、IDN和AL状态。
+ * - 复制数据到SoE请求。
+ * - 锁定主站信号量。
+ * - 添加SoE请求到从对象的SoE配置列表。
+ * - 解锁主站信号量。
+ */
 int ecrt_slave_config_idn(ec_slave_config_t *sc, uint8_t drive_no,
                           uint16_t idn, ec_al_state_t state, const uint8_t *data,
                           size_t size)
@@ -1512,28 +1944,26 @@ int ecrt_slave_config_idn(ec_slave_config_t *sc, uint8_t drive_no,
 
     if (drive_no > 7)
     {
-        EC_CONFIG_ERR(sc, "Invalid drive number %u!\n",
+        EC_CONFIG_ERR(sc, "无效的驱动号 %u！\n",
                       (unsigned int)drive_no);
         return -EINVAL;
     }
 
     if (state != EC_AL_STATE_PREOP && state != EC_AL_STATE_SAFEOP)
     {
-        EC_CONFIG_ERR(sc, "AL state for IDN config"
-                          " must be PREOP or SAFEOP!\n");
+        EC_CONFIG_ERR(sc, "IDN配置的AL状态必须为PREOP或SAFEOP！\n");
         return -EINVAL;
     }
 
     if (slave && slave->sii_image && !(slave->sii_image->sii.mailbox_protocols & EC_MBOX_SOE))
     {
-        EC_CONFIG_WARN(sc, "Attached slave does not support SoE!\n");
+        EC_CONFIG_WARN(sc, "连接的从设备不支持SoE！\n");
     }
 
     if (!(req = (ec_soe_request_t *)
               kmalloc(sizeof(ec_soe_request_t), GFP_KERNEL)))
     {
-        EC_CONFIG_ERR(sc, "Failed to allocate memory for"
-                          " IDN configuration!\n");
+        EC_CONFIG_ERR(sc, "分配IDN配置的内存失败！\n");
         return -ENOMEM;
     }
 
