@@ -2,58 +2,50 @@
 #
 #  $Id$
 #
-#  Copyright (C) 2006-2012  Florian Pose, Ingenieurgemeinschaft IgH
+#  版权所有 (C) 2006-2012 Florian Pose, Ingenieurgemeinschaft IgH
 #
-#  This file is part of the IgH EtherCAT Master.
+#  此文件是 IgH EtherCAT Master 的一部分。
 #
-#  The IgH EtherCAT Master is free software; you can redistribute it and/or
-#  modify it under the terms of the GNU General Public License version 2, as
-#  published by the Free Software Foundation.
+#  IgH EtherCAT Master 是自由软件；您可以根据 GNU General Public License 第2版的条款重新分发和修改它，该许可证由自由软件基金会发布。
 #
-#  The IgH EtherCAT Master is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
-#  Public License for more details.
+#  IgH EtherCAT Master 希望它是有用的，但没有任何担保；甚至没有暗示的担保，适销性或适用于特定目的的担保。有关更多详细信息，请参阅 GNU General Public License。
 #
-#  You should have received a copy of the GNU General Public License along
-#  with the IgH EtherCAT Master; if not, write to the Free Software
-#  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+#  您应该收到了 GNU General Public License 的副本；如果没有，请写信给 Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA。
 #
 #  ---
 #
-#  The license mentioned above concerns the source code only. Using the
-#  EtherCAT technology and brand is only permitted in compliance with the
-#  industrial property and similar rights of Beckhoff Automation GmbH.
+#  上述许可证仅涉及源代码。使用 EtherCAT 技术和品牌仅在遵守 Beckhoff Automation GmbH 的工业产权和类似权利的情况下允许。
 #
 #------------------------------------------------------------------------------
 
-AC_PREREQ(2.59)
+#
+# 发布流程
+# - 更新以发布内核版本的以太网驱动程序
+# - 编写自上次发布以来的变更的 NEWS 条目
+# - 检查是否有完整的 Doxygen 注释
+# - 更新文档中的版本号
+# - 更新 ChangeLog -> hg log -bstable-1.5 --style=changelog > ChangeLog
+# - 在下方更新版本号
+# - 运行 make dist-bzip2
 
-#
-# Release procedure
-# - Update Ethernet drivers up to release kernel version
-# - Write NEWS entry with changes since last release
-# - Check for complete Doxygen comments
-# - Update version number in documentation
-# - Update the ChangeLog -> hg log -bstable-1.5 --style=changelog > ChangeLog
-# - Update version number below
-# - make dist-bzip2
-#
-AC_INIT([ethercat],[1.5.2],[fp@igh-essen.com])
-AC_CONFIG_AUX_DIR([autoconf])
-AM_INIT_AUTOMAKE([-Wall -Werror dist-bzip2 subdir-objects])
-AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_SRCDIR([config.h.in])
-AC_CONFIG_MACRO_DIR([m4])
+AC_PREREQ(2.59)   # 检查Autoconf版本是否满足要求
+AC_INIT([ethercat],[1.5.2],[fp@igh-essen.com])   # 设置软件包的名称、版本和联系人信息
+AC_CONFIG_AUX_DIR([autoconf])   # 指定辅助文件的目录
+AM_INIT_AUTOMAKE([-Wall -Werror dist-bzip2 subdir-objects])   # 初始化Automake，并设置编译选项
+AC_CONFIG_HEADERS([config.h])   # 生成config.h文件
+AC_CONFIG_SRCDIR([config.h.in])   # 指定源代码目录中的配置文件
+AC_CONFIG_MACRO_DIR([m4])   # 指定宏文件的目录
+
 
 #------------------------------------------------------------------------------
 # Global
 #------------------------------------------------------------------------------
 
-AM_PROG_CC_C_O
-m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
-AC_PROG_CXX
-AC_PROG_LIBTOOL
+AM_PROG_CC_C_O   # 检查并设置C编译器
+m4_ifdef([AM_PROG_AR], [AM_PROG_AR])   # 检查并设置静态库工具（可选）
+AC_PROG_CXX   # 检查并设置C++编译器
+AC_PROG_LIBTOOL   # 检查并设置libtool工具
+
 
 #------------------------------------------------------------------------------
 # Kernel modules
@@ -91,64 +83,72 @@ AC_SUBST(ENABLE_KERNEL,[$enablekernel])
 #------------------------------------------------------------------------------
 
 if test "x$enablekernel" = "x1"; then
+    # 检查是否启用内核配置
 
-AC_ARG_WITH([linux-dir],
-    AC_HELP_STRING(
-        [--with-linux-dir=<DIR>],
-        [Linux kernel sources @<:@running kernel@:>@]
-    ),
-    [
-        sourcedir=[$withval]
-    ],
-    [
-        version=[`uname -r`]
-        modulesdir=/lib/modules/${version}
-        if test \! -d ${modulesdir} || test \! -d ${modulesdir}/build; then
-           echo
-           AC_MSG_ERROR([Failed to find Linux sources. Use --with-linux-dir!])
-        fi
-        sourcedir=`cd ${modulesdir}/build && pwd -P`
-    ]
-)
+    AC_ARG_WITH([linux-dir],
+        AC_HELP_STRING(
+            [--with-linux-dir=<DIR>],
+            [Linux kernel sources @<:@running kernel@:>@]
+        ),
+        [
+            sourcedir=[$withval]
+        ],
+        [
+            version=[`uname -r`]
+            modulesdir=/lib/modules/${version}
+            if test \! -d ${modulesdir} || test \! -d ${modulesdir}/build; then
+                echo
+                AC_MSG_ERROR([Failed to find Linux sources. Use --with-linux-dir!])
+            fi
+            sourcedir=`cd ${modulesdir}/build && pwd -P`
+        ]
+    )
 
-AC_MSG_CHECKING([for Linux kernel sources])
+    AC_MSG_CHECKING([for Linux kernel sources])
+    # 检查Linux内核源代码路径
 
-if test \! -r ${sourcedir}/.config; then
-    echo
-    AC_MSG_ERROR([No configured Linux kernel sources in $sourcedir])
+    if test \! -r ${sourcedir}/.config; then
+        echo
+        AC_MSG_ERROR([No configured Linux kernel sources in $sourcedir])
+    fi
+    # 检查是否存在配置的Linux内核源代码
+
+    # 尝试获取内核版本字符串
+    if test -r ${sourcedir}/include/config/kernel.release; then
+        kernelrelease=`cat $sourcedir/include/config/kernel.release`
+    elif test -r ${sourcedir}/.kernelrelease; then
+        kernelrelease=`cat $sourcedir/.kernelrelease`
+    elif test -r ${sourcedir}/include/linux/utsrelease.h; then
+        hdr=${sourcedir}/include/linux/utsrelease.h
+        kernelrelease=`grep UTS_RELEASE $hdr | cut -d " " -f 3- | tr -d \"`
+    elif test -r ${sourcedir}/include/linux/version.h; then
+        hdr=${sourcedir}/include/linux/version.h
+        kernelrelease=`grep UTS_RELEASE $hdr | cut -d " " -f 3- | tr -d \"`
+    fi
+
+    if test -z "$kernelrelease"; then
+        echo
+        AC_MSG_ERROR([Failed to extract Linux kernel version!])
+    fi
+    # 检查是否成功提取了Linux内核版本号
+
+    if test ${kernelrelease%%.*} -gt 2; then
+        regex="^[[0-9]]+\.[[0-9]]+"
+    else
+        regex="^[[0-9]]+\.[[0-9]]+\.[[0-9]]+"
+    fi
+    # 根据内核版本号的格式设置正则表达式
+
+    # 从内核版本中提取数字
+    linuxversion=`echo $kernelrelease | grep -oE "$regex"`
+
+    AC_SUBST(LINUX_SOURCE_DIR,[$sourcedir])
+    AC_MSG_RESULT([$LINUX_SOURCE_DIR (Kernel $linuxversion)])
+    # 保存内核源代码路径和版本信息
+
 fi
 
-# Try to get kernel release string
-if test -r ${sourcedir}/include/config/kernel.release; then
-    kernelrelease=`cat $sourcedir/include/config/kernel.release`
-elif test -r ${sourcedir}/.kernelrelease; then
-    kernelrelease=`cat $sourcedir/.kernelrelease`
-elif test -r ${sourcedir}/include/linux/utsrelease.h; then
-    hdr=${sourcedir}/include/linux/utsrelease.h
-    kernelrelease=`grep UTS_RELEASE $hdr | cut -d " " -f 3- | tr -d \"`
-elif test -r ${sourcedir}/include/linux/version.h; then
-    hdr=${sourcedir}/include/linux/version.h
-    kernelrelease=`grep UTS_RELEASE $hdr | cut -d " " -f 3- | tr -d \"`
-fi
 
-if test -z "$kernelrelease"; then
-    echo
-    AC_MSG_ERROR([Failed to extract Linux kernel version!])
-fi
-
-if test ${kernelrelease%%.*} -gt 2; then
-    regex="^[[0-9]]+\.[[0-9]]+"
-else
-    regex="^[[0-9]]+\.[[0-9]]+\.[[0-9]]+"
-fi
-
-# Extract numbers from kernel release
-linuxversion=`echo $kernelrelease | grep -oE "$regex"`
-
-AC_SUBST(LINUX_SOURCE_DIR,[$sourcedir])
-AC_MSG_RESULT([$LINUX_SOURCE_DIR (Kernel $linuxversion)])
-
-fi
 
 #------------------------------------------------------------------------------
 # Linux module installation subdirectory
@@ -190,458 +190,6 @@ AC_ARG_ENABLE([generic],
 AM_CONDITIONAL(ENABLE_GENERIC, test "x$enablegeneric" = "x1")
 AC_SUBST(ENABLE_GENERIC,[$enablegeneric])
 
-#------------------------------------------------------------------------------
-# 8139too driver
-#------------------------------------------------------------------------------
-
-AC_ARG_ENABLE([8139too],
-    AS_HELP_STRING([--enable-8139too],
-                   [Enable 8139too driver]),
-    [
-        case "${enableval}" in
-            yes) enable8139too=1
-                ;;
-            no) enable8139too=0
-                ;;
-            *) AC_MSG_ERROR([Invalid value for --enable-8139too])
-                ;;
-        esac
-    ],
-    [enable8139too=$enablekernel]
-)
-
-AM_CONDITIONAL(ENABLE_8139TOO, test "x$enable8139too" = "x1")
-AC_SUBST(ENABLE_8139TOO,[$enable8139too])
-
-AC_ARG_WITH([8139too-kernel],
-    AC_HELP_STRING(
-        [--with-8139too-kernel=<X.Y.Z>],
-        [8139too kernel (only if differing)]
-    ),
-    [
-        kernel8139too=[$withval]
-    ],
-    [
-        kernel8139too=$linuxversion
-    ]
-)
-
-if test "x${enable8139too}" = "x1"; then
-    AC_MSG_CHECKING([for kernel for 8139too driver])
-
-    kernels=`ls -1 ${srcdir}/devices/ | grep -oE "^8139too-.*-" | cut -d "-" -f 2 | uniq`
-    found=0
-    for k in $kernels; do
-        if test "$kernel8139too" = "$k"; then
-            found=1
-        fi
-    done
-    if test $found -ne 1; then
-        AC_MSG_ERROR([kernel $kernel8139too not available for 8139too driver!])
-    fi
-
-    AC_MSG_RESULT([$kernel8139too])
-fi
-
-AC_SUBST(KERNEL_8139TOO,[$kernel8139too])
-
-#------------------------------------------------------------------------------
-# e100 driver
-#------------------------------------------------------------------------------
-
-AC_ARG_ENABLE([e100],
-    AS_HELP_STRING([--enable-e100],
-                   [Enable e100 driver]),
-    [
-        case "${enableval}" in
-            yes) enablee100=1
-                ;;
-            no) enablee100=0
-                ;;
-            *) AC_MSG_ERROR([Invalid value for --enable-e100])
-                ;;
-        esac
-    ],
-    [enablee100=0] # disabled by default
-)
-
-AM_CONDITIONAL(ENABLE_E100, test "x$enablee100" = "x1")
-AC_SUBST(ENABLE_E100,[$enablee100])
-
-AC_ARG_WITH([e100-kernel],
-    AC_HELP_STRING(
-        [--with-e100-kernel=<X.Y.Z>],
-        [e100 kernel (only if differing)]
-    ),
-    [
-        kernele100=[$withval]
-    ],
-    [
-        kernele100=$linuxversion
-    ]
-)
-
-if test "x${enablee100}" = "x1"; then
-    AC_MSG_CHECKING([for kernel for e100 driver])
-
-    kernels=`ls -1 ${srcdir}/devices/ | grep -oE "^e100-.*-" | cut -d "-" -f 2 | uniq`
-    found=0
-    for k in $kernels; do
-        if test "$kernele100" = "$k"; then
-            found=1
-        fi
-    done
-    if test $found -ne 1; then
-        AC_MSG_ERROR([kernel $kernele100 not available for e100 driver!])
-    fi
-
-    AC_MSG_RESULT([$kernele100])
-fi
-
-AC_SUBST(KERNEL_E100,[$kernele100])
-
-#------------------------------------------------------------------------------
-# e1000 driver
-#------------------------------------------------------------------------------
-
-AC_ARG_ENABLE([e1000],
-    AS_HELP_STRING([--enable-e1000],
-                   [Enable e1000 driver]),
-    [
-        case "${enableval}" in
-            yes) enablee1000=1
-                ;;
-            no) enablee1000=0
-                ;;
-            *) AC_MSG_ERROR([Invalid value for --enable-e1000])
-                ;;
-        esac
-    ],
-    [enablee1000=0] # disabled by default
-)
-
-AM_CONDITIONAL(ENABLE_E1000, test "x$enablee1000" = "x1")
-AC_SUBST(ENABLE_E1000,[$enablee1000])
-
-AC_ARG_WITH([e1000-kernel],
-    AC_HELP_STRING(
-        [--with-e1000-kernel=<X.Y.Z>],
-        [e1000 kernel (only if differing)]
-    ),
-    [
-        kernele1000=[$withval]
-    ],
-    [
-        kernele1000=$linuxversion
-    ]
-)
-
-if test "x${enablee1000}" = "x1"; then
-    AC_MSG_CHECKING([for kernel for e1000 driver])
-
-    kernels=`ls -1 ${srcdir}/devices/e1000/ | grep -oE "^e1000_main-.*" | cut -d "-" -f 2 | uniq`
-    found=0
-    for k in $kernels; do
-        if test "$kernele1000" = "$k"; then
-            found=1
-        fi
-    done
-    if test $found -ne 1; then
-        AC_MSG_ERROR([kernel $kernele1000 not available for e1000 driver!])
-    fi
-
-    AC_MSG_RESULT([$kernele1000])
-fi
-
-AC_SUBST(KERNEL_E1000,[$kernele1000])
-
-#------------------------------------------------------------------------------
-# e1000e driver
-#------------------------------------------------------------------------------
-
-AC_ARG_ENABLE([e1000e],
-    AS_HELP_STRING([--enable-e1000e],
-                   [Enable e1000e driver]),
-    [
-        case "${enableval}" in
-            yes) enablee1000e=1
-                ;;
-            no) enablee1000e=0
-                ;;
-            *) AC_MSG_ERROR([Invalid value for --enable-e1000e])
-                ;;
-        esac
-    ],
-    [enablee1000e=0] # disabled by default
-)
-
-AM_CONDITIONAL(ENABLE_E1000E, test "x$enablee1000e" = "x1")
-AC_SUBST(ENABLE_E1000E,[$enablee1000e])
-
-AC_ARG_WITH([e1000e-kernel],
-    AC_HELP_STRING(
-        [--with-e1000e-kernel=<X.Y.Z>],
-        [e1000e kernel (only if differing)]
-    ),
-    [
-        kernele1000e=[$withval]
-    ],
-    [
-        kernele1000e=$linuxversion
-    ]
-)
-
-e1000elayout=0
-
-if test "x${enablee1000e}" = "x1"; then
-    AC_MSG_CHECKING([for kernel for e1000e driver])
-
-    kernels=`ls -1 ${srcdir}/devices/e1000e/ | grep -oE "^netdev-.*" | cut -d "-" -f 2 | uniq`
-    found=0
-    for k in $kernels; do
-        if test "$kernele1000e" = "$k"; then
-            found=1
-        fi
-    done
-    if test $found -ne 1; then
-        AC_MSG_ERROR([kernel $kernele1000e not available for e1000e driver!])
-    fi
-
-    AC_MSG_RESULT([$kernele1000e])
-
-    # check for e1000e file layout (changed in kernel 3.4 and 3.10)
-    AC_MSG_CHECKING([for e1000e source layout])
-
-    file34="${srcdir}/devices/e1000e/80003es2lan-$kernele1000e-ethercat.c"
-    file310="${srcdir}/devices/e1000e/ptp-$kernele1000e-ethercat.c"
-
-    if test -r "$file310"; then
-        AC_MSG_RESULT([>= 3.10])
-        e1000elayout=2
-    elif test -r "$file34"; then
-        AC_MSG_RESULT([>= 3.4])
-        e1000elayout=1
-    else
-        AC_MSG_RESULT([before 3.4])
-    fi
-
-fi
-
-AC_SUBST(KERNEL_E1000E,[$kernele1000e])
-AC_SUBST(E1000E_LAYOUT, [$e1000elayout])
-
-#------------------------------------------------------------------------------
-# igb driver
-#------------------------------------------------------------------------------
-
-AC_ARG_ENABLE([igb],
-    AS_HELP_STRING([--enable-igb],
-                   [Enable igb driver]),
-    [
-        case "${enableval}" in
-            yes) enableigb=1
-                ;;
-            no) enableigb=0
-                ;;
-            *) AC_MSG_ERROR([Invalid value for --enable-igb])
-                ;;
-        esac
-    ],
-    [enableigb=0] # disabled by default
-)
-
-AM_CONDITIONAL(ENABLE_IGB, test "x$enableigb" = "x1")
-AC_SUBST(ENABLE_IGB,[$enableigb])
-
-AC_ARG_WITH([igb-kernel],
-    AC_HELP_STRING(
-        [--with-igb-kernel=<X.Y.Z>],
-        [igb kernel (only if differing)]
-    ),
-    [
-        kerneligb=[$withval]
-    ],
-    [
-        kerneligb=$linuxversion
-    ]
-)
-
-if test "x${enableigb}" = "x1"; then
-    AC_MSG_CHECKING([for kernel for igb driver])
-
-    if test ! -f "${srcdir}/devices/igb/igb_main-${kerneligb}-orig.c"; then
-        AC_MSG_ERROR([kernel $kerneligb not available for igb driver!])
-    fi
-
-    AC_MSG_RESULT([$kerneligb])
-fi
-
-AC_SUBST(KERNEL_IGB,[$kerneligb])
-
-#------------------------------------------------------------------------------
-# cx2100 driver
-#------------------------------------------------------------------------------
-
-AC_ARG_ENABLE([cx2100],
-    AS_HELP_STRING([--enable-cx2100],
-                   [Enable cx2100 driver]),
-    [
-        case "${enableval}" in
-            yes) enablecx2100=1
-                ;;
-            no) enablecx2100=0
-                ;;
-            *) AC_MSG_ERROR([Invalid value for --enable-cx2100])
-                ;;
-        esac
-    ],
-    [enablecx2100=0] # disabled by default
-)
-
-AM_CONDITIONAL(ENABLE_CX2100, test "x$enablecx2100" = "x1")
-AC_SUBST(ENABLE_CX2100,[$enablecx2100])
-
-AC_ARG_WITH([cx2100-kernel],
-    AC_HELP_STRING(
-        [--with-cx2100-kernel=<X.Y.Z>],
-        [cx2100 kernel (only if differing)]
-    ),
-    [
-        kernelcx2100=[$withval]
-    ],
-    [
-        kernelcx2100=$linuxversion
-    ]
-)
-
-if test "x${enablecx2100}" = "x1"; then
-    AC_MSG_CHECKING([for kernel for cx2100 driver])
-
-    kernels=`ls -1 ${srcdir}/devices/cx2100/ | grep -oE "^cx2100-.*" | cut -d "-" -f 2 | uniq`
-    found=0
-    for k in $kernels; do
-        if test "$kernelcx2100" = "$k"; then
-            found=1
-        fi
-    done
-    if test $found -ne 1; then
-        AC_MSG_ERROR([kernel $kernelcx2100 not available for cx2100 driver!])
-    fi
-
-    AC_MSG_RESULT([$kernelcx2100])
-fi
-
-AC_SUBST(KERNEL_CX2100,[$kernelcx2100])
-
-#------------------------------------------------------------------------------
-# r8169 driver
-#------------------------------------------------------------------------------
-
-AC_ARG_ENABLE([r8169],
-    AS_HELP_STRING([--enable-r8169],
-                   [Enable r8169 driver]),
-    [
-        case "${enableval}" in
-            yes) enable_r8169=1
-                ;;
-            no) enable_r8169=0
-                ;;
-            *) AC_MSG_ERROR([Invalid value for --enable-r8169])
-                ;;
-        esac
-    ],
-    [enable_r8169=0] # disabled by default
-)
-
-AM_CONDITIONAL(ENABLE_R8169, test "x$enable_r8169" = "x1")
-AC_SUBST(ENABLE_R8169,[$enable_r8169])
-
-AC_ARG_WITH([r8169-kernel],
-    AC_HELP_STRING(
-        [--with-r8169-kernel=<X.Y.Z>],
-        [r8169 kernel (only if differing)]
-    ),
-    [
-        kernel_r8169=[$withval]
-    ],
-    [
-        kernel_r8169=$linuxversion
-    ]
-)
-
-if test "x${enable_r8169}" = "x1"; then
-    AC_MSG_CHECKING([for kernel for r8169 driver])
-
-    kernels=`ls -1 ${srcdir}/devices/ | grep -oE "^r8169-.*-" | cut -d "-" -f 2 | uniq`
-    found=0
-    for k in $kernels; do
-        if test "$kernel_r8169" = "$k"; then
-            found=1
-        fi
-    done
-    if test $found -ne 1; then
-        AC_MSG_ERROR([kernel $kernel_r8169 not available for r8169 driver!])
-    fi
-
-    AC_MSG_RESULT([$kernel_r8169])
-fi
-
-AC_SUBST(KERNEL_R8169,[$kernel_r8169])
-
-#------------------------------------------------------------------------------
-# r8152 driver
-#------------------------------------------------------------------------------
-
-AC_ARG_ENABLE([r8152],
-    AS_HELP_STRING([--enable-r8152],
-                   [Enable r8152 driver]),
-    [
-        case "${enableval}" in
-            yes) enable_r8152=1
-                ;;
-            no) enable_r8152=0
-                ;;
-            *) AC_MSG_ERROR([Invalid value for --enable-r8152])
-                ;;
-        esac
-    ],
-    [enable_r8152=0] # disabled by default
-)
-
-AM_CONDITIONAL(ENABLE_R8152, test "x$enable_r8152" = "x1")
-AC_SUBST(ENABLE_R8152,[$enable_r8152])
-
-AC_ARG_WITH([r8152-kernel],
-    AC_HELP_STRING(
-        [--with-r8152-kernel=<X.Y.Z>],
-        [r8152 kernel (only if differing)]
-    ),
-    [
-        kernel_r8152=[$withval]
-    ],
-    [
-        kernel_r8152=$linuxversion
-    ]
-)
-
-if test "x${enable_r8152}" = "x1"; then
-    AC_MSG_CHECKING([for kernel for r8152 driver])
-
-    kernels=`ls -1 ${srcdir}/devices/ | grep -oE "^r8152-.*-" | cut -d "-" -f 2 | uniq`
-    found=0
-    for k in $kernels; do
-        if test "$kernel_r8152" = "$k"; then
-            found=1
-        fi
-    done
-    if test $found -ne 1; then
-        AC_MSG_ERROR([kernel $kernel_r8152 not available for r8152 driver!])
-    fi
-
-    AC_MSG_RESULT([$kernel_r8152])
-fi
-
-AC_SUBST(KERNEL_R8152,[$kernel_r8152])
 
 #------------------------------------------------------------------------------
 # CCAT driver

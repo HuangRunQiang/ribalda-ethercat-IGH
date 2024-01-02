@@ -27,70 +27,91 @@
 #
 #------------------------------------------------------------------------------
 
+# 设置 aclocal 的标志，指定 m4 目录
 ACLOCAL_AMFLAGS = -I m4
 
+# 指定需要进行构建的子目录
 SUBDIRS = \
-	include \
-	script
+    include \
+    script
 
+# 如果启用了内核
 if ENABLE_KERNEL
-SUBDIRS += devices
-SUBDIRS += master
+    # 添加 devices 子目录到构建目录列表
+    SUBDIRS += devices
+    # 添加 master 子目录到构建目录列表
+    SUBDIRS += master
 endif
 
+
+# 如果构建工具被启用
 if BUILD_TOOL
-SUBDIRS += tool
+    # 添加 tool 子目录到构建目录列表
+    SUBDIRS += tool
 endif
 
+# 如果构建 MBG 被启用
 if BUILD_MBG
-SUBDIRS += mailbox_gateway
+    # 添加 mailbox_gateway 子目录到构建目录列表
+    SUBDIRS += mailbox_gateway
 endif
 
+# 如果启用用户库
 if ENABLE_USERLIB
-SUBDIRS += lib
+    # 添加 lib 子目录到构建目录列表
+    SUBDIRS += lib
 endif
 
+# 如果启用 TTY
 if ENABLE_TTY
-SUBDIRS += tty
+    # 添加 tty 子目录到构建目录列表
+    SUBDIRS += tty
 endif
 
-# userspace example depends on lib/
+
+# 将 examples 子目录添加到构建目录列表中，表示用户空间示例依赖于 lib/
 SUBDIRS += examples
 
+# 指定需要打包分发的子目录
 DIST_SUBDIRS = \
-	devices \
-	examples \
-	include \
-	lib \
-	m4 \
-	mailbox_gateway \
-	master \
-	script \
-	tool \
-	tty
+    devices \
+    examples \
+    include \
+    lib \
+    m4 \
+    mailbox_gateway \
+    master \
+    script \
+    tool \
+    tty
 
+
+# 指定不需要安装的头文件列表
 noinst_HEADERS = \
-	globals.h
+    globals.h
 
+# 指定额外需要分发但不需要安装的文件列表
 EXTRA_DIST = \
-	Doxyfile.in \
-	FEATURES \
-	Kbuild.in \
-	README.EoE \
-	ethercat.spec \
-	ethercat.spec.in
+    Doxyfile.in \
+    FEATURES \
+    Kbuild.in \
+    README.EoE \
+    ethercat.spec \
+    ethercat.spec.in
+
 
 BUILT_SOURCES = \
-	Doxyfile \
-	Kbuild \
+	Doxyfile \  # BUILT_SOURCES包含需要在构建过程中生成的文件列表，这些文件可能是通过其他命令或脚本生成的
+	Kbuild \    # 例如，Doxyfile可能是用于Doxygen文档生成的配置文件，Kbuild可能是用于内核模块构建的配置文件
 	ethercat.spec
 
 modules:
-	$(MAKE) -C "$(LINUX_SOURCE_DIR)" M="@abs_srcdir@" modules
+	$(MAKE) -C "$(LINUX_SOURCE_DIR)" M="@abs_srcdir@" modules  # 通过执行命令$(MAKE)来编译内核模块
 
 modules_install:
 	$(MAKE) -C "$(LINUX_SOURCE_DIR)" M="@abs_srcdir@" \
-		INSTALL_MOD_DIR="$(INSTALL_MOD_DIR)" modules_install
+		INSTALL_MOD_DIR="$(INSTALL_MOD_DIR)" modules_install  # 通过执行命令$(MAKE)来安装内核模块
+
 
 clean-local:
 	$(MAKE) -C "$(LINUX_SOURCE_DIR)" M="@abs_srcdir@" clean
@@ -106,29 +127,29 @@ dist-hook:
 	fi
 
 mrproper: clean cleandoc
-	rm -rf \
-		*~ \
-		ChangeLog \
-		Doxyfile \
-		Kbuild \
-		Makefile \
-		Makefile.in \
-		TAGS \
-		aclocal.m4 \
-		autoconf \
-		autom4te.cache \
-		config.h \
-		config.h.in \
-		config.log \
-		config.status \
-		configure \
-		configure.in \
-		libtool \
-		stamp-h1 \
-		ethercat.spec \
-		script/init.d/ethercat \
-		m4/*.m4 \
-		`find -path ./documentation -prune -o "(" -name Makefile -o -name Makefile.in -o -name Kbuild -o -name .deps -o -name Module.symvers -o -name .tmp_versions ")" -print`
+	rm -rf \  # "mrproper"目标用于清理项目中的临时文件和生成的文件，以便进行干净的重新构建
+		*~ \  # 删除临时文件
+		ChangeLog \  # 删除ChangeLog文件
+		Doxyfile \  # 删除Doxyfile文件
+		Kbuild \  # 删除Kbuild文件
+		Makefile \  # 删除Makefile文件
+		Makefile.in \  # 删除Makefile.in文件
+		TAGS \  # 删除TAGS文件
+		aclocal.m4 \  # 删除aclocal.m4文件
+		autoconf \  # 删除autoconf目录
+		autom4te.cache \  # 删除autom4te.cache目录
+		config.h \  # 删除config.h文件
+		config.h.in \  # 删除config.h.in文件
+		config.log \  # 删除config.log文件
+		config.status \  # 删除config.status文件
+		configure \  # 删除configure文件
+		configure.in \  # 删除configure.in文件
+		libtool \  # 删除libtool文件
+		stamp-h1 \  # 删除stamp-h1文件
+		ethercat.spec \  # 删除ethercat.spec文件
+		script/init.d/ethercat \  # 删除script/init.d/ethercat文件
+		m4/*.m4 \  # 删除m4目录下的所有.m4文件
+		`find -path ./documentation -prune -o "(" -name Makefile -o -name Makefile.in -o -name Kbuild -o -name .deps -o -name Module.symvers -o -name .tmp_versions ")" -print`  # 通过find命令删除特定的文件和目录
 
 doc:
 	doxygen Doxyfile
